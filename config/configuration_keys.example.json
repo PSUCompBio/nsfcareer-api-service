@@ -1,0 +1,24 @@
+{
+
+    "awsAccessKeyId": "",
+    "awsSecretAccessKey": "", 
+    "avatar3dClientId": "",
+    "avatar3dclientSecret": "",
+    "region" : "",
+    "usersbucket": "",
+    "apiVersion" :"",
+    "jwt_secret" : "",
+    "email_id" : "",
+    "mail_list" : "",
+    "ComputeInstanceEndpoint" : "",
+    "userPoolId": "",
+    "ClientId" : "",
+    "react_website_url" : "",
+    "simulation_result_host_url" : "",
+    "jobQueue" : "",
+    "jobDefinition" : "",
+    "simulation_bucket" : "",
+    "queue_x" : "",
+    "queue_y" : "",
+    "queue_beta" : ""
+}
