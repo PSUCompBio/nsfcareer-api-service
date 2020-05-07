@@ -199,12 +199,12 @@ if (cluster.isMaster) {
             queue_name = req.body.queue;
         }
 
-        let reader = 2;
+        let reader = 0;
 
         if (queue_name == config_env.queue_x || queue_name == config_env.queue_beta) {
             reader = 1;
         }
-        let filename = req.body.data_filename;
+        let filename = null;
 
         if (queue_name == config_env.queue_y) {
             reader = 2;
