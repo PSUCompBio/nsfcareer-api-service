@@ -50,7 +50,6 @@ if (cluster.isMaster) {
 
     var _ = require('lodash');
     var simulation_timer = 120000; // 4 minutes in milliseconds
-    const csvparser = require("csvtojson");
 
     // ================================================
     //            SERVER CONFIGURATION
@@ -159,6 +158,7 @@ if (cluster.isMaster) {
     // Promise to delay a function or any promise
     const delay = t => new Promise(resolve => setTimeout(resolve, t));
 
+    // Simuation related functions
     const {
         convertFileDataToJson,
         storeSensorData,
@@ -168,6 +168,23 @@ if (cluster.isMaster) {
         computeImageData,
         generateINP
     } = require('./controller/simulation');
+
+    const {
+        getUserDetails,
+        updateSimulationFileStatusInDB,
+        updateIRBFormStatusInDDB,
+        addTeam,
+        deleteTeam,
+        fetchAllTeamsInOrganization,
+        scanSensorDataTable,
+        deleteTeamFromOrganizationList,
+        addTeamToOrganizationList,
+        getCumulativeAccelerationData,
+        getTeamDataWithPlayerRecords,
+        getTeamData,
+        getCumulativeSensorData,
+        getPlayersListFromTeamsDB
+    } = require('./controller/query');
 
     // Clearing the cookies
     app.get(`/`, (req, res) => {
@@ -182,12 +199,12 @@ if (cluster.isMaster) {
             queue_name = req.body.queue;
         }
 
-        let reader = 0;
+        let reader = 2;
 
         if (queue_name == config_env.queue_x || queue_name == config_env.queue_beta) {
             reader = 1;
         }
-        let filename = null;
+        let filename = req.body.data_filename;
 
         if (queue_name == config_env.queue_y) {
             reader = 2;
@@ -874,26 +891,7 @@ if (cluster.isMaster) {
     //              FUNCTIONS
     // ======================================
 
-    function getUserDetails(user_name, cb) {
-        return new Promise((resolve, reject) => {
-            var db_table = {
-                TableName: 'users',
-                Key: {
-                    "user_cognito_id": user_name
-                }
-            };
-            docClient.get(db_table, function (err, data) {
-                if (err) {
 
-                    reject(err)
-
-                } else {
-
-                    resolve(data);
-                }
-            });
-        })
-    }
 
     function sendMail(recepient, subject, body, attachement_name = null, attachment = null) {
         console.log("Mail is being sent to ", recepient, " by ", email);
@@ -1035,50 +1033,9 @@ if (cluster.isMaster) {
         })
     }
 
-    function updateSimulationFileStatusInDB(obj) {
-        return new Promise((resolve, reject) => {
-            var userParams = {
-                TableName: "users",
-                Key: {
 
-                    "user_cognito_id": obj.user_cognito_id
-                },
-                UpdateExpression: "set is_selfie_simulation_file_uploaded = :is_selfie_simulation_file_uploaded",
-                ExpressionAttributeValues: {
-                    ":is_selfie_simulation_file_uploaded": true
-                },
-                ReturnValues: "UPDATED_NEW"
-            };
-            docClient.update(userParams, (err, data) => {
-                if (err) {
-                    reject(err);
-                } else {
-                    resolve(data);
-                }
-            })
-        });
-    }
 
-    function updateIRBFormStatusInDDB(obj, cb) {
-        var userParams = {
-            TableName: "users",
-            Key: {
-                "user_cognito_id": obj.user_cognito_id
-            },
-            UpdateExpression: "set is_IRB_complete = :is_IRB_complete",
-            ExpressionAttributeValues: {
-                ":is_IRB_complete": true
-            },
-            ReturnValues: "UPDATED_NEW"
-        };
-        docClient.update(userParams, (err, data) => {
-            if (err) {
-                cb(err, '');
-            } else {
-                cb('', data);
-            }
-        })
-    }
+
 
     function getCumulativeEventPressureData() {
         var myObject = {
@@ -1273,305 +1230,6 @@ if (cluster.isMaster) {
         return myObject;
     }
 
-    function addTeam(obj) {
-        return new Promise((resolve, reject) => {
-            var dbInsert = {
-                TableName: "teams",
-                Item: obj
-            };
-            docClient.put(dbInsert, function (err, data) {
-                if (err) {
-                    console.log(err);
-                    reject(err)
-
-                } else {
-
-                    resolve(data)
-                }
-            });
-        })
-    }
-
-    function deleteTeam(obj) {
-        console.log("IN delete functionality");
-        return new Promise((resolve, reject) => {
-            let params = {
-                TableName: "teams",
-                Key: {
-                    "organization": obj.organization,
-                    "team_name": obj.team_name
-                }
-            };
-            docClient.delete(params, function (err, data) {
-                if (err) {
-                    reject(err)
-                }
-                else {
-                    resolve(data)
-                }
-            });
-        })
-    }
-
-    function fetchAllTeamsInOrganization(org) {
-        return new Promise((resolve, reject) => {
-            let params = {
-                TableName: 'teams',
-                KeyConditionExpression: "organization = :organization",
-                ExpressionAttributeValues: {
-                    ":organization": org
-                }
-            };
-            var item = [];
-            docClient.query(params).eachPage((err, data, done) => {
-                if (err) {
-                    reject(err);
-                }
-                if (data == null) {
-                    resolve(concatArrays(item))
-                } else {
-                    item.push(data.Items);
-                }
-                done();
-            });
-        })
-    }
-
-    function scanSensorDataTable() {
-        return new Promise((resolve, reject) => {
-            let params = {
-                TableName: 'sensor_data'
-            };
-            var item = [];
-            docClient.scan(params).eachPage((err, data, done) => {
-                if (err) {
-                    reject(err);
-                }
-                if (data == null) {
-                    resolve(concatArrays(item))
-                } else {
-                    item.push(data.Items);
-                }
-                done();
-            });
-        })
-    }
-
-    function deleteTeamFromOrganizationList(org, team_name) {
-        return new Promise((resolve, reject) => {
-            let params = {
-                TableName: "teams",
-                Key: {
-                    "organization": org,
-                    "team_name": "teams"
-                }
-            };
-            docClient.get(params, function (err, data) {
-                if (err) {
-                    reject(err)
-                }
-                else {
-
-                    var item = data.Item;
-                    var updatedList = item.team_list.filter(function (team) {
-                        return team != team_name;
-                    });
-                    console.log(updatedList);
-                    var dbInsert = {
-                        TableName: "teams",
-                        Key: {
-                            "organization": org,
-                            "team_name": "teams"
-                        },
-                        UpdateExpression: "set #list = :newItem ",
-                        ExpressionAttributeNames: {
-                            "#list": "team_list"
-                        },
-                        ExpressionAttributeValues: {
-                            ":newItem": updatedList
-                        },
-                        ReturnValues: "UPDATED_NEW"
-                    }
-                    docClient.update(dbInsert, function (err, data) {
-                        if (err) {
-                            console.log("ERROR WHILE DELETING DATA", err);
-                            reject(err);
-
-                        } else {
-                            resolve(data)
-                        }
-                    });
-                }
-            })
-        })
-    }
-
-    function addTeamToOrganizationList(org, team_name) {
-        return new Promise((resolve, reject) => {
-            // if flag is true it means data array is to be created
-            let params = {
-                TableName: "teams",
-                Key: {
-                    "organization": org,
-                    "team_name": "teams"
-                }
-            };
-            docClient.get(params, function (err, data) {
-                if (err) {
-                    reject(err)
-                }
-                else {
-                    console.log("DATA IS ADD USER TO ORG ", data);
-                    if (Object.keys(data).length == 0 && data.constructor === Object) {
-                        var dbInsert = {
-                            TableName: "teams",
-                            Item: {
-                                organization: org,
-                                team_name: "teams",
-                                team_list: [team_name]
-                            }
-                        };
-                        docClient.put(dbInsert, function (err, data) {
-                            if (err) {
-                                console.log(err);
-                                reject(err);
-
-                            } else {
-                                resolve(data)
-                            }
-                        });
-                    }
-                    else {
-                        var dbInsert = {
-                            TableName: "teams",
-                            Key: {
-                                "organization": org,
-                                "team_name": "teams"
-                            },
-                            UpdateExpression: "set #list = list_append(#list, :newItem)",
-                            ExpressionAttributeNames: {
-                                "#list": "team_list"
-                            },
-                            ExpressionAttributeValues: {
-                                ":newItem": [team_name]
-                            },
-                            ReturnValues: "UPDATED_NEW"
-                        }
-
-                        docClient.update(dbInsert, function (err, data) {
-                            if (err) {
-                                console.log("ERROR WHILE CREATING DATA", err);
-                                reject(err);
-
-                            } else {
-                                resolve(data)
-                            }
-                        });
-                    }
-                }
-            });
-        })
-    }
-
-    function getCumulativeAccelerationData(obj) {
-        return new Promise((resolve, reject) => {
-            let params = {
-                TableName: 'sensor_data',
-                KeyConditionExpression: "team = :team and begins_with(player_id,:player_id)",
-                ExpressionAttributeValues: {
-                    ":player_id": obj.player_id,
-                    ":team": obj.team
-                }
-            };
-            var item = [];
-            docClient.query(params).eachPage((err, data, done) => {
-                if (err) {
-                    reject(err);
-                }
-                if (data == null) {
-                    resolve(concatArrays(item))
-                } else {
-                    item.push(data.Items);
-                }
-                done();
-            });
-        })
-    }
-
-    function getTeamDataWithPlayerRecords(obj) {
-        return new Promise((resolve, reject) => {
-            let params = {
-                TableName: 'sensor_data',
-                KeyConditionExpression: "team = :team and begins_with(player_id,:player_id)",
-                ExpressionAttributeValues: {
-                    ":player_id": obj.player_id,
-                    ":team": obj.team
-                }
-            };
-            var item = [];
-            docClient.query(params).eachPage((err, data, done) => {
-                if (err) {
-                    reject(err);
-                }
-                if (data == null) {
-                    resolve(concatArrays(item))
-                } else {
-                    item.push(data.Items);
-                }
-                done();
-            });
-        })
-    }
-
-    function getTeamData(obj) {
-        return new Promise((resolve, reject) => {
-            let params = {
-                TableName: 'sensor_data',
-                KeyConditionExpression: "team = :team",
-                ExpressionAttributeValues: {
-                    ":team": obj.team
-                }
-            };
-            var item = [];
-            docClient.query(params).eachPage((err, data, done) => {
-                if (err) {
-                    reject(err);
-                }
-                if (data == null) {
-                    resolve(concatArrays(item))
-                } else {
-                    item.push(data.Items);
-                }
-                done();
-            });
-        })
-    }
-
-    function getCumulativeSensorData(obj) {
-        return new Promise((resolve, reject) => {
-            let params = {
-                TableName: 'sensor_data',
-                KeyConditionExpression: "team = :team and begins_with(player_id,:player_id)",
-                ExpressionAttributeValues: {
-                    ":team": obj.team,
-                    ":player_id": obj.player_id
-                }
-            };
-            var item = [];
-            docClient.query(params).eachPage((err, data, done) => {
-                if (err) {
-                    reject(err);
-                }
-                if (data == null) {
-                    resolve(concatArrays(item))
-                } else {
-                    item.push(data.Items);
-                }
-                done();
-            });
-        })
-    }
-
     function customInsertionSortForGraphData(arr, arr1) {
         // arr needs to be the Y-AXIS of the graph
         // arr1 is X-AXIS of the graph
@@ -1739,25 +1397,5 @@ if (cluster.isMaster) {
         return new Buffer(bitmap).toString('base64');
     }
 
-    function getPlayersListFromTeamsDB(obj) {
-        return new Promise((resolve, reject) => {
-            var db_table = {
-                TableName: 'teams',
-                Key: {
-                    "organization": obj.organization,
-                    "team_name": obj.team_name
-                }
-            };
-            docClient.get(db_table, function (err, data) {
-                if (err) {
 
-                    reject(err)
-
-                } else {
-
-                    resolve(data.Item)
-                }
-            });
-        })
-    }
 }

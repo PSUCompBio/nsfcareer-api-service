@@ -8,9 +8,14 @@ const AWS = require('aws-sdk'),
     shortid = require('shortid'),
     moment = require('moment');
 
-const docClient = new AWS.DynamoDB.DocumentClient({
-    convertEmptyValues: true
-});
+const {
+    storeSensorData,
+    addPlayerToTeamInDDB,
+    checkIfSelfiePresent,
+    updateSelfieAndModelStatusInDB,
+    updateINPFileStatusInDB,
+    updateSimulationImageToDDB
+} = require('./query');
 
 // var config_env = config ;
 var config = require('../config/configuration_keys.json');
@@ -19,7 +24,7 @@ const BUCKET_NAME = config_env.usersbucket;
 
 var s3 = new AWS.S3();
 var batch = new AWS.Batch();
-
+const csvparser = require("csvtojson");
 
 function convertFileDataToJson(buf, reader, filename) {
     return new Promise((resolve, reject) => {
@@ -107,33 +112,6 @@ function convertXLSXDataToJSON(buf, cb) {
         }
         cb(data_array);
     });
-}
-
-function storeSensorData(sensor_data_array) {
-    return new Promise((resolve, reject) => {
-        var counter = 0;
-        if (sensor_data_array.length == 0) {
-            resolve(true);
-        }
-        for (var i = 0; i < sensor_data_array.length; i++) {
-
-            let param = {
-                TableName: "sensor_data",
-                Item: sensor_data_array[i]
-            };
-
-            docClient.put(param, function (err, data) {
-                counter++;
-                if (err) {
-                    console.log(err);
-                    reject(err)
-                }
-                if (counter == sensor_data_array.length) {
-                    resolve(true);
-                }
-            })
-        }
-    })
 }
 
 function groupSensorDataForY(arr, filename) {
@@ -281,80 +259,6 @@ function groupSensorData(arr) {
     return result;
 }
 
-function addPlayerToTeamInDDB(org, team, player_id) {
-    return new Promise((resolve, reject) => {
-        // if flag is true it means data array is to be created
-        let params = {
-            TableName: "teams",
-            Key: {
-                "organization": org,
-                "team_name": team
-            }
-        };
-
-        docClient.get(params, function (err, data) {
-            if (err) {
-                reject(err);
-            }
-            else {
-                if (Object.keys(data).length == 0 && data.constructor === Object) {
-                    var dbInsert = {
-                        TableName: "teams",
-                        Item: {
-                            organization: org,
-                            team_name: team,
-                            player_list: [player_id]
-                        }
-                    };
-                    docClient.put(dbInsert, function (err, data) {
-                        if (err) {
-                            console.log(err);
-                            reject(err);
-
-                        } else {
-                            resolve(data)
-                        }
-                    });
-                }
-                else {
-                    // If Player does not exists in Team
-                    if (data.Item.player_list.indexOf(player_id) <= -1) {
-                        var dbInsert = {
-                            TableName: "teams",
-                            Key: {
-                                "organization": org,
-                                "team_name": team
-                            },
-                            UpdateExpression: "set #list = list_append(#list, :newItem)",
-                            ExpressionAttributeNames: {
-                                "#list": "player_list"
-                            },
-                            ExpressionAttributeValues: {
-                                ":newItem": [player_id]
-                            },
-                            ReturnValues: "UPDATED_NEW"
-                        }
-
-                        docClient.update(dbInsert, function (err, data) {
-                            if (err) {
-
-                                reject(err);
-
-                            } else {
-                                resolve(data)
-                            }
-                        });
-                    }
-                    else {
-                        resolve("PLAYER ALREADY EXISTS IN TEAM");
-                    }
-
-                }
-            }
-        });
-    })
-}
-
 function uploadPlayerSelfieIfNotPresent(selfie, player_id, filename) {
     return new Promise((resolve, reject) => {
         // If no selfie details present then resolve
@@ -391,33 +295,6 @@ function uploadPlayerSelfieIfNotPresent(selfie, player_id, filename) {
                     reject(err);
                 })
         }
-    })
-}
-
-function checkIfSelfiePresent(player_id) {
-    return new Promise((resolve, reject) => {
-        //Fetch user details from dynamodb
-        let params = {
-            TableName: "users",
-            Key: {
-                "user_cognito_id": player_id
-            }
-        };
-        docClient.get(params, function (err, data) {
-            if (err) {
-                reject(err);
-            }
-            else {
-                console.log("check if selfie present ", data);
-                if ((Object.keys(data).length == 0 && data.constructor === Object) || ('is_selfie_image_uploaded' in data.Item && data.Item.is_selfie_image_uploaded == false)) {
-                    resolve(false);
-                }
-                else {
-                    resolve(true);
-                }
-            }
-        });
-
     })
 }
 
@@ -921,28 +798,6 @@ function uploadGeneratedSelfieImage(obj, cb) {
     })
 }
 
-function updateSelfieAndModelStatusInDB(obj, cb) {
-    var userParams = {
-        TableName: "users",
-        Key: {
-            "user_cognito_id": obj.user_cognito_id
-        },
-        UpdateExpression: "set is_selfie_image_uploaded = :selfie_image_uploaded, is_selfie_model_uploaded = :selfie_model_uploaded",
-        ExpressionAttributeValues: {
-            ":selfie_model_uploaded": true,
-            ":selfie_image_uploaded": true,
-        },
-        ReturnValues: "UPDATED_NEW"
-    };
-    docClient.update(userParams, (err, data) => {
-        if (err) {
-            cb(err, '');
-        } else {
-            cb('', data);
-        }
-    })
-}
-
 function generateStlFromPly(obj) {
     return new Promise((resolve, reject) => {
         var cmd = `mkdir -p ./../users_data/${obj.user_cognito_id}/stl/ && pvpython ./../rbf-brain/extract.py --input ./avatars/${obj.user_cognito_id}/face/model.ply --output ./../users_data/${obj.user_cognito_id}/stl/${obj.file_name}.stl`
@@ -973,28 +828,6 @@ function generateParametersFileFromStl(obj) {
                 console.log("ERROR in PRM generations <<<<<--------------\n", err);
                 reject(err);
             })
-    })
-}
-
-function updateINPFileStatusInDB(obj, cb) {
-    var userParams = {
-        TableName: "users",
-        Key: {
-            "user_cognito_id": obj.user_cognito_id
-        },
-        UpdateExpression: "set is_selfie_inp_uploaded = :is_selfie_inp_uploaded",
-        ExpressionAttributeValues: {
-            ":is_selfie_inp_uploaded": true
-
-        },
-        ReturnValues: "UPDATED_NEW"
-    };
-    docClient.update(userParams, (err, data) => {
-        if (err) {
-            cb(err, '');
-        } else {
-            cb('', data);
-        }
     })
 }
 
@@ -1148,84 +981,6 @@ function generateJWTokenWithNoExpiry(obj, secret) {
                 resolve(token);
             }
         })
-    })
-}
-
-function updateSimulationImageToDDB(image_id, bucket_name, path, status = "completed", token = null, secret = null) {
-    return new Promise((resolve, reject) => {
-        if (image_id == null) {
-            return resolve({ message: "No Image Simulation ID provided" });
-        }
-        else {
-            // if flag is true it means data array is to be created
-            let params = {
-                TableName: "simulation_images",
-                Key: {
-                    "image_id": image_id
-                }
-            };
-            docClient.get(params, function (err, data) {
-                if (err) {
-                    reject(err);
-                }
-                else {
-                    if (Object.keys(data).length == 0 && data.constructor === Object) {
-                        var dbInsert = {
-                            TableName: "simulation_images",
-                            Item: {
-                                image_id: image_id,
-                                bucket_name: bucket_name,
-                                path: path,
-                                status: status,
-                                token: token,
-                                secret: secret
-                            }
-                        };
-                        docClient.put(dbInsert, function (err, data) {
-                            if (err) {
-                                console.log(err);
-                                reject(err);
-
-                            } else {
-                                resolve(data)
-                            }
-                        });
-                    }
-                    else {
-                        // If Player does not exists in Team
-                        var dbInsert = {
-                            TableName: "simulation_images",
-                            Key: { "image_id": image_id },
-                            UpdateExpression: "set #path = :path,#status = :status",
-                            ExpressionAttributeNames: {
-                                "#path": "path",
-                                "#status": "status",
-                            },
-                            ExpressionAttributeValues: {
-                                ":path": path,
-                                ":status": status
-                            },
-                            ReturnValues: "UPDATED_NEW"
-                        }
-
-                        docClient.update(dbInsert, function (err, data) {
-                            if (err) {
-                                console.log("ERROR WHILE CREATING DATA", err);
-                                reject(err);
-
-                            } else {
-                                resolve(data)
-                            }
-                        });
-
-                    }
-
-
-
-                }
-            });
-
-        }
     })
 }
 
