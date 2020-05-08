@@ -1,4 +1,4 @@
-# rbf-brain-nodejs-service
+# nsfcareer-api-service
 A lightweight service to generate INP (FE Mesh) data and upload it on AWS data lake.
 ### Initialization & Dependencies configuration:
 - #### Install all the required dependencies by executing following commands :
