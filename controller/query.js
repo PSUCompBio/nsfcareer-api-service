@@ -4,6 +4,10 @@ const docClient = new AWS.DynamoDB.DocumentClient({
     convertEmptyValues: true,
 });
 
+function concatArrays(arrays) {
+    return [].concat.apply([], arrays);
+}
+
 function getUserDetails(user_name, cb) {
     return new Promise((resolve, reject) => {
         var db_table = {
@@ -618,6 +622,79 @@ function updateSimulationImageToDDB(
     });
 }
 
+function updateSimulationData(obj, cb) {
+    var userParams = {
+        TableName: "simulation_images",
+        Key: {
+            image_id: obj.image_id,
+        },
+        UpdateExpression:
+            "set job_id = :job_id",
+        ExpressionAttributeValues: {
+            ":job_id": obj.job_id,
+        },
+        ReturnValues: "UPDATED_NEW",
+    };
+    docClient.update(userParams, (err, data) => {
+        if (err) {
+            cb(err, "");
+        } else {
+            cb("", data);
+        }
+    });
+}
+
+function getCompletedJobs() {
+    return new Promise((resolve, reject) => {
+        let params = {
+            TableName: "simulation_images",
+            FilterExpression:
+                "#job_status = :job_status_value and attribute_exists(job_id) and attribute_not_exists(computed_time)",
+            ExpressionAttributeValues: {
+               ":job_status_value": "completed",
+            },
+            ExpressionAttributeNames: {
+                "#job_status": "status",
+            },
+        };
+        var item = [];
+        docClient.scan(params).eachPage((err, data, done) => {
+            if (err) {
+                reject(err);
+            }
+            if (data == null) {
+                resolve(concatArrays(item));
+            } else {
+                console.log(data.Items);
+                item.push(data.Items);
+            }
+            done();
+        });
+    });
+}
+
+function updateJobComputedTime(obj, cb) {
+    var userParams = {
+        TableName: "simulation_images",
+        Key: {
+            image_id: obj.image_id,
+        },
+        UpdateExpression:
+            "set computed_time = :computed_time",
+        ExpressionAttributeValues: {
+            ":computed_time": obj.computed_time,
+        },
+        ReturnValues: "UPDATED_NEW",
+    };
+    docClient.update(userParams, (err, data) => {
+        if (err) {
+            cb(err, "");
+        } else {
+            cb("", data);
+        }
+    });
+}
+
 module.exports = {
     getUserDetails,
     updateSimulationFileStatusInDB,
@@ -639,4 +716,7 @@ module.exports = {
     updateSelfieAndModelStatusInDB,
     updateINPFileStatusInDB,
     updateSimulationImageToDDB,
+    updateSimulationData,
+    getCompletedJobs,
+    updateJobComputedTime
 };

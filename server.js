@@ -122,6 +122,8 @@ if (cluster.isMaster) {
     });
 
     var s3 = new AWS.S3();
+    var batch = new AWS.Batch();
+    var cron = require('node-cron');
 
     const docClient = new AWS.DynamoDB.DocumentClient({
         convertEmptyValues: true
@@ -183,7 +185,9 @@ if (cluster.isMaster) {
         getTeamDataWithPlayerRecords,
         getTeamData,
         getCumulativeSensorData,
-        getPlayersListFromTeamsDB
+        getPlayersListFromTeamsDB,
+        getCompletedJobs,
+        updateJobComputedTime
     } = require('./controller/query');
 
     // Clearing the cookies
@@ -323,6 +327,73 @@ if (cluster.isMaster) {
                 })
             })
     })
+
+    // Cron to get job computation time after job completetion
+    cron.schedule('*/5 * * * *', () => {
+        getCompletedJobs()
+            .then(simulation_data => {
+                let array_size = simulation_data.length
+                if (array_size > 0) {
+                    simulation_data.forEach((job) => {
+                        if (job.job_id !== undefined) {
+                            var params = {
+                                jobs: [job.job_id]
+                            };
+                            let cnt = 0;
+                            batch.describeJobs(params, function (err, data) {
+                                if (err) {
+                                    console.log(err, err.stack);
+                                    // res.send({
+                                    //     message: "failure",
+                                    //     error: err
+                                    // })
+                                } else {
+                                    console.log(data);
+                                    data = data.jobs[0];
+                                    let computed_time = (data.stoppedAt - data.startedAt) // miliseconds
+                                    let obj = {};
+                                    obj.image_id = job.image_id;
+                                    obj.computed_time = computed_time;
+                                    
+                                    updateJobComputedTime(obj, function (err, data) {
+                                        if (err) {
+                                            // res.send({
+                                            //     message: "failure",
+                                            //     error: err
+                                            // })
+                                            console.log(err);
+                                        }
+                                        else {
+                                            cnt++;
+                                            if (cnt ===  array_size) {
+                                                // res.send({
+                                                //     message: "success",
+                                                //     data: data
+                                                // })
+                                                console.log('Success');
+                                            }
+                                        }
+                                    })
+                                }
+                            })
+                        }
+                    })
+                } else {
+                    // res.send({
+                    //     message: "failure",
+                    //     error: "No job found"
+                    // })
+                    console.log('No job found');
+                }
+            })
+            .catch(err => {
+                // res.send({
+                //     message: "failure",
+                //     error: err
+                // })
+                console.log(err);
+            })
+    });
 
     app.post(`${apiPrefix}getUserDetailsForIRB`, function (req, res) {
         console.log(req.body);

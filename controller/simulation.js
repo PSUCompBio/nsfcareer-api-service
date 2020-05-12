@@ -14,7 +14,8 @@ const {
     checkIfSelfiePresent,
     updateSelfieAndModelStatusInDB,
     updateINPFileStatusInDB,
-    updateSimulationImageToDDB
+    updateSimulationImageToDDB,
+    updateSimulationData
 } = require('./query');
 
 // var config_env = config ;
@@ -916,7 +917,7 @@ function generateSimulationForPlayers(player_data_array, queue_name, reader) {
                                 upload_simulation_data(simulation_data)
                                     .then(job => {
                                         // Submitting simulation job
-                                        return submitJobsToBatch(simulation_data.length, job.job_id, job.path, queue_name);
+                                        return submitJobsToBatch(simulation_data, job.job_id, job.path, queue_name);
 
                                     })
                                     .then(value => {
@@ -984,9 +985,9 @@ function generateJWTokenWithNoExpiry(obj, secret) {
     })
 }
 
-function submitJobsToBatch(array_size, job_name, file_path, queue_name) {
+function submitJobsToBatch(simulation_data, job_name, file_path, queue_name) {
     return new Promise((resolve, reject) => {
-
+        const array_size = simulation_data.length;
         let simulation_params = {
             jobDefinition: config.jobDefinition, /* required */
             jobName: job_name, /* required */
@@ -1016,7 +1017,24 @@ function submitJobsToBatch(array_size, job_name, file_path, queue_name) {
                 reject(err);
             } else {
                 console.log(data);
-                resolve(data);
+                let cnt = 0;
+                simulation_data.forEach((value) => {
+                    let obj = {};
+                    obj.image_id = value.image_id;
+                    obj.job_id = data.jobId + ':' + value.index;
+                    console.log(obj);
+                    updateSimulationData(obj, function (err, data) {
+                        if (err) {
+                            reject(err);
+                        }
+                        else {
+                            cnt++;
+                            if (cnt ===  array_size) {
+                                resolve(data);
+                            }
+                        }
+                    })
+                })
             }
         })
     })
