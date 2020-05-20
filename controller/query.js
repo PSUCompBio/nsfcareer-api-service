@@ -50,27 +50,6 @@ function updateSimulationFileStatusInDB(obj) {
     });
 }
 
-function updateIRBFormStatusInDDB(obj, cb) {
-    var userParams = {
-        TableName: "users",
-        Key: {
-            user_cognito_id: obj.user_cognito_id,
-        },
-        UpdateExpression: "set is_IRB_complete = :is_IRB_complete",
-        ExpressionAttributeValues: {
-            ":is_IRB_complete": true,
-        },
-        ReturnValues: "UPDATED_NEW",
-    };
-    docClient.update(userParams, (err, data) => {
-        if (err) {
-            cb(err, "");
-        } else {
-            cb("", data);
-        }
-    });
-}
-
 function addTeam(obj) {
     return new Promise((resolve, reject) => {
         var dbInsert = {
@@ -119,26 +98,6 @@ function fetchAllTeamsInOrganization(org) {
         };
         var item = [];
         docClient.query(params).eachPage((err, data, done) => {
-            if (err) {
-                reject(err);
-            }
-            if (data == null) {
-                resolve(concatArrays(item));
-            } else {
-                item.push(data.Items);
-            }
-            done();
-        });
-    });
-}
-
-function scanSensorDataTable() {
-    return new Promise((resolve, reject) => {
-        let params = {
-            TableName: "sensor_data",
-        };
-        var item = [];
-        docClient.scan(params).eachPage((err, data, done) => {
             if (err) {
                 reject(err);
             }
@@ -337,32 +296,6 @@ function getTeamData(obj) {
     });
 }
 
-function getCumulativeSensorData(obj) {
-    return new Promise((resolve, reject) => {
-        let params = {
-            TableName: "sensor_data",
-            KeyConditionExpression:
-                "team = :team and begins_with(player_id,:player_id)",
-            ExpressionAttributeValues: {
-                ":team": obj.team,
-                ":player_id": obj.player_id,
-            },
-        };
-        var item = [];
-        docClient.query(params).eachPage((err, data, done) => {
-            if (err) {
-                reject(err);
-            }
-            if (data == null) {
-                resolve(concatArrays(item));
-            } else {
-                item.push(data.Items);
-            }
-            done();
-        });
-    });
-}
-
 function getPlayersListFromTeamsDB(obj) {
     return new Promise((resolve, reject) => {
         var db_table = {
@@ -481,70 +414,80 @@ function checkIfSelfiePresent(player_id) {
         let params = {
             TableName: "users",
             Key: {
-                user_cognito_id: player_id,
-            },
+                "user_cognito_id": player_id
+            }
         };
         docClient.get(params, function (err, data) {
             if (err) {
                 reject(err);
-            } else {
+            }
+            else {
                 console.log("check if selfie present ", data);
-                if (
-                    (Object.keys(data).length == 0 && data.constructor === Object) ||
-                    ("is_selfie_image_uploaded" in data.Item &&
-                        data.Item.is_selfie_image_uploaded == false)
-                ) {
+                if ((Object.keys(data).length == 0 && data.constructor === Object)) {
+                    addPlayerToUsers(player_id)
+                        .then(data => {
+                            resolve(false);
+                        })
+                        .catch(err => {
+                            reject(err);
+                        })
+                }
+                else if (('is_selfie_image_uploaded' in data.Item && data.Item.is_selfie_image_uploaded == false) || (!data.Item.is_selfie_image_uploaded)) {
                     resolve(false);
-                } else {
+                }
+                else {
                     resolve(true);
                 }
             }
         });
-    });
+
+    })
 }
 
-function updateSelfieAndModelStatusInDB(obj, cb) {
-    var userParams = {
-        TableName: "users",
-        Key: {
-            user_cognito_id: obj.user_cognito_id,
-        },
-        UpdateExpression:
-            "set is_selfie_image_uploaded = :selfie_image_uploaded, is_selfie_model_uploaded = :selfie_model_uploaded",
-        ExpressionAttributeValues: {
-            ":selfie_model_uploaded": true,
-            ":selfie_image_uploaded": true,
-        },
-        ReturnValues: "UPDATED_NEW",
-    };
-    docClient.update(userParams, (err, data) => {
-        if (err) {
-            cb(err, "");
-        } else {
-            cb("", data);
+function addPlayerToUsers(user_id) {
+    return new Promise((resolve, reject) => {
+        let params = {
+            TableName: "users",
+            Item: {
+                user_cognito_id: user_id,
+                is_selfie_image_uploaded: false
+            }
         }
-    });
+        docClient.put(params, function (err, data) {
+            if (err) {
+                reject(err);
+            } else {
+                resolve(data);
+            }
+        })
+
+    })
 }
 
-function updateINPFileStatusInDB(obj, cb) {
-    var userParams = {
-        TableName: "users",
-        Key: {
-            user_cognito_id: obj.user_cognito_id,
-        },
-        UpdateExpression: "set is_selfie_inp_uploaded = :is_selfie_inp_uploaded",
-        ExpressionAttributeValues: {
-            ":is_selfie_inp_uploaded": true,
-        },
-        ReturnValues: "UPDATED_NEW",
-    };
-    docClient.update(userParams, (err, data) => {
-        if (err) {
-            cb(err, "");
-        } else {
-            cb("", data);
-        }
+function updateSelfieAndModelStatusInDB(obj) {
+
+    return new Promise((resolve, reject) => {
+        var userParams = {
+            TableName: "users",
+            Key: {
+                "user_cognito_id": obj.user_cognito_id
+            },
+            UpdateExpression: "set is_selfie_image_uploaded = :selfie_image_uploaded, is_selfie_model_uploaded = :selfie_model_uploaded",
+            ExpressionAttributeValues: {
+                ":selfie_model_uploaded": true,
+                ":selfie_image_uploaded": true,
+            },
+            ReturnValues: "UPDATED_NEW"
+        };
+        docClient.update(userParams, (err, data) => {
+            if (err) {
+                reject(err);
+            } else {
+                resolve(data);
+            }
+        })
     });
+
 }
 
 function updateSimulationImageToDDB(
@@ -651,7 +594,7 @@ function getCompletedJobs() {
             FilterExpression:
                 "#job_status = :job_status_value and attribute_exists(job_id) and attribute_not_exists(computed_time)",
             ExpressionAttributeValues: {
-               ":job_status_value": "completed",
+                ":job_status_value": "completed",
             },
             ExpressionAttributeNames: {
                 "#job_status": "status",
@@ -695,28 +638,82 @@ function updateJobComputedTime(obj, cb) {
     });
 }
 
+function fetchCGValues(player_id) {
+    return new Promise((resolve, reject) => {
+        let params = {
+            TableName: "users",
+            Key: {
+                "user_cognito_id": player_id
+            },
+            ProjectionExpression: "cg_coordinates"
+        };
+        docClient.get(params, function (err, data) {
+            if (err) {
+                reject(err);
+            } else {
+                if (JSON.stringify(data).length == 2) {
+                    resolve([]);
+                } else {
+                    resolve(data.Item.cg_coordinates);
+                }
+            }
+        })
+    })
+}
+
+function uploadCGValuesAndSetINPStatus(user_cognito_id, file_name) {
+    return new Promise((resolve, reject) => {
+        fs.readFile(`./../users_data/${user_cognito_id}/morphed_vtk/${file_name}_cg.txt`, "utf8", function (err, data) {
+            if (err) {
+                reject(err)
+            }
+            else {
+                var userParams = {
+                    TableName: "users",
+                    Key: {
+                        "user_cognito_id": user_cognito_id
+                    },
+                    UpdateExpression: "set cg_coordinates = :cg, is_cg_present = :present, is_selfie_inp_uploaded = :is_selfie_inp_uploaded",
+                    ExpressionAttributeValues: {
+                        ":cg": data.split(" ").map(function (x) { return parseFloat(x) }),
+                        ":present": true,
+                        ":is_selfie_inp_uploaded": true
+                    },
+                    ReturnValues: "UPDATED_NEW"
+                };
+                docClient.update(userParams, (err, data) => {
+                    if (err) {
+                        reject(err);
+                    } else {
+                        resolve(data);
+                    }
+                })
+
+            }
+        })
+    });
+}
+
 module.exports = {
     getUserDetails,
     updateSimulationFileStatusInDB,
-    updateIRBFormStatusInDDB,
     addTeam,
     deleteTeam,
     fetchAllTeamsInOrganization,
-    scanSensorDataTable,
     deleteTeamFromOrganizationList,
     addTeamToOrganizationList,
     getCumulativeAccelerationData,
     getTeamDataWithPlayerRecords,
     getTeamData,
-    getCumulativeSensorData,
     getPlayersListFromTeamsDB,
     storeSensorData,
     addPlayerToTeamInDDB,
     checkIfSelfiePresent,
     updateSelfieAndModelStatusInDB,
-    updateINPFileStatusInDB,
     updateSimulationImageToDDB,
     updateSimulationData,
     getCompletedJobs,
-    updateJobComputedTime
+    updateJobComputedTime,
+    fetchCGValues,
+    uploadCGValuesAndSetINPStatus
 };

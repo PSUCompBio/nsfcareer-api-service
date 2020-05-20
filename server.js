@@ -46,6 +46,7 @@ if (cluster.isMaster) {
         nodemailer = require('nodemailer'),
         jwt = require('jsonwebtoken'),
         shortid = require('shortid'),
+        archiver = require('archiver'),
         moment = require('moment');
 
     var _ = require('lodash');
@@ -97,6 +98,7 @@ if (cluster.isMaster) {
     //     "simulation_result_host_url" : process.env.SIMULATION_RESULT_HOST_URL,
     //     "jobQueue" : process.env.JOB_QUEUE,
     //     "jobDefinition" : process.env.JOB_DEFINITION,
+    //     "jobDefinitionBeta" : process.env.JOB_DEFINITION_BETA,
     //     "simulation_bucket" : process.env.SIMULATION_BUCKET,
     //     "queue_x" : process.env.QUEUE_X,
     //     "queue_y" : process.env.QUEUE_Y,
@@ -174,17 +176,14 @@ if (cluster.isMaster) {
     const {
         getUserDetails,
         updateSimulationFileStatusInDB,
-        updateIRBFormStatusInDDB,
         addTeam,
         deleteTeam,
         fetchAllTeamsInOrganization,
-        scanSensorDataTable,
         deleteTeamFromOrganizationList,
         addTeamToOrganizationList,
         getCumulativeAccelerationData,
         getTeamDataWithPlayerRecords,
         getTeamData,
-        getCumulativeSensorData,
         getPlayersListFromTeamsDB,
         getCompletedJobs,
         updateJobComputedTime
@@ -354,7 +353,7 @@ if (cluster.isMaster) {
                                     let obj = {};
                                     obj.image_id = job.image_id;
                                     obj.computed_time = computed_time;
-                                    
+
                                     updateJobComputedTime(obj, function (err, data) {
                                         if (err) {
                                             // res.send({
@@ -365,7 +364,7 @@ if (cluster.isMaster) {
                                         }
                                         else {
                                             cnt++;
-                                            if (cnt ===  array_size) {
+                                            if (cnt === array_size) {
                                                 // res.send({
                                                 //     message: "success",
                                                 //     data: data
@@ -1079,7 +1078,7 @@ if (cluster.isMaster) {
                 // Doing Post Processing on simulation
                 var timestamp = Date.now();
 
-                cmd = `cd /home/ec2-user/FemTech/build/examples/ex5; ~/MergePolyData/build/MultipleViewPorts brain3.ply Br_color3.jpg maxstrain.dat ${user_id}-${timestamp}.png`;
+                cmd = `cd /home/ec2-user/FemTech/build/examples/ex5; ~/MergePolyData/build/MultipleViewPorts brain3.ply Br_color3.jpg output.json ${user_id}-${timestamp}.png cellcentres.txt`;
                 console.log(cmd);
                 executeShellCommands(cmd).then((data) => {
                     uploadSimulationFile(user_id, timestamp, (err, data) => {

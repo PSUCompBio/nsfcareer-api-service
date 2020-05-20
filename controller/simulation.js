@@ -6,6 +6,7 @@ const AWS = require('aws-sdk'),
     XLSX = require('xlsx'),
     jwt = require('jsonwebtoken'),
     shortid = require('shortid'),
+    archiver = require('archiver'),
     moment = require('moment');
 
 const {
@@ -13,9 +14,10 @@ const {
     addPlayerToTeamInDDB,
     checkIfSelfiePresent,
     updateSelfieAndModelStatusInDB,
-    updateINPFileStatusInDB,
     updateSimulationImageToDDB,
-    updateSimulationData
+    updateSimulationData,
+    fetchCGValues,
+    uploadCGValuesAndSetINPStatus
 } = require('./query');
 
 // var config_env = config ;
@@ -184,8 +186,11 @@ function groupSensorDataForY(arr, filename) {
 
 function groupSensorData(arr) {
     var helper = {};
+
     var result = arr.reduce(function (accumulator, data_point) {
+
         var key = data_point['Session ID'] + '$' + data_point['Player ID'] + '$' + data_point['Date'];
+
         if (!helper[key]) {
             helper[key] = {
                 'date': data_point['Date'],
@@ -361,78 +366,105 @@ function computeImageData(req) {
         // Adding timestamp as filename to request
         req.body["file_name"] = Number(Date.now()).toString();
         generate3DModel(req.body)
+            .then(data => {
+                return upload3DModelZip(req.body);
+            })
+            .then(data => {
+                // Create Selfie PNG Image using ProjectedTexture VTK
+                return executeShellCommands(`xvfb-run ./../MergePolyData/build/ImageCapture ./avatars/${req.body.user_cognito_id}/head/model.ply ./avatars/${req.body.user_cognito_id}/head/model.jpg ./avatars/${req.body.user_cognito_id}/head/${req.body.file_name}.png`);
+            })
             .then((data) => {
-                upload3DModelZip(req.body, function (err, data) {
+                // Upload the selfie image generated on S3
+                return uploadGeneratedSelfieImage(req.body);
+            })
+            .then(d => {
+                return updateSelfieAndModelStatusInDB(req.body);
+            })
+            .then(data => {
+                return generateStlFromPly(req.body);
+            })
+            .then(d => {
+                return generateParametersFileFromStl(req.body)
+            })
+            .then(d => {
+                // Generate INP File
+                return generateINP(req.body.user_cognito_id, req.body);
+            })
+            .then(data => {
+                // Function to clean up
+                // the files generated
+                return cleanUp(req.body);
+            })
+            .then(d => {
+                resolve({ message: "success" });
+            })
+            .catch((err) => {
+                console.log(err);
+                reject(err);
+            })
+    })
 
+}
+
+function uploadMorphedVTKZip(user_id, timestamp) {
+    return new Promise((resolve, reject) => {
+        var uploadParams = {
+            Bucket: config.usersbucket,
+            Key: `${user_id}/profile/morphed_vtk/combined_meshes/${timestamp}.zip`, // pass key
+            Body: null,
+        };
+        fs.readFile(`./../users_data/${user_id}/morphed_vtk/${timestamp}.zip`, function (err, headBuffer) {
+            if (err) {
+                console.log(err);
+                reject(err);
+            }
+            else {
+                uploadParams.Body = headBuffer;
+                s3.upload(uploadParams, (err, data) => {
                     if (err) {
-                        // Create Selfie PNG Image using ProjectedTexture VTK
                         reject(err);
                     }
                     else {
-                        executeShellCommands(`xvfb-run ./../MergePolyData/build/ImageCapture ./avatars/${req.body.user_cognito_id}/head/model.ply ./avatars/${req.body.user_cognito_id}/head/model.jpg ./avatars/${req.body.user_cognito_id}/head/${req.body.file_name}.png`)
-                            .then((data) => {
-                                // Upload the selfie image generated on S3
-                                uploadGeneratedSelfieImage(req.body, function (err, data) {
-                                    if (err) {
-                                        reject(err);
-                                    }
-                                    else {
-                                        updateSelfieAndModelStatusInDB(req.body, function (err, data) {
-
-                                            if (err) {
-                                                reject(err);
-                                            }
-                                            else {
-                                                generateStlFromPly(req.body)
-                                                    .then(d => {
-                                                        return generateParametersFileFromStl(req.body)
-                                                    })
-                                                    .then(d => {
-                                                        // Generate INP File
-                                                        generateINP(req.body.user_cognito_id, req.body)
-                                                            .then((d) => {
-
-                                                                // Update Status of INP File generation
-                                                                updateINPFileStatusInDB(req.body, function (err, data) {
-                                                                    if (err) {
-                                                                        reject(err);
-                                                                    }
-                                                                    else {
-                                                                        // Function to clean up
-                                                                        // the files generated
-                                                                        cleanUp(req.body)
-                                                                            .then(d => {
-                                                                                resolve({ message: "success" })
-                                                                            })
-                                                                            .catch(err => {
-                                                                                reject(err);
-                                                                            })
-                                                                    }
-                                                                })
-                                                            }).catch((err) => {
-                                                                console.log(err);
-                                                                reject(err);
-                                                            })
-                                                    })
-                                                    .catch(err => {
-                                                        reject(err);
-                                                    })
-                                            }
-                                        })
-                                    }
-                                })
-                            })
-                            .catch((err) => {
-                                reject(err);
-
-                            })
+                        resolve(data);
                     }
+                });
+            }
+        })
+    })
+}
 
-                })
-            })
-            .catch((err) => {
+function createMorphedVTKZip(user_id, timestamp) {
+    return new Promise((resolve, reject) => {
+        try {
+            //archive zip
+            var output = fs.createWriteStream(`./../users_data/${user_id}/morphed_vtk/${timestamp}.zip`);
+            var archive = archiver('zip', {
+                zlib: { level: 9 } // Sets the compression level.
+            });
+
+            output.on("close", async function () {
+                console.log(archive.pointer() + " total bytes");
+                console.log(
+                    "archiver has been finalized and the output file descriptor has closed."
+                );
+                console.log("zip file uploading");
+                resolve(true);
+            });
+            archive.on("error", function (err) {
+                console.log('error for zip ', err)
                 reject(err);
-            })
+            });
+            archive.pipe(output);
+
+            // append files from a glob pattern
+            archive.glob(`*.vtk`, { cwd: `./../users_data/${user_id}/morphed_vtk` });
+
+            archive.finalize();
+
+        } catch (error) {
+            console.log(error);
+            reject(error);
+        }
     })
 }
 
@@ -481,43 +513,30 @@ function generateINP(user_id, obj = null) {
                             else {
                                 generateMorphedVTK(obj)
                                     .then((d) => {
-
-                                        var cmd = `mkdir -p ./../users_data/${user_id}/rbf/ ; ./../MergePolyData/build/MergePolyData -in ./../users_data/${user_id}/morphed_vtk/${obj.file_name}.vtk -out ./../users_data/${user_id}/rbf/${obj.file_name}.vtk -abaqus ;`
-                                        executeShellCommands(cmd)
-                                            .then(d => {
-                                                return generateCentroidLookUpTable(obj);
-                                            })
-                                            .then(d => {
-                                                return uploadCentroidLookUpFile(obj)
-                                            })
-                                            .then(d => {
-                                                uploadINPFile(user_id, obj.file_name, (err, data) => {
-
-                                                    if (err) {
-                                                        reject(err);
-
-                                                    }
-                                                    else {
-                                                        uploadVTKFile(user_id, obj.file_name, (err, data) => {
-
-                                                            if (err) {
-
-                                                                reject(err);
-                                                            }
-                                                            else {
-                                                                resolve(data);
-                                                            }
-                                                        })
-                                                    }
-                                                })
-                                            })
-                                            .catch((err) => {
-                                                reject(err);
-                                            })
-                                    }).catch((err) => {
-
+                                        var cmd = `mkdir -p ./../users_data/${user_id}/rbf/ ;  ./../MergePolyData/build/InpFromVTK  -in ./../users_data/${user_id}/morphed_vtk/${obj.file_name}.vtk -out ./../users_data/${user_id}/rbf/${obj.file_name}.inp`;
+                                        return executeShellCommands(cmd);
+                                    })
+                                    .then(d => {
+                                        return uploadINPFile(user_id, obj.file_name);
+                                    })
+                                    .then(d => {
+                                        return uploadVTKFile(user_id, obj.file_name);
+                                    })
+                                    .then(d => {
+                                        return uploadCGValuesAndSetINPStatus(user_id, obj.file_name);
+                                    })
+                                    .then(d => {
+                                        return createMorphedVTKZip(user_id, obj.file_name);
+                                    })
+                                    .then(d => {
+                                        return uploadMorphedVTKZip(user_id, obj.file_name);
+                                    })
+                                    .then(d => {
+                                        resolve(true);
+                                    })
+                                    .catch((err) => {
                                         reject(err);
-                                    });
+                                    })
                             }
                         })
                     }
@@ -563,31 +582,25 @@ function getFileSignedUrl(key, cb) {
 
 function generateMorphedVTK(obj) {
     return new Promise((resolve, reject) => {
-        var cmd = `mkdir -p ./../users_data/${obj.user_cognito_id}/morphed_vtk/ && python3  ./../rbf-brain/RBF_coarse.py  --p ./../users_data/${obj.user_cognito_id}/parameters/${obj.file_name}.prm --m ./../rbf-brain/coarse_mesh.vtk --output ./../users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}.vtk`;
+        var cmd = `mkdir -p ./../users_data/${obj.user_cognito_id}/morphed_vtk/ && python3  ./../rbf-brain/RBF_coarse.py  --p ./../users_data/${obj.user_cognito_id}/parameters/${obj.file_name}.prm --m ./../rbf-brain/coarse_brain.vtk --output ./../users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}.vtk`;
         console.log(cmd);
         executeShellCommands(cmd)
             .then(d => {
                 console.log("MORPHED VTK POST<<<<<--------------\n", d);
-                resolve(d)
+                let fiber_cmd = `python3  ./../rbf-brain/RBF_coarse.py  --p ./../users_data/${obj.user_cognito_id}/parameters/${obj.file_name}.prm --m ./../rbf-brain/fiber_mesh.vtk --output ./../users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_fiber.vtk`;
+                return executeShellCommands(fiber_cmd);
+            })
+            .then(output => {
+                console.log('Output of fiber mesh ', output);
+                let cg_cmd = `python3  ./../rbf-brain/RBF_CG.py  --p ./../users_data/${obj.user_cognito_id}/parameters/${obj.file_name}.prm --m ./../rbf-brain/cg.vtk --output ./../users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_cg.txt`;
+                return executeShellCommands(cg_cmd);
+            })
+            .then(cg => {
+                console.log('output of cg value ', cg);
+                resolve(cg);
             })
             .catch(err => {
                 console.log("MORPHED VTK <<<<<--------------\n", err);
-                reject(err);
-            })
-    })
-}
-
-function generateCentroidLookUpTable(obj) {
-    return new Promise((resolve, reject) => {
-        var cmd = `mkdir -p ./../users_data/${obj.user_cognito_id}/centroid_table/ && pvpython ./../rbf-brain/lookuptablegenerator_coarse.py --centroid ./../rbf-brain/centroid_coarse.txt --input ./../users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}.vtk --output ./../users_data/${obj.user_cognito_id}/centroid_table/${obj.file_name}.txt`
-        console.log(cmd);
-        executeShellCommands(cmd)
-            .then(d => {
-                console.log("CENTROID CMD POST <<<<<--------------\n", d);
-                resolve(d);
-            })
-            .catch(err => {
-                console.log("CENTROID CMD <<<<<--------------\n", err);
                 reject(err);
             })
     })
@@ -628,74 +641,79 @@ function uploadCentroidLookUpFile(obj) {
     })
 }
 
-function uploadINPFile(user_id, timestamp, cb) {
+function uploadINPFile(user_id, timestamp) {
 
+    return new Promise((resolve, reject) => {
+        var uploadParams = {
+            Bucket: config.usersbucket,
+            Key: '', // pass key
+            Body: null, // pass file body
+        };
 
-    var uploadParams = {
-        Bucket: config.usersbucket,
-        Key: '', // pass key
-        Body: null, // pass file body
-    };
+        const params = uploadParams;
 
-    const params = uploadParams;
+        fs.readFile(`./../users_data/${user_id}/rbf/${timestamp}.inp`, function (err, headBuffer) {
+            if (err) {
+                reject(err);
+            }
+            else {
+                params.Key = user_id + "/profile/rbf/" + timestamp + ".inp";
+                params.Body = headBuffer;
+                // Call S3 Upload
+                s3.upload(params, (err, data) => {
+                    if (err) {
+                        reject(err);
+                    }
+                    else {
+                        resolve(data);
+                    }
+                });
 
-    fs.readFile(`./../users_data/${user_id}/rbf/${timestamp}.inp`, function (err, headBuffer) {
-        if (err) {
-            cb(err, '');
-        }
-        else {
-            params.Key = user_id + "/profile/rbf/" + timestamp + ".inp";
-            params.Body = headBuffer;
-            // Call S3 Upload
-            s3.upload(params, (err, data) => {
-                if (err) {
-                    cb(err, '');
-                }
-                else {
-                    cb('', data);
-                }
-            });
-
-        }
+            }
+        })
     })
 
 }
 
-function uploadVTKFile(user_id, timestamp, cb) {
-    var uploadParams = {
-        Bucket: config.usersbucket,
-        Key: '', // pass key
-        Body: null, // pass file body
-    };
+function uploadVTKFile(user_id, timestamp) {
 
-    const params = uploadParams;
+    return new Promise((resolve, reject) => {
+        var uploadParams = {
+            Bucket: config.usersbucket,
+            Key: '', // pass key
+            Body: null, // pass file body
+        };
 
-    fs.readFile(`../users_data/${user_id}/morphed_vtk/${timestamp}.vtk`, function (err, headBuffer) {
-        if (err) {
-            cb(err, '');
-        }
-        else {
-            params.Key = user_id + "/profile/rbf/vtk/" + timestamp + ".vtk";
-            params.Body = headBuffer;
-            // Call S3 Upload
-            s3.upload(params, (err, data) => {
-                if (err) {
-                    cb(err, '');
-                }
-                else {
-                    cb('', data);
-                }
-            });
+        const params = uploadParams;
 
-        }
-    })
+        fs.readFile(`../users_data/${user_id}/morphed_vtk/${timestamp}.vtk`, function (err, headBuffer) {
+            if (err) {
+                reject(err);
+            }
+            else {
+                params.Key = user_id + "/profile/rbf/vtk/" + timestamp + ".vtk";
+                params.Body = headBuffer;
+                // Call S3 Upload
+                s3.upload(params, (err, data) => {
+                    if (err) {
+                        reject(err);
+                    }
+                    else {
+                        resolve(data);
+                    }
+                });
+
+            }
+        })
+    });
+
 }
 
 function generate3DModel(obj) {
     console.log(obj);
     return new Promise((resolve, reject) => {
         const pythonProcess = spawn("python", [
-            __dirname + "/config/AvatarTest.py",
+            "./config/AvatarTest.py",
             obj.image_url,
             config.avatar3dClientId,
             config.avatar3dclientSecret,
@@ -728,33 +746,33 @@ function generate3DModel(obj) {
     })
 }
 
-function upload3DModelZip(obj, cb) {
-    console.log("IN UPLOAD MODEL");
-    var uploadParams = {
-        Bucket: config.usersbucket,
-        Key: `${obj.user_cognito_id}/profile/model/${obj.file_name}.zip`, // pass key
-        Body: null,
-    };
-    fs.readFile(`./avatars/${obj.user_cognito_id}.zip`, function (err, headBuffer) {
-        if (err) {
-            console.log(err);
-            cb(err, '');
-        }
-        else {
-            uploadParams.Body = headBuffer;
-            s3.upload(uploadParams, (err, data) => {
-                if (err) {
-                    cb(err, '');
-                }
-                else {
-                    cb('', data);
-                }
-            });
-
-        }
+function upload3DModelZip(obj) {
+    return new Promise((resolve, reject) => {
+        console.log("IN UPLOAD MODEL");
+        var uploadParams = {
+            Bucket: config.usersbucket,
+            Key: `${obj.user_cognito_id}/profile/model/${obj.file_name}.zip`, // pass key
+            Body: null,
+        };
+        fs.readFile(`./avatars/${obj.user_cognito_id}.zip`, function (err, headBuffer) {
+            if (err) {
+                console.log(err);
+                reject(err);
+            }
+            else {
+                uploadParams.Body = headBuffer;
+                s3.upload(uploadParams, (err, data) => {
+                    if (err) {
+                        reject(err);
+                    }
+                    else {
+                        resolve(data);
+                    }
+                });
+            }
+        })
     })
 }
-
 function executeShellCommands(cmd) {
     return new Promise((resolve, reject) => {
         var command = spawn(cmd, { shell: true })
@@ -769,34 +787,39 @@ function executeShellCommands(cmd) {
     })
 }
 
-function uploadGeneratedSelfieImage(obj, cb) {
-    var uploadParams = {
-        Bucket: config.usersbucket,
-        Key: '', // pass key
-        Body: null, // pass file body
-    };
+function uploadGeneratedSelfieImage(obj) {
 
-    const params = uploadParams;
+    return new Promise((resolve, reject) => {
+        var uploadParams = {
+            Bucket: config.usersbucket,
+            Key: '', // pass key
+            Body: null, // pass file body
+        };
 
-    fs.readFile(`./avatars/${obj.user_cognito_id}/head/${obj.file_name}.png`, function (err, headBuffer) {
-        if (err) {
-            cb(err, '');
-        }
-        else {
-            params.Key = `${obj.user_cognito_id}/profile/image/${obj.file_name}.png`;
-            params.Body = headBuffer;
-            // Call S3 Upload
-            s3.upload(params, (err, data) => {
-                if (err) {
-                    cb(err, '');
-                }
-                else {
-                    cb('', data);
-                }
-            });
+        const params = uploadParams;
 
-        }
-    })
+        fs.readFile(`./avatars/${obj.user_cognito_id}/head/${obj.file_name}.png`, function (err, headBuffer) {
+            if (err) {
+                reject(err);
+            }
+            else {
+                params.Key = `${obj.user_cognito_id}/profile/image/${obj.file_name}.png`;
+                params.Body = headBuffer;
+                // Call S3 Upload
+                s3.upload(params, (err, data) => {
+                    if (err) {
+                        reject(err);
+                    }
+                    else {
+                        resolve(data);
+                    }
+                });
+
+            }
+        })
+
+    });
+
 }
 
 function generateStlFromPly(obj) {
@@ -850,6 +873,11 @@ function generateSimulationForPlayers(player_data_array, queue_name, reader) {
 
                     updateSimulationImageToDDB(_temp_player.image_id, config.usersbucket, "null", "pending", image_token, token_secret)
                         .then(value => {
+                            return fetchCGValues(_temp_player.player_id.split("$")[0].replace(/ /g, "-"));
+                        })
+                        .then(cg_coordinates => {
+                            console.log('CG coordinates are ', cg_coordinates);
+
                             // console.log("LOOPING THROUGH COMPONENTS ++++++++++ !!!!! ",index ,_temp_player);
 
                             simulation_result_urls.push(`${config_env.simulation_result_host_url}simulation/results/${image_token}/${_temp_player.image_id}`)
@@ -869,7 +897,11 @@ function generateSimulationForPlayers(player_data_array, queue_name, reader) {
                                     "impact-point": ""
                                 }
                             }
-
+                            if (cg_coordinates) {
+                                playerData.simulation["head-cg"] = (cg_coordinates.length == 0) ? [0, -0.3308, -0.037] : cg_coordinates.map(function (x) { return parseFloat(x) });
+                            } else {
+                                playerData.simulation["head-cg"] = [0, -0.3308, -0.037]
+                            }
                             playerData["player"]["name"] = _temp_player.player_id.replace(/ /g, "-");
                             playerData["uid"] = _temp_player.player_id.split("$")[0].replace(/ /g, "-") + '_' + _temp_player.image_id;
 
@@ -879,10 +911,10 @@ function generateSimulationForPlayers(player_data_array, queue_name, reader) {
                                 playerData["simulation"]["angular-acceleration"] = _temp_player['angular-acceleration'];
 
                                 if (reader == 2) {
-                                    playerData["simulation"]["maximum-time"] = _temp_player.time;
+                                    playerData["simulation"]["maximum-time"] = _temp_player.time * 1000;
+                                    playerData["simulation"]["mesh-transformation"] = ["-y", "z", "-x"];
                                 } else {
-                                    playerData["simulation"]["maximum-time"] = parseFloat(_temp_player['linear-acceleration']['xt'][_temp_player['linear-acceleration']['xt'].length - 1]) / 1000;
-
+                                    playerData["simulation"]["maximum-time"] = parseFloat(_temp_player['linear-acceleration']['xt'][_temp_player['linear-acceleration']['xt'].length - 1]);
                                 }
                             } else {
 
@@ -912,7 +944,7 @@ function generateSimulationForPlayers(player_data_array, queue_name, reader) {
                             counter++;
 
                             if (counter == player_data_array.length) {
-                                console.log('SIMULATION DATA IS ', simulation_data);
+                                console.log('SIMULATION DATA IS ', JSON.stringify(simulation_data));
                                 // Uploading simulation data file
                                 upload_simulation_data(simulation_data)
                                     .then(job => {
@@ -1005,6 +1037,10 @@ function submitJobsToBatch(simulation_data, job_name, file_path, queue_name) {
             }
         };
 
+        if (queue_name == "beta") {
+            simulation_params.jobDefinition = config.jobDefinitionBeta
+        }
+
         if (array_size > 1) {
             simulation_params['arrayProperties'] = {
                 size: array_size
@@ -1021,15 +1057,15 @@ function submitJobsToBatch(simulation_data, job_name, file_path, queue_name) {
                 simulation_data.forEach((value) => {
                     let obj = {};
                     obj.image_id = value.image_id;
-                    obj.job_id = data.jobId + ':' + value.index;
+                    obj.job_id = array_size > 1 ? data.jobId + ':' + value.index : data.jobId;
                     console.log(obj);
-                    updateSimulationData(obj, function (err, data) {
+                    updateSimulationData(obj, function (err, dbdata) {
                         if (err) {
                             reject(err);
                         }
                         else {
                             cnt++;
-                            if (cnt ===  array_size) {
+                            if (cnt === array_size) {
                                 resolve(data);
                             }
                         }
@@ -1067,8 +1103,6 @@ function cleanUp(obj) {
                 reject(err);
 
             })
-
-
     })
 }
 
