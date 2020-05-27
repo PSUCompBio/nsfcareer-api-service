@@ -952,7 +952,7 @@ if (cluster.isMaster) {
     })
 
     // Configuring port for APP
-    const port = 3000;
+    const port = process.env.PORT || 3000;
     const server = app.listen(port, function () {
         console.log('Magic happens on ' + port);
     });
