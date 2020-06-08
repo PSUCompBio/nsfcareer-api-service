@@ -203,12 +203,13 @@ if (cluster.isMaster) {
         }
 
         let reader = 0;
+        let filename = null;
 
         if (queue_name == config_env.queue_x || queue_name == config_env.queue_beta) {
             reader = 1;
+            filename = req.body.data_filename
         }
-        let filename = null;
-
+        
         if (queue_name == config_env.queue_y) {
             reader = 2;
             filename = req.body.data_filename
@@ -217,114 +218,276 @@ if (cluster.isMaster) {
         // The file content will be in 'upload_file' parameter
         let buffer = Buffer.from(req.body.upload_file, 'base64');
 
-        // Converting file data into JSON
-        convertFileDataToJson(buffer, reader, filename)
-            .then(items => {
-                // Adding default organization PSU to the impact data
+        let file_extension = null;
+        if (filename !== null) {
+            file_extension = filename.split(".");
+            file_extension = file_extension[file_extension.length - 1];
+        }
+        
+        if (file_extension === 'json') { // Reading json from file 
+            const new_items_array = JSON.parse(buffer);
+            //console.log(new_items_array);
 
-                items.map((element) => {
-                    return element.organization = "PSU";
-                });
+            // Adding image id in array data
+            for (var i = 0; i < new_items_array.length; i++) {
+                var _temp = new_items_array[i];
+                _temp["image_id"] = shortid.generate();
+                _temp["organization"] = "PSU";
+                _temp["player_id"] = _temp["player_id"] + '$' + Date.now();
+                _temp["simulation_status"] = 'pending';
+              
+                if (_temp["sensor"] === 'prevent' || _temp["sensor"] === 'sensor_company_x') {
+                    _temp['angular-acceleration']['xt'] = [];
+                    _temp['angular-acceleration']['yt'] = [];
+                    _temp['angular-acceleration']['zt'] = [];
 
-                const new_items_array = _.map(items, o => _.extend({ organization: "PSU" }, o));
+                    _temp['angular-velocity']['xt'] = [];
+                    _temp['angular-velocity']['yt'] = [];
+                    _temp['angular-velocity']['zt'] = [];
 
-                // Adding image id in array data
-                for (var i = 0; i < new_items_array.length; i++) {
-                    var _temp = new_items_array[i];
-                    _temp["image_id"] = shortid.generate();
-
-                    if (reader == 1) {
-                        _temp["team"] = config_env.queue_x;
-                    }
-                    new_items_array[i] = _temp;
-
-                }
-                console.log('New items array is ', new_items_array);
-
-                // Stores sensor data in db 
-                // TableName: "sensor_data"
-                // team, player_id
-
-                storeSensorData(new_items_array)
-                    .then(flag => {
-
-                        var players = items.map(function (player) {
-                            return {
-                                player_id: player.player_id.split("$")[0],
-                                team: (reader == 1) ? config_env.queue_x : player.team,
-                                organization: player.organization,
-                            }
-                        });
-
-                        // Fetching unique players
-                        const result = _.uniqBy(players, 'player_id')
-
-                        var simulation_result_urls = [];
-
-                        if (result.length == 0) {
-                            res.send({
-                                message: "success"
-                            })
-                        } else {
-                            // Run simulation here and send data
-                            // {
-                            //     "player_id" : "STRING",
-                            //     "team" : "STRING",
-                            //     "organization" : "STRING"
-                            // }
-                            var counter = 0;
-
-                            for (var i = 0; i < result.length; i++) {
-                                var temp = result[i];
-
-                                // Adds team details in db if doesn't already exist
-                                addPlayerToTeamInDDB(temp.organization, temp.team, temp.player_id)
-                                    .then(d => {
-                                        counter++;
-                                        if (counter == result.length) {
-                                            // Upload player selfie if not present and generate meshes
-                                            // Generate simulation for player
-                                            uploadPlayerSelfieIfNotPresent(req.body.selfie, temp.player_id, req.body.filename)
-                                                .then((selfieDetails) => {
-                                                    return generateSimulationForPlayers(new_items_array, queue_name, reader);
-                                                })
-                                                .then(urls => {
-                                                    simulation_result_urls.push(urls)
-                                                    res.send({
-                                                        message: "success",
-                                                        image_url: _.spread(_.union)(simulation_result_urls)
-                                                    })
-                                                })
-                                                .catch(err => {
-                                                    console.log(err);
-                                                    counter = result.length;
-                                                    i = result.length;
-                                                    res.send({
-                                                        message: "failure",
-                                                        error: err
-                                                    })
-                                                })
-                                        }
-                                    })
-                                    .catch(err => {
-                                        console.log(err);
-                                        counter = result.length;
-                                        i = result.length;
-                                        res.send({
-                                            message: "failure",
-                                            error: err
-                                        })
-                                    })
-                            }
+                    _temp['linear-acceleration']['xt'] = [];
+                    _temp['linear-acceleration']['yt'] = [];
+                    _temp['linear-acceleration']['zt'] = [];
+               
+                    const tsec = _temp['tsec'];
+                    let max_time = parseFloat(tsec[0]) * 1000;
+                    let curr_time = null;
+                    for (let i = 0; i < tsec.length; i++) {
+                        
+                        if (_temp["sensor"] === 'prevent') {  
+                            curr_time = parseFloat(tsec[i]) * 1000;
+                            if (curr_time > max_time)
+                                max_time = curr_time;
                         }
-                    })
-            })
-            .catch(err => {
-                res.send({
-                    message: "failure",
-                    error: "Incorrect file format"
+
+                        if (_temp["sensor"] === 'sensor_company_x') {
+                            curr_time = parseFloat(tsec[i]);
+                        }
+                            
+                        _temp['angular-acceleration']['xt'].push(curr_time);
+                        _temp['angular-acceleration']['yt'].push(curr_time);
+                        _temp['angular-acceleration']['zt'].push(curr_time);
+        
+                        _temp['angular-velocity']['xt'].push(curr_time);
+                        _temp['angular-velocity']['yt'].push(curr_time);
+                        _temp['angular-velocity']['zt'].push(curr_time);
+        
+                        _temp['linear-acceleration']['xt'].push(curr_time);
+                        _temp['linear-acceleration']['yt'].push(curr_time);
+                        _temp['linear-acceleration']['zt'].push(curr_time);    
+                    }
+
+                    if (_temp["sensor"] === 'prevent') {
+                        // Add max_time in simulation ( in seconds )
+                        _temp['time'] = max_time / 1000;
+                    }
+
+                    delete new_items_array[i]['tsec'];
+                }
+
+                new_items_array[i] = _temp;
+
+            }
+            console.log('New items array is ', new_items_array);
+
+            // Stores sensor data in db 
+            // TableName: "sensor_data"
+            // team, player_id
+
+            storeSensorData(new_items_array)
+                .then(flag => {
+
+                    var players = new_items_array.map(function (player) {
+                        return {
+                            player_id: player.player_id.split("$")[0],
+                            team: (reader == 1) ? config_env.queue_x : player.team,
+                            organization: player.organization,
+                        }
+                    });
+
+                    // Fetching unique players
+                    const result = _.uniqBy(players, 'player_id')
+
+                    var simulation_result_urls = [];
+
+                    if (result.length == 0) {
+                        res.send({
+                            message: "success"
+                        })
+                    } else {
+                        // Run simulation here and send data
+                        // {
+                        //     "player_id" : "STRING",
+                        //     "team" : "STRING",
+                        //     "organization" : "STRING"
+                        // }
+                        var counter = 0;
+
+                        for (var i = 0; i < result.length; i++) {
+                            var temp = result[i];
+
+                            // Adds team details in db if doesn't already exist
+                            addPlayerToTeamInDDB(temp.organization, temp.team, temp.player_id)
+                                .then(d => {
+                                    counter++;
+                                    if (counter == result.length) {
+                                        // Upload player selfie if not present and generate meshes
+                                        // Generate simulation for player
+                                        uploadPlayerSelfieIfNotPresent(req.body.selfie, temp.player_id, req.body.filename)
+                                            .then((selfieDetails) => {
+                                                return generateSimulationForPlayers(new_items_array, queue_name, reader);
+                                            })
+                                            .then(urls => {
+                                                simulation_result_urls.push(urls)
+                                                res.send({
+                                                    message: "success",
+                                                    image_url: _.spread(_.union)(simulation_result_urls)
+                                                })
+                                            })
+                                            .catch(err => {
+                                                console.log(err);
+                                                counter = result.length;
+                                                i = result.length;
+                                                res.send({
+                                                    message: "failure",
+                                                    error: err
+                                                })
+                                            })
+                                    }
+                                })
+                                .catch(err => {
+                                    console.log(err);
+                                    counter = result.length;
+                                    i = result.length;
+                                    res.send({
+                                        message: "failure",
+                                        error: err
+                                    })
+                                })
+                        }
+                    }
+                })              
+        } else {
+            //Converting file data into JSON
+            convertFileDataToJson(buffer, reader, filename)
+                .then(items => {
+                    // Adding default organization PSU to the impact data
+
+                    items.map((element) => {
+                        return element.organization = "PSU";
+                    });
+
+                    const new_items_array = _.map(items, o => _.extend({ organization: "PSU" }, o));
+
+                    // Adding image id in array data
+                    for (var i = 0; i < new_items_array.length; i++) {
+                        var _temp = new_items_array[i];
+                        _temp["image_id"] = shortid.generate();
+
+                        if (reader == 1) {
+                            _temp["first-name"] = "";
+                            _temp["last-name"] = "";
+                            _temp["sport"] = "";
+                            _temp["position"] = "";
+                            _temp["team"] = config_env.queue_x;
+                        }
+
+                        if (reader == 2) {
+                            _temp["first-name"] = "";
+                            _temp["last-name"] = "";
+                            _temp["sport"] = "";
+                            _temp["position"] = "";
+                        }
+                        new_items_array[i] = _temp;
+
+                    }
+                    console.log('New items array is ', new_items_array);
+
+                    // Stores sensor data in db 
+                    // TableName: "sensor_data"
+                    // team, player_id
+
+                    storeSensorData(new_items_array)
+                        .then(flag => {
+
+                            var players = items.map(function (player) {
+                                return {
+                                    player_id: player.player_id.split("$")[0],
+                                    team: (reader == 1) ? config_env.queue_x : player.team,
+                                    organization: player.organization,
+                                }
+                            });
+
+                            // Fetching unique players
+                            const result = _.uniqBy(players, 'player_id')
+
+                            var simulation_result_urls = [];
+
+                            if (result.length == 0) {
+                                res.send({
+                                    message: "success"
+                                })
+                            } else {
+                                // Run simulation here and send data
+                                // {
+                                //     "player_id" : "STRING",
+                                //     "team" : "STRING",
+                                //     "organization" : "STRING"
+                                // }
+                                var counter = 0;
+
+                                for (var i = 0; i < result.length; i++) {
+                                    var temp = result[i];
+
+                                    // Adds team details in db if doesn't already exist
+                                    addPlayerToTeamInDDB(temp.organization, temp.team, temp.player_id)
+                                        .then(d => {
+                                            counter++;
+                                            if (counter == result.length) {
+                                                // Upload player selfie if not present and generate meshes
+                                                // Generate simulation for player
+                                                uploadPlayerSelfieIfNotPresent(req.body.selfie, temp.player_id, req.body.filename)
+                                                    .then((selfieDetails) => {
+                                                        return generateSimulationForPlayers(new_items_array, queue_name, reader);
+                                                    })
+                                                    .then(urls => {
+                                                        simulation_result_urls.push(urls)
+                                                        res.send({
+                                                            message: "success",
+                                                            image_url: _.spread(_.union)(simulation_result_urls)
+                                                        })
+                                                    })
+                                                    .catch(err => {
+                                                        console.log(err);
+                                                        counter = result.length;
+                                                        i = result.length;
+                                                        res.send({
+                                                            message: "failure",
+                                                            error: err
+                                                        })
+                                                    })
+                                            }
+                                        })
+                                        .catch(err => {
+                                            console.log(err);
+                                            counter = result.length;
+                                            i = result.length;
+                                            res.send({
+                                                message: "failure",
+                                                error: err
+                                            })
+                                        })
+                                }
+                            }
+                        })
                 })
-            })
+                .catch(err => {
+                    res.send({
+                        message: "failure",
+                        error: "Incorrect file format"
+                    })
+                })
+        }
     })
 
     // Cron to get job computation time after job completetion

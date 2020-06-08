@@ -147,6 +147,7 @@ function groupSensorDataForY(arr, filename) {
             'zt': [],
             'zv': []
         },
+        'mesh-transformation': ["-y", "z", "-x"],
         'simulation_status': 'pending'
 
     }
@@ -226,6 +227,7 @@ function groupSensorData(arr) {
                 'linear-acceleration-mag': [parseFloat(data_point['Linear Acc Mag g'])],
                 'angular-velocity-mag': [parseFloat(data_point['Angular Vel Mag rad/s'])],
                 'angular-acceleration-mag': [parseFloat(data_point['Angular Acc Mag rad/s2'])],
+                'mesh-transformation': ["-z", "x", "-y"],
                 'simulation_status': 'pending'
             }
             // create a copy of data_point
@@ -885,9 +887,13 @@ function generateSimulationForPlayers(player_data_array, queue_name, reader) {
                             let playerData = {
                                 "uid": "",
                                 "player": {
-                                    "name": "",
+                                    "first-name": "",
+                                    "first-name": "",
+                                    "sport": "",
+                                    "team": "",
                                     "position": ""
                                 },
+                                "sensor": "",
                                 "simulation": {
                                     "mesh": "coarse_brain.inp",
                                     "linear-acceleration": [0.0, 0.0, 0.0],
@@ -902,20 +908,27 @@ function generateSimulationForPlayers(player_data_array, queue_name, reader) {
                             } else {
                                 playerData.simulation["head-cg"] = [0, -0.3308, -0.037]
                             }
+
                             playerData["player"]["name"] = _temp_player.player_id.replace(/ /g, "-");
                             playerData["uid"] = _temp_player.player_id.split("$")[0].replace(/ /g, "-") + '_' + _temp_player.image_id;
 
-
                             if (reader == 1 || reader == 2) {
+                                
+                                playerData["sensor"] = _temp_player.sensor;
+                                playerData["player"]["first-name"] = _temp_player['first-name'];
+                                playerData["player"]["last-name"] = _temp_player['last-name'];
+                                playerData["player"]["sport"] = _temp_player.sport;
+                                playerData["player"]["team"] = _temp_player.team;
+                                playerData["player"]["position"] = _temp_player.position;
                                 playerData["simulation"]["linear-acceleration"] = _temp_player['linear-acceleration'];
                                 playerData["simulation"]["angular-acceleration"] = _temp_player['angular-acceleration'];
-
+                    
                                 if (reader == 2) {
                                     playerData["simulation"]["maximum-time"] = _temp_player.time * 1000;
-                                    playerData["simulation"]["mesh-transformation"] = ["-y", "z", "-x"];
                                 } else {
                                     playerData["simulation"]["maximum-time"] = parseFloat(_temp_player['linear-acceleration']['xt'][_temp_player['linear-acceleration']['xt'].length - 1]);
                                 }
+                                playerData["simulation"]["mesh-transformation"] = _temp_player['mesh-transformation'];
                             } else {
 
                                 playerData["player"]["position"] = _temp_player.position.toLowerCase();
@@ -950,7 +963,6 @@ function generateSimulationForPlayers(player_data_array, queue_name, reader) {
                                     .then(job => {
                                         // Submitting simulation job
                                         return submitJobsToBatch(simulation_data, job.job_id, job.path, queue_name);
-
                                     })
                                     .then(value => {
                                         resolve(simulation_result_urls);
