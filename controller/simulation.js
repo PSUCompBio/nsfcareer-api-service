@@ -857,7 +857,7 @@ function generateParametersFileFromStl(obj) {
     })
 }
 
-function generateSimulationForPlayers(player_data_array, queue_name, reader) {
+function generateSimulationForPlayers(player_data_array, reader) {
     return new Promise((resolve, reject) => {
         var counter = 0;
         var simulation_result_urls = [];
@@ -962,7 +962,7 @@ function generateSimulationForPlayers(player_data_array, queue_name, reader) {
                                 upload_simulation_data(simulation_data)
                                     .then(job => {
                                         // Submitting simulation job
-                                        return submitJobsToBatch(simulation_data, job.job_id, job.path, queue_name);
+                                        return submitJobsToBatch(simulation_data, job.job_id, job.path);
                                     })
                                     .then(value => {
                                         resolve(simulation_result_urls);
@@ -974,6 +974,123 @@ function generateSimulationForPlayers(player_data_array, queue_name, reader) {
 
                             }
 
+                        })
+                        .catch(err => {
+                            console.log(err);
+                            counter = result.length;
+                            j = player_data_array.length;
+                            reject(err)
+                        })
+                })
+                .catch(err => {
+
+                    console.log(err);
+                    counter = result.length;
+                    j = player_data_array.length;
+                    reject(err)
+                })
+        })
+    })
+}
+
+function generateSimulationForPlayersFromJson(player_data_array) {
+    return new Promise((resolve, reject) => {
+        var counter = 0;
+        var simulation_result_urls = [];
+
+        // Array that will store all the impact data that will be sent for simulation processing
+
+        var simulation_data = [];
+        player_data_array.forEach((player, j) => {
+
+            var _temp_player = player;
+            var index = j;
+            var token_secret = shortid.generate();
+            generateJWTokenWithNoExpiry({ image_id: _temp_player.image_id }, token_secret)
+                .then(image_token => {
+
+                    updateSimulationImageToDDB(_temp_player.image_id, config.usersbucket, "null", "pending", image_token, token_secret)
+                        .then(value => {
+                            return fetchCGValues(_temp_player.player_id.split("$")[0].replace(/ /g, "-"));
+                        })
+                        .then(cg_coordinates => {
+                            console.log('CG coordinates are ', cg_coordinates);
+
+                            // console.log("LOOPING THROUGH COMPONENTS ++++++++++ !!!!! ",index ,_temp_player);
+
+                            simulation_result_urls.push(`${config_env.simulation_result_host_url}simulation/results/${image_token}/${_temp_player.image_id}`)
+
+                            let playerData = {
+                                "uid": "",
+                                "player": {
+                                    "first-name": "",
+                                    "first-name": "",
+                                    "sport": "",
+                                    "team": "",
+                                    "position": ""
+                                },
+                                "sensor": "",
+                                "simulation": {
+                                    "mesh": "coarse_brain.inp",
+                                    "linear-acceleration": [0.0, 0.0, 0.0],
+                                    "angular-acceleration": 0.0,
+                                    "time-peak-acceleration": 2.0e-2,
+                                    "maximum-time": 4.0e-2,
+                                    "head-cg": [0, -0.3308, -0.037],
+                                    "impact-point": ""
+                                }
+                            }
+
+                            playerData["uid"] = _temp_player.player_id.split("$")[0].replace(/ /g, "-") + '_' + _temp_player.image_id;
+                            playerData["player"]["first-name"] = _temp_player.player['first-name'];
+                            playerData["player"]["last-name"] = _temp_player.player['last-name'];
+                            playerData["player"]["sport"] = _temp_player.player.sport;
+                            playerData["player"]["team"] = _temp_player.player.team;
+                            playerData["player"]["position"] = _temp_player.player.position;
+                            playerData["sensor"] = _temp_player.sensor;
+
+                            playerData["simulation"]["linear-acceleration"] = _temp_player.simulation['linear-acceleration'];
+                            playerData["simulation"]["angular-acceleration"] = _temp_player.simulation['angular-acceleration'];
+                            playerData["simulation"]["maximum-time"] = parseFloat(_temp_player.simulation['linear-acceleration']['xt'][_temp_player.simulation['linear-acceleration']['xt'].length - 1]);
+                            playerData["simulation"]["mesh-transformation"] = _temp_player['mesh-transformation'];
+                            if (cg_coordinates) {
+                                playerData.simulation["head-cg"] = (cg_coordinates.length == 0) ? [0, -0.3308, -0.037] : cg_coordinates.map(function (x) { return parseFloat(x) });
+                            }
+                           
+                            let temp_simulation_data = {
+                                "impact_data": playerData,
+                                "index": index,
+                                "image_id": _temp_player.image_id,
+                                "image_token": image_token,
+                                "token_secret": token_secret,
+                                "date": _temp_player.date.split("/").join("-"),
+                                "player_id": _temp_player.player_id.split("$")[0].split(" ").join("-")
+                            }
+
+                            if ("impact" in _temp_player) {
+                                temp_simulation_data["impact"] = _temp_player.impact
+                            }
+
+                            simulation_data.push(temp_simulation_data);
+
+                            counter++;
+
+                            if (counter == player_data_array.length) {
+                                console.log('SIMULATION DATA JSON IS ', JSON.stringify(simulation_data));
+                                // Uploading simulation data file
+                                upload_simulation_data(simulation_data)
+                                    .then(job => {
+                                        // Submitting simulation job
+                                        return submitJobsToBatch(simulation_data, job.job_id, job.path);
+                                    })
+                                    .then(value => {
+                                        resolve(simulation_result_urls);
+                                    })
+                                    .catch(err => {
+                                        console.log(err);
+                                        reject(err);
+                                    })
+                            }
                         })
                         .catch(err => {
                             console.log(err);
@@ -1029,13 +1146,13 @@ function generateJWTokenWithNoExpiry(obj, secret) {
     })
 }
 
-function submitJobsToBatch(simulation_data, job_name, file_path, queue_name) {
+function submitJobsToBatch(simulation_data, job_name, file_path) {
     return new Promise((resolve, reject) => {
         const array_size = simulation_data.length;
         let simulation_params = {
             jobDefinition: config.jobDefinition, /* required */
             jobName: job_name, /* required */
-            jobQueue: queue_name, /* required */
+            jobQueue: config.jobQueue, /* required */
             parameters: {
                 'simulation_data': `s3://${config.simulation_bucket}/${file_path}`,
             },
@@ -1049,7 +1166,7 @@ function submitJobsToBatch(simulation_data, job_name, file_path, queue_name) {
             }
         };
 
-        if (queue_name == "beta") {
+        if (config.jobQueue == "beta") {
             simulation_params.jobDefinition = config.jobDefinitionBeta
         }
 
@@ -1124,6 +1241,7 @@ module.exports = {
     addPlayerToTeamInDDB,
     uploadPlayerSelfieIfNotPresent,
     generateSimulationForPlayers,
+    generateSimulationForPlayersFromJson,
     computeImageData,
     generateINP
 };

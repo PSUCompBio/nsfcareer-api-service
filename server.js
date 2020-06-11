@@ -169,6 +169,7 @@ if (cluster.isMaster) {
         addPlayerToTeamInDDB,
         uploadPlayerSelfieIfNotPresent,
         generateSimulationForPlayers,
+        generateSimulationForPlayersFromJson,
         computeImageData,
         generateINP
     } = require('./controller/simulation');
@@ -196,21 +197,16 @@ if (cluster.isMaster) {
 
     app.post(`${apiPrefix}generateSimulationForSensorData`, setConnectionTimeout('10m'), function (req, res) {
 
-        let queue_name = config_env.jobQueue;
-
-        if ("queue" in req.body) {
-            queue_name = req.body.queue;
-        }
-
+        let sensor =  req.body.sensor !== undefined ? req.body.sensor : null;
         let reader = 0;
-        let filename = null;
+        let filename = req.body.data_filename !== undefined ? req.body.data_filename : null;
 
-        if (queue_name == config_env.queue_x || queue_name == config_env.queue_beta) {
+        if (sensor === 'sensor_company_x') {
             reader = 1;
             filename = req.body.data_filename
         }
         
-        if (queue_name == config_env.queue_y) {
+        if (sensor === 'prevent') {
             reader = 2;
             filename = req.body.data_filename
         }
@@ -232,57 +228,16 @@ if (cluster.isMaster) {
             for (var i = 0; i < new_items_array.length; i++) {
                 var _temp = new_items_array[i];
                 _temp["image_id"] = shortid.generate();
-                _temp["organization"] = "PSU";
                 _temp["player_id"] = _temp["player_id"] + '$' + Date.now();
                 _temp["simulation_status"] = 'pending';
+                _temp["team"] = _temp.player.team;
               
-                if (_temp["sensor"] === 'prevent' || _temp["sensor"] === 'sensor_company_x') {
-                    _temp['angular-acceleration']['xt'] = [];
-                    _temp['angular-acceleration']['yt'] = [];
-                    _temp['angular-acceleration']['zt'] = [];
+                if (_temp["sensor"] === 'prevent') {
+                    _temp['mesh-transformation'] = [ "-y", "z", "-x" ];
+                }
 
-                    _temp['angular-velocity']['xt'] = [];
-                    _temp['angular-velocity']['yt'] = [];
-                    _temp['angular-velocity']['zt'] = [];
-
-                    _temp['linear-acceleration']['xt'] = [];
-                    _temp['linear-acceleration']['yt'] = [];
-                    _temp['linear-acceleration']['zt'] = [];
-               
-                    const tsec = _temp['tsec'];
-                    let max_time = parseFloat(tsec[0]) * 1000;
-                    let curr_time = null;
-                    for (let i = 0; i < tsec.length; i++) {
-                        
-                        if (_temp["sensor"] === 'prevent') {  
-                            curr_time = parseFloat(tsec[i]) * 1000;
-                            if (curr_time > max_time)
-                                max_time = curr_time;
-                        }
-
-                        if (_temp["sensor"] === 'sensor_company_x') {
-                            curr_time = parseFloat(tsec[i]);
-                        }
-                            
-                        _temp['angular-acceleration']['xt'].push(curr_time);
-                        _temp['angular-acceleration']['yt'].push(curr_time);
-                        _temp['angular-acceleration']['zt'].push(curr_time);
-        
-                        _temp['angular-velocity']['xt'].push(curr_time);
-                        _temp['angular-velocity']['yt'].push(curr_time);
-                        _temp['angular-velocity']['zt'].push(curr_time);
-        
-                        _temp['linear-acceleration']['xt'].push(curr_time);
-                        _temp['linear-acceleration']['yt'].push(curr_time);
-                        _temp['linear-acceleration']['zt'].push(curr_time);    
-                    }
-
-                    if (_temp["sensor"] === 'prevent') {
-                        // Add max_time in simulation ( in seconds )
-                        _temp['time'] = max_time / 1000;
-                    }
-
-                    delete new_items_array[i]['tsec'];
+                if (_temp["sensor"] === 'sensor_company_x') {
+                    _temp['mesh-transformation'] = ["-z", "x", "-y" ];
                 }
 
                 new_items_array[i] = _temp;
@@ -300,7 +255,7 @@ if (cluster.isMaster) {
                     var players = new_items_array.map(function (player) {
                         return {
                             player_id: player.player_id.split("$")[0],
-                            team: (reader == 1) ? config_env.queue_x : player.team,
+                            team: player.player.team,
                             organization: player.organization,
                         }
                     });
@@ -335,7 +290,7 @@ if (cluster.isMaster) {
                                         // Generate simulation for player
                                         uploadPlayerSelfieIfNotPresent(req.body.selfie, temp.player_id, req.body.filename)
                                             .then((selfieDetails) => {
-                                                return generateSimulationForPlayers(new_items_array, queue_name, reader);
+                                                return generateSimulationForPlayersFromJson(new_items_array);
                                             })
                                             .then(urls => {
                                                 simulation_result_urls.push(urls)
@@ -368,8 +323,14 @@ if (cluster.isMaster) {
                     }
                 })              
         } else {
-            //Converting file data into JSON
-            convertFileDataToJson(buffer, reader, filename)
+            if (sensor === null || sensor === '') {
+                res.send({
+                    message: "failure",
+                    error: 'Sensor parameter is required.'
+                })
+            } else {
+                //Converting file data into JSON
+                convertFileDataToJson(buffer, reader, filename)
                 .then(items => {
                     // Adding default organization PSU to the impact data
 
@@ -383,20 +344,13 @@ if (cluster.isMaster) {
                     for (var i = 0; i < new_items_array.length; i++) {
                         var _temp = new_items_array[i];
                         _temp["image_id"] = shortid.generate();
+                        _temp["first-name"] = "Test";
+                        _temp["last-name"] = "Test";
+                        _temp["sport"] = "Test";
+                        _temp["position"] = "Test";
 
                         if (reader == 1) {
-                            _temp["first-name"] = "";
-                            _temp["last-name"] = "";
-                            _temp["sport"] = "";
-                            _temp["position"] = "";
                             _temp["team"] = config_env.queue_x;
-                        }
-
-                        if (reader == 2) {
-                            _temp["first-name"] = "";
-                            _temp["last-name"] = "";
-                            _temp["sport"] = "";
-                            _temp["position"] = "";
                         }
                         new_items_array[i] = _temp;
 
@@ -448,7 +402,7 @@ if (cluster.isMaster) {
                                                 // Generate simulation for player
                                                 uploadPlayerSelfieIfNotPresent(req.body.selfie, temp.player_id, req.body.filename)
                                                     .then((selfieDetails) => {
-                                                        return generateSimulationForPlayers(new_items_array, queue_name, reader);
+                                                        return generateSimulationForPlayers(new_items_array, reader);
                                                     })
                                                     .then(urls => {
                                                         simulation_result_urls.push(urls)
@@ -487,6 +441,7 @@ if (cluster.isMaster) {
                         error: "Incorrect file format"
                     })
                 })
+            }
         }
     })
 
