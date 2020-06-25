@@ -166,7 +166,7 @@ if (cluster.isMaster) {
     const {
         convertFileDataToJson,
         storeSensorData,
-        addPlayerToTeamInDDB,
+        addPlayerToTeamOfOrganization,
         uploadPlayerSelfieIfNotPresent,
         generateSimulationForPlayers,
         generateSimulationForPlayersFromJson,
@@ -187,7 +187,14 @@ if (cluster.isMaster) {
         getTeamData,
         getPlayersListFromTeamsDB,
         getCompletedJobs,
-        updateJobComputedTime
+        updateJobComputedTime,
+        getAllSensorBrands,
+        getBrandData,
+        getAllOrganizationsOfSensorBrand,
+        getBrandOrganizationData,
+        getAllTeamsOfOrganizationsOfSensorBrand,
+        getOrganizationTeamData,
+        getPlayerSimulationFile
     } = require('./controller/query');
 
     // Clearing the cookies
@@ -196,7 +203,8 @@ if (cluster.isMaster) {
     })
 
     app.post(`${apiPrefix}generateSimulationForSensorData`, setConnectionTimeout('10m'), function (req, res) {
-
+        // console.log('user_cognito_id', req.body.user_cognito_id);
+        let apiMode = req.body.mode;
         let sensor =  req.body.sensor !== undefined ? req.body.sensor : null;
         let reader = 0;
         let filename = req.body.data_filename !== undefined ? req.body.data_filename : null;
@@ -223,36 +231,116 @@ if (cluster.isMaster) {
         if (file_extension === 'json') { // Reading json from file 
             const new_items_array = JSON.parse(buffer);
             //console.log(new_items_array);
+            const sensor_data_array = [];
 
             // Adding image id in array data
             for (var i = 0; i < new_items_array.length; i++) {
                 var _temp = new_items_array[i];
-                _temp["image_id"] = shortid.generate();
-                _temp["player_id"] = _temp["player_id"] + '$' + Date.now();
-                _temp["simulation_status"] = 'pending';
-                _temp["team"] = _temp.player.team;
+                // _temp["user_cognito_id"] = req.body.user_cognito_id;
+                // _temp["image_id"] = shortid.generate();
+                // _temp["player_id"] = _temp["player_id"] + '$' + Date.now();
+                // _temp["simulation_status"] = 'pending';
+                // _temp["team"] = _temp.player.team;
               
-                if (_temp["sensor"] === 'prevent') {
-                    _temp['mesh-transformation'] = [ "-y", "z", "-x" ];
+                // if (_temp["sensor"] === 'prevent') {
+                //     _temp['mesh-transformation'] = [ "-y", "z", "-x" ];
+                // }
+
+                // if (_temp["sensor"] === 'sensor_company_x') {
+                //     _temp['mesh-transformation'] = ["-z", "x", "-y" ];
+                // }
+
+                //  if (_temp["sensor"] === 'sisu') {
+                //     _temp['mesh-transformation'] = ["-z", "-x", "-y"];
+                // }
+
+                // new_items_array[i] = _temp;
+
+                var _temp_sensor_data = {};
+                _temp_sensor_data["sensor"] = _temp["sensor"];
+                _temp_sensor_data["impact-date"] = _temp["impact-date"];
+                _temp_sensor_data["impact-time"] = _temp["impact-time"];
+                _temp_sensor_data["organization"] = _temp["organization"];
+                _temp_sensor_data["player"] = _temp["player"];
+
+                _temp_sensor_data["simulation"] = {
+                    "linear-acceleration" : {},
+                    "angular-acceleration" : {}
+                };
+
+                _temp_sensor_data["simulation"]["linear-acceleration"] = {};
+
+                if (_temp["simulation"]['time-units'] === 'seconds') {
+                    _temp["simulation"]['time'].forEach((time, i) => {
+                        var _temp_time = parseFloat(time) * 0.001;
+                        _temp["simulation"]['time'][i] = _temp_time;
+                    })
                 }
 
-                if (_temp["sensor"] === 'sensor_company_x') {
-                    _temp['mesh-transformation'] = ["-z", "x", "-y" ];
+                if (_temp["simulation"]['linear-acceleration']['la-units'] === 'g') {
+                    _temp["simulation"]['linear-acceleration']['x-la'].forEach((la, x) => {
+                        var _temp_la = parseFloat(la) * 9.80665;
+                        _temp["simulation"]['linear-acceleration']['x-la'][x] = _temp_la;
+                    })
+
+                    _temp["simulation"]['linear-acceleration']['y-la'].forEach((la, y) => {
+                        var _temp_la = parseFloat(la) * 9.80665;
+                        _temp["simulation"]['linear-acceleration']['y-la'][y] = _temp_la;
+                    })
+
+                    _temp["simulation"]['linear-acceleration']['z-la'].forEach((la, z) => {
+                        var _temp_la = parseFloat(la) * 9.80665;
+                        _temp["simulation"]['linear-acceleration']['z-la'][z] = _temp_la;
+                    })
                 }
 
-                new_items_array[i] = _temp;
+                _temp_sensor_data["simulation"]["linear-acceleration"]['xv'] = _temp["simulation"]['linear-acceleration']['x-la'];
+                _temp_sensor_data["simulation"]["linear-acceleration"]['xt'] = _temp["simulation"]['time'];
+                _temp_sensor_data["simulation"]["linear-acceleration"]['yv'] = _temp["simulation"]['linear-acceleration']['y-la'];
+                _temp_sensor_data["simulation"]["linear-acceleration"]['yt'] = _temp["simulation"]['time'];
+                _temp_sensor_data["simulation"]["linear-acceleration"]['zv'] = _temp["simulation"]['linear-acceleration']['z-la'];
+                _temp_sensor_data["simulation"]["linear-acceleration"]['zt'] = _temp["simulation"]['time'];
+
+                _temp_sensor_data["simulation"]["angular-acceleration"]['xv'] = _temp["simulation"]['angular-acceleration']['x-aa-rad/s^2'];
+                _temp_sensor_data["simulation"]["angular-acceleration"]['xt'] = _temp["simulation"]['time'];
+                _temp_sensor_data["simulation"]["angular-acceleration"]['yv'] = _temp["simulation"]['angular-acceleration']['y-aa-rad/s^2'];
+                _temp_sensor_data["simulation"]["angular-acceleration"]['yt'] = _temp["simulation"]['time'];
+                _temp_sensor_data["simulation"]["angular-acceleration"]['zv'] = _temp["simulation"]['angular-acceleration']['z-aa-rad/s^2'];
+                _temp_sensor_data["simulation"]["angular-acceleration"]['zt'] = _temp["simulation"]['time'];
+         
+                _temp_sensor_data["user_cognito_id"] = req.body.user_cognito_id;
+                _temp_sensor_data["image_id"] = shortid.generate();
+                _temp_sensor_data["player_id"] = _temp["player_id"] + '$' + Date.now();
+                _temp_sensor_data["simulation_status"] = 'pending';
+                _temp_sensor_data["team"] = _temp.player.team;
+              
+                if (_temp_sensor_data["sensor"] === 'prevent') {
+                    _temp_sensor_data['mesh-transformation'] = [ "-y", "z", "-x" ];
+                    _temp_sensor_data['maximum-time'] = 49.6875;
+                }
+
+                if (_temp_sensor_data["sensor"] === 'sensor_company_x') {
+                    _temp_sensor_data['mesh-transformation'] = ["-z", "x", "-y" ];
+                    _temp_sensor_data['maximum-time'] = 49.6875;
+                }
+
+                if (_temp_sensor_data["sensor"] === 'sisu') {
+                    _temp_sensor_data['mesh-transformation'] = ["-z", "-x", "-y"];
+                    _temp_sensor_data['maximum-time'] = 40.0;
+                }
+
+                sensor_data_array.push(_temp_sensor_data);
 
             }
-            console.log('New items array is ', new_items_array);
+            console.log('new_items_array is ', (sensor_data_array));
 
             // Stores sensor data in db 
             // TableName: "sensor_data"
             // team, player_id
 
-            storeSensorData(new_items_array)
+            storeSensorData(sensor_data_array)
                 .then(flag => {
-
-                    var players = new_items_array.map(function (player) {
+                    var players = sensor_data_array.map(function (player) {
                         return {
                             player_id: player.player_id.split("$")[0],
                             team: player.player.team,
@@ -282,7 +370,7 @@ if (cluster.isMaster) {
                             var temp = result[i];
 
                             // Adds team details in db if doesn't already exist
-                            addPlayerToTeamInDDB(temp.organization, temp.team, temp.player_id)
+                            addPlayerToTeamOfOrganization(req.body.user_cognito_id, temp.organization, temp.team, temp.player_id)
                                 .then(d => {
                                     counter++;
                                     if (counter == result.length) {
@@ -290,7 +378,7 @@ if (cluster.isMaster) {
                                         // Generate simulation for player
                                         uploadPlayerSelfieIfNotPresent(req.body.selfie, temp.player_id, req.body.filename)
                                             .then((selfieDetails) => {
-                                                return generateSimulationForPlayersFromJson(new_items_array);
+                                                return generateSimulationForPlayersFromJson(sensor_data_array, apiMode);
                                             })
                                             .then(urls => {
                                                 simulation_result_urls.push(urls)
@@ -321,7 +409,14 @@ if (cluster.isMaster) {
                                 })
                         }
                     }
-                })              
+                }) 
+                .catch(err => {
+                    console.log(err);
+                    res.send({
+                        message: "failure",
+                        error: err
+                    })
+                })            
         } else {
             if (sensor === null || sensor === '') {
                 res.send({
@@ -343,15 +438,17 @@ if (cluster.isMaster) {
                     // Adding image id in array data
                     for (var i = 0; i < new_items_array.length; i++) {
                         var _temp = new_items_array[i];
+                        _temp["user_cognito_id"] = req.body.user_cognito_id;
                         _temp["image_id"] = shortid.generate();
-                        _temp["first-name"] = "Test";
-                        _temp["last-name"] = "Test";
-                        _temp["sport"] = "Test";
-                        _temp["position"] = "Test";
-
+                        _temp['player'] = {};
+                        _temp['player']['first-name'] = "Unknown";
+                        _temp['player']['last-name'] = "Unknown";
+                        _temp['player']['sport'] = "Unknown";
+                        _temp['player']['position'] = "Unknown";
                         if (reader == 1) {
                             _temp["team"] = config_env.queue_x;
                         }
+                        _temp['player']['team'] = _temp.team;
                         new_items_array[i] = _temp;
 
                     }
@@ -394,7 +491,7 @@ if (cluster.isMaster) {
                                     var temp = result[i];
 
                                     // Adds team details in db if doesn't already exist
-                                    addPlayerToTeamInDDB(temp.organization, temp.team, temp.player_id)
+                                    addPlayerToTeamOfOrganization(req.body.user_cognito_id, temp.organization, temp.team, temp.player_id)
                                         .then(d => {
                                             counter++;
                                             if (counter == result.length) {
@@ -402,7 +499,7 @@ if (cluster.isMaster) {
                                                 // Generate simulation for player
                                                 uploadPlayerSelfieIfNotPresent(req.body.selfie, temp.player_id, req.body.filename)
                                                     .then((selfieDetails) => {
-                                                        return generateSimulationForPlayers(new_items_array, reader);
+                                                        return generateSimulationForPlayers(new_items_array, reader, apiMode);
                                                     })
                                                     .then(urls => {
                                                         simulation_result_urls.push(urls)
@@ -729,31 +826,35 @@ if (cluster.isMaster) {
 
     app.post(`${apiPrefix}getCumulativeAccelerationData`, function (req, res) {
         console.log(req.body);
+        // getCumulativeAccelerationData(req.body)
+        //     .then(data => {
+        //         let linear_accelerations = data.map(function (impact_data) {
+        //             return impact_data.linear_acceleration_pla
+        //         });
+
+        //         let angular_accelerations = data.map(function (impact_data) {
+        //             return impact_data.angular_acceleration_paa
+        //         });
+        //         var sorted_acceleration_data = customInsertionSortForGraphData(angular_accelerations, linear_accelerations)
+        //         res.send({
+        //             message: "success",
+        //             data: {
+        //                 linear_accelerations: sorted_acceleration_data.array_X,
+        //                 angular_accelerations: sorted_acceleration_data.array_Y
+        //             }
+        //         })
+        //     })
         getCumulativeAccelerationData(req.body)
             .then(data => {
-                let linear_accelerations = data.map(function (impact_data) {
-                    return impact_data.linear_acceleration_pla
-                });
-
-                let angular_accelerations = data.map(function (impact_data) {
-                    return impact_data.angular_acceleration_paa
-                });
-                var sorted_acceleration_data = customInsertionSortForGraphData(angular_accelerations, linear_accelerations)
                 res.send({
                     message: "success",
-                    data: {
-                        linear_accelerations: sorted_acceleration_data.array_X,
-                        angular_accelerations: sorted_acceleration_data.array_Y
-                    }
+                    data: data[0]
                 })
             })
             .catch(err => {
                 res.send({
                     message: "failure",
-                    data: {
-                        linear_accelerations: [],
-                        angular_accelerations: []
-                    },
+                    data: {},
                     error: err
                 })
             })
@@ -763,8 +864,9 @@ if (cluster.isMaster) {
 
         getPlayersListFromTeamsDB(req.body)
             .then(data => {
-                console.log(data.player_list);
-                if (data.player_list.length == 0) {
+                console.log(data[0].player_list);
+                let player_list = data[0].player_list;
+                if (player_list.length == 0) {
                     res.send({
                         message: "success",
                         data: []
@@ -773,34 +875,50 @@ if (cluster.isMaster) {
                 else {
                     var counter = 0;
                     var p_data = [];
-                    data.player_list.forEach(function (player, index) {
+                    player_list.forEach(function (player, index) {
                         let p = player;
                         let i = index;
-                        getTeamDataWithPlayerRecords({ player_id: p, team: req.body.team_name })
+                        let playerData = '';
+                        let imageData = '';
+                        getTeamDataWithPlayerRecords({ player_id: p, team: req.body.team_name, user_cognito_id: req.body.user_cognito_id, organization: req.body.organization })
                             .then(player_data => {
+                               playerData = player_data;
+                               return getPlayerSimulationFile(player_data[0]);
+                            })
+                            .then(image_data => {
+                                imageData = image_data;
+                                if (image_data.path && image_data.path != 'null')
+                                    return getImageFromS3(image_data);
+                            })
+                            .then(image_s3 => {
+                                if (imageData.path && imageData.path != 'null')
+                                    return getImageFromS3Buffer(image_s3);
+                            })     
+                            .then(image => {
                                 counter++;
                                 p_data.push({
                                     player_name: p,
-                                    simulation_data: player_data
+                                    simulation_image: image ? image : '',
+                                    simulation_data: playerData
                                 });
 
-                                if (counter == data.player_list.length) {
+                                if (counter == player_list.length) {
                                     res.send({
                                         message: "success",
                                         data: p_data
                                     })
                                 }
                             })
-                            .catch(err => {
-                                console.log(err);
-                                counter++;
-                                if (counter == data.player_list.length) {
-                                    res.send({
-                                        message: "failure",
-                                        data: p_data
-                                    })
-                                }
-                            })
+                            // .catch(err => {
+                            //     console.log(err);
+                            //     counter++;
+                            //     if (counter == player_list.length) {
+                            //         res.send({
+                            //             message: "failure",
+                            //             data: p_data
+                            //         })
+                            //     }
+                            // })
                     })
                 }
             })
@@ -851,23 +969,56 @@ if (cluster.isMaster) {
         getCumulativeAccelerationData(req.body)
             .then(data => {
                 var acceleration_data_list = [];
+                let cnt = 1;
                 data.forEach(function (acc_data) {
-
-                    // X- Axis Linear Acceleration
-                    let max_acceleration = [0, acc_data.linear_acceleration_pla, 0];
-                    // Y Axis timestamp
-                    let time = [0, 20, 40];
-                    acceleration_data_list.push({
-                        max_linear_acceleration: max_acceleration,
-                        time: time,
-                        timestamp: acc_data.timestamp,
-                        record_time: acc_data.time
+                    let accData = acc_data;
+                    let imageData = '';
+                    getPlayerSimulationFile(acc_data)
+                    // .then(image_data => {
+                    //     return getImageFromS3(image_data);
+                    // })
+                    // .then(image_s3 => {
+                    //     return getImageFromS3Buffer(image_s3);
+                    // })
+                    .then(image_data => {
+                        imageData = image_data;
+                        if (image_data.path && image_data.path != 'null')
+                            return getImageFromS3(image_data);
                     })
+                    .then(image_s3 => {
+                        if (imageData.path && imageData.path != 'null')
+                            return getImageFromS3Buffer(image_s3);
+                    })
+                    .then(image => {
+                        console.log(accData);
+                        // X- Axis Linear Acceleration
+                        let linear_acceleration = accData.player.position !== 'Unknown' ? accData.simulation['linear-acceleration'] : accData['linear-acceleration'];
+                        // X- Axis Angular Acceleration
+                        let angular_acceleration = accData.player.position !== 'Unknown' ? accData.simulation['angular-acceleration'] : accData['angular-acceleration'];
+                        // Y Axis timestamp
+                        let time = accData.player.position !== 'Unknown' ? accData.simulation['linear-acceleration']['xt'] : accData['linear-acceleration']['xt'];
+                        acceleration_data_list.push({
+                            linear_acceleration: linear_acceleration,
+                            angular_acceleration: angular_acceleration,
+                            time: time,
+                            simulation_image: image ? image : '',
+                            timestamp: accData.date,
+                            record_time: accData.time,
+                            sensor_data: accData
+                        })
+
+                        if (data.length === cnt) {
+                            res.send({
+                                message: "success",
+                                data: acceleration_data_list
+                            })
+                        }
+
+                        cnt++;
+                    })
+                    
                 })
-                res.send({
-                    message: "success",
-                    data: acceleration_data_list
-                })
+               
             })
             .catch(err => {
                 res.send({
@@ -1007,7 +1158,7 @@ if (cluster.isMaster) {
 
                     return (!("team_list" in team));
                 });
-                let counter = 0;
+                let counter = 1;
                 if (teamList.length == 0) {
                     res.send({
                         message: "success",
@@ -1067,6 +1218,153 @@ if (cluster.isMaster) {
                     error: err
                 })
             })
+    })
+
+    app.post(`${apiPrefix}getAllSensorBrands`, function (req, res) {
+        getAllSensorBrands()
+        .then(list => {
+
+            var brandList = list.filter(function (brand) {
+                return (!("brandList" in brand));
+            });
+
+            let counter = 0;
+            if (brandList.length == 0) {
+                res.send({
+                    message: "success",
+                    data: []
+                })
+            } else {
+                brandList.forEach(function (brand, index) {
+                    let data = brand;
+                    let i = index;
+                    // console.log(data.user_cognito_id);
+                    getBrandData({ user_cognito_id: data.user_cognito_id })
+                        .then(simulation_records => {
+                            counter++;
+                            brand["simulation_count"] = Number(simulation_records.length).toString();
+
+                            if (counter == brandList.length) {
+                                res.send({
+                                    message: "success",
+                                    data: brandList
+                                })
+                            }
+                        })
+                        .catch(err => {
+                           counter++
+                            if (counter == brandList.length) {
+                                res.send({
+                                    message: "failure",
+                                    error: err
+                                })
+                            }
+                        })
+                })
+            }
+        })
+        .catch(err => {
+            res.send({
+                message: "failure",
+                error: err
+            })
+        })
+    })
+
+    app.post(`${apiPrefix}getAllOrganizationsOfSensorBrand`, function (req, res) {
+       getAllOrganizationsOfSensorBrand(req.body)
+        .then(list => {
+            // console.log(list);
+            let uniqueList = [];
+            var orgList = list.filter(function (organization) {
+                if (uniqueList.indexOf(organization.organization) === -1) {
+                    uniqueList.push(organization.organization);
+                    return organization;
+                }
+            });
+
+            let counter = 0;
+            if (orgList.length == 0) {
+                res.send({
+                    message: "success",
+                    data: []
+                })
+            } else {
+                orgList.forEach(function (org, index) {
+                    let data = org;
+                    let i = index;
+                    getBrandOrganizationData({ user_cognito_id: data.user_cognito_id, organization: data.organization })
+                        .then(simulation_records => {
+                            counter++;
+                            org["simulation_count"] = Number(simulation_records.length).toString();
+
+                            if (counter == orgList.length) {
+                                res.send({
+                                    message: "success",
+                                    data: orgList
+                                })
+                            }
+                        })
+                        .catch(err => {
+                           counter++
+                            if (counter == brandList.length) {
+                                res.send({
+                                    message: "failure",
+                                    error: err
+                                })
+                            }
+                        })
+                })
+            }
+        })    
+    })
+
+    app.post(`${apiPrefix}getAllteamsOfOrganizationOfSensorBrand`, function (req, res) {
+        getAllTeamsOfOrganizationsOfSensorBrand(req.body)
+        .then(list => {
+            // console.log(list);
+            let uniqueList = [];
+            var teamList = list.filter(function (team_name) {
+                return (!("teamList" in team_name));
+            });
+
+            console.log(teamList);
+
+            let counter = 0;
+            if (teamList.length == 0) {
+                res.send({
+                    message: "success",
+                    data: []
+                })
+            } else {
+                teamList.forEach(function (team, index) {
+                    let data = team;
+                    let i = index;
+                    getOrganizationTeamData({ user_cognito_id: data.user_cognito_id, organization: data.organization, team: data.team_name})
+                        .then(simulation_records => {
+                            counter++;
+                            team["simulation_count"] = Number(simulation_records.length).toString();
+
+                            if (counter == teamList.length) {
+                                console.log(teamList);
+                                res.send({
+                                    message: "success",
+                                    data: teamList
+                                })
+                            }
+                        })
+                        .catch(err => {
+                           counter++
+                            if (counter == brandList.length) {
+                                res.send({
+                                    message: "failure",
+                                    error: err
+                                })
+                            }
+                        })
+                })
+            }
+        })    
     })
 
     // Configuring port for APP
@@ -1585,5 +1883,34 @@ if (cluster.isMaster) {
         return new Buffer(bitmap).toString('base64');
     }
 
+    function getImageFromS3(image_record){
+        return new Promise((resolve, reject) =>{
+            var params = {
+                Bucket: config_env.usersbucket,
+                Key: image_record.path
+            };
+            s3.getObject(params, function(err, data) {
+                if (err) {
+                    reject(err)
+                }
+                else{
+                    resolve(data);
+                }
+            });
+        })
+    }
+
+    function getImageFromS3Buffer(image_data){
+        return new Promise((resolve, reject) => {
+            console.log(image_data.Body);
+                try{
+                    resolve(image_data.Body.toString('base64'))
+                }
+                catch (e){
+                    reject(e)
+                }
+    
+        })
+    }
 
 }

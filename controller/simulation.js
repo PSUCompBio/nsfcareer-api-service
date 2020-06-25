@@ -11,7 +11,7 @@ const AWS = require('aws-sdk'),
 
 const {
     storeSensorData,
-    addPlayerToTeamInDDB,
+    addPlayerToTeamOfOrganization,
     checkIfSelfiePresent,
     updateSelfieAndModelStatusInDB,
     updateSimulationImageToDDB,
@@ -157,6 +157,18 @@ function groupSensorDataForY(arr, filename) {
         if (curr_time > max_time)
             max_time = curr_time;
 
+        arr[i]["PLA"]['X']['msec^2'] = arr[i]["PLA"]['X']['msec^2'] && arr[i]["PLA"]['X']['msec^2'] != '' ? arr[i]["PLA"]['X']['msec^2'] : 0
+        arr[i]["PLA"]['Y']['msec^2'] = arr[i]["PLA"]['Y']['msec^2'] && arr[i]["PLA"]['Y']['msec^2'] != '' ? arr[i]["PLA"]['Y']['msec^2'] : 0
+        arr[i]["PLA"]['Z']['msec^2'] = arr[i]["PLA"]['Z']['msec^2'] && arr[i]["PLA"]['Z']['msec^2'] != '' ? arr[i]["PLA"]['Z']['msec^2'] : 0
+
+        arr[i]['PAV']['X']['radsec'] = arr[i]['PAV']['X']['radsec'] && arr[i]['PAV']['X']['radsec'] != '' ? arr[i]['PAV']['X']['radsec'] : 0
+        arr[i]['PAV']['Y']['radsec'] = arr[i]['PAV']['Y']['radsec'] && arr[i]['PAV']['Y']['radsec'] != '' ? arr[i]['PAV']['Y']['radsec'] : 0
+        arr[i]['PAV']['Z']['radsec'] = arr[i]['PAV']['Z']['radsec'] && arr[i]['PAV']['Z']['radsec'] != '' ? arr[i]['PAV']['Z']['radsec'] : 0
+
+        arr[i]['PAA']['X']['radsec^2'] = arr[i]['PAA']['X']['radsec^2'] && arr[i]['PAA']['X']['radsec^2'] != '' ? arr[i]['PAA']['X']['radsec^2'] : 0
+        arr[i]['PAA']['Y']['radsec^2'] = arr[i]['PAA']['Y']['radsec^2'] && arr[i]['PAA']['Y']['radsec^2'] != '' ? arr[i]['PAA']['Y']['radsec^2'] : 0
+        arr[i]['PAA']['Z']['radsec^2'] = arr[i]['PAA']['Z']['radsec^2'] && arr[i]['PAA']['Z']['radsec^2'] != '' ? arr[i]['PAA']['Z']['radsec^2'] : 0
+
         data['linear-acceleration']['xv'].push(parseFloat(arr[i]["PLA"]['X']['msec^2']))
         data['linear-acceleration']['xt'].push(curr_time)
         data['linear-acceleration']['yv'].push(parseFloat(arr[i]['PLA']['Y']['msec^2']))
@@ -192,9 +204,26 @@ function groupSensorData(arr) {
 
         var key = data_point['Session ID'] + '$' + data_point['Player ID'] + '$' + data_point['Date'];
 
+        data_point['Sample Num'] = data_point['Sample Num'] && data_point['Sample Num'] != '' ? data_point['Sample Num'] : 0
+        data_point['Linear Acc x g'] = data_point['Linear Acc x g'] && data_point['Linear Acc x g'] != '' ? data_point['Linear Acc x g'] : 0
+        data_point['Linear Acc y g'] = data_point['Linear Acc y g'] && data_point['Linear Acc y g'] != '' ? data_point['Linear Acc y g'] : 0
+        data_point['Linear Acc z g'] = data_point['Linear Acc z g'] && data_point['Linear Acc z g'] != '' ? data_point['Linear Acc z g'] : 0
+
+        data_point['Angular Acc x rad/s2'] = data_point['Angular Acc x rad/s2'] && data_point['Angular Acc x rad/s2'] != '' ? data_point['Angular Acc x rad/s2'] : 0
+        data_point['Angular Acc y rad/s2'] = data_point['Angular Acc y rad/s2'] && data_point['Angular Acc y rad/s2'] != '' ? data_point['Angular Acc y rad/s2'] : 0
+        data_point['Angular Acc z rad/s2'] = data_point['Angular Acc z rad/s2'] && data_point['Angular Acc z rad/s2'] != '' ? data_point['Angular Acc z rad/s2'] : 0
+        
+        data_point['Angular Vel x rad/s'] = data_point['Angular Vel x rad/s'] && data_point['Angular Vel x rad/s'] != '' ? data_point['Angular Vel x rad/s'] : 0
+        data_point['Angular Vel y rad/s2'] = data_point['Angular Vel y rad/s2'] && data_point['Angular Vel y rad/s2'] != '' ? data_point['Angular Vel y rad/s2'] : 0
+        data_point['Angular Vel z rad/s'] = data_point['Angular Vel z rad/s'] && data_point['Angular Vel z rad/s'] != '' ? data_point['Angular Vel z rad/s'] : 0
+
+        data_point['Linear Acc Mag g'] = data_point['Linear Acc Mag g'] && data_point['Linear Acc Mag g'] != '' ? data_point['Linear Acc Mag g'] : 0
+        data_point['Angular Vel Mag rad/s'] = data_point['Angular Vel Mag rad/s'] && data_point['Angular Vel Mag rad/s'] != '' ? data_point['Angular Vel Mag rad/s'] : 0
+        data_point['Angular Acc Mag rad/s2'] = data_point['Angular Acc Mag rad/s2'] && data_point['Angular Acc Mag rad/s2'] != '' ? data_point['Angular Acc Mag rad/s2'] : 0
+
         if (!helper[key]) {
             helper[key] = {
-                'date': data_point['Date'],
+                'date': data_point['Date'] && data_point['Date'] != '' ? data_point['Date'] : '2020-01-01',
                 'time': data_point['Time'],
                 'session_id': data_point['Session ID'],
                 'player_id': data_point['Player ID'] + '$' + Date.now(),
@@ -218,11 +247,11 @@ function groupSensorData(arr) {
                 },
                 'angular-velocity': {
                     'xt': [parseFloat(data_point['Sample Num'])],
-                    'xv': [data_point['Angular Vel x rad/s']],
+                    'xv': [parseFloat(data_point['Angular Vel x rad/s'])],
                     'yt': [parseFloat(data_point['Sample Num'])],
-                    'yv': [data_point['Angular Vel y rad/s2']],
+                    'yv': [parseFloat(data_point['Angular Vel y rad/s2'])],
                     'zt': [parseFloat(data_point['Sample Num'])],
-                    'zv': [data_point['Angular Vel z rad/s']]
+                    'zv': [parseFloat(data_point['Angular Vel z rad/s'])]
                 },
                 'linear-acceleration-mag': [parseFloat(data_point['Linear Acc Mag g'])],
                 'angular-velocity-mag': [parseFloat(data_point['Angular Vel Mag rad/s'])],
@@ -244,11 +273,11 @@ function groupSensorData(arr) {
 
             helper[key]['linear-acceleration-mag'].push(parseFloat(data_point['Linear Acc Mag g']))
 
-            helper[key]['angular-velocity']['xv'].push(data_point['Angular Vel x rad/s'])
+            helper[key]['angular-velocity']['xv'].push(parseFloat(data_point['Angular Vel x rad/s']))
             helper[key]['angular-velocity']['xt'].push(parseFloat(data_point['Sample Num']))
-            helper[key]['angular-velocity']['yv'].push(data_point['Angular Vel y rad/s'])
+            helper[key]['angular-velocity']['yv'].push(parseFloat(data_point['Angular Vel y rad/s']))
             helper[key]['angular-velocity']['yt'].push(parseFloat(data_point['Sample Num']))
-            helper[key]['angular-velocity']['zv'].push(data_point['Angular Vel z rad/s'])
+            helper[key]['angular-velocity']['zv'].push(parseFloat(data_point['Angular Vel z rad/s']))
             helper[key]['angular-velocity']['zt'].push(parseFloat(data_point['Sample Num']))
             helper[key]['angular-velocity-mag'].push(parseFloat(data_point['Angular Vel Mag rad/s']))
 
@@ -857,7 +886,7 @@ function generateParametersFileFromStl(obj) {
     })
 }
 
-function generateSimulationForPlayers(player_data_array, reader) {
+function generateSimulationForPlayers(player_data_array, reader, apiMode) {
     return new Promise((resolve, reject) => {
         var counter = 0;
         var simulation_result_urls = [];
@@ -898,9 +927,9 @@ function generateSimulationForPlayers(player_data_array, reader) {
                                     "mesh": "coarse_brain.inp",
                                     "linear-acceleration": [0.0, 0.0, 0.0],
                                     "angular-acceleration": 0.0,
-                                    "time-peak-acceleration": 2.0e-2,
+                                    //"time-peak-acceleration": 2.0e-2,
                                     "maximum-time": 4.0e-2,
-                                    "impact-point": ""
+                                    //"impact-point": ""
                                 }
                             }
                             if (cg_coordinates) {
@@ -915,11 +944,11 @@ function generateSimulationForPlayers(player_data_array, reader) {
                             if (reader == 1 || reader == 2) {
                                 
                                 playerData["sensor"] = _temp_player.sensor;
-                                playerData["player"]["first-name"] = _temp_player['first-name'];
-                                playerData["player"]["last-name"] = _temp_player['last-name'];
-                                playerData["player"]["sport"] = _temp_player.sport;
-                                playerData["player"]["team"] = _temp_player.team;
-                                playerData["player"]["position"] = _temp_player.position;
+                                playerData["player"]["first-name"] = _temp_player.player['first-name']
+                                playerData["player"]["last-name"] = _temp_player.player['last-name'];
+                                playerData["player"]["sport"] = _temp_player.player.sport;
+                                playerData["player"]["team"] = _temp_player.player.team;
+                                playerData["player"]["position"] = _temp_player.player.position;
                                 playerData["simulation"]["linear-acceleration"] = _temp_player['linear-acceleration'];
                                 playerData["simulation"]["angular-acceleration"] = _temp_player['angular-acceleration'];
                     
@@ -934,7 +963,7 @@ function generateSimulationForPlayers(player_data_array, reader) {
                                 playerData["player"]["position"] = _temp_player.position.toLowerCase();
                                 playerData["simulation"]["linear-acceleration"][0] = _temp_player.linear_acceleration_pla;
                                 playerData["simulation"]["angular-acceleration"] = _temp_player.angular_acceleration_paa;
-                                playerData["simulation"]["impact-point"] = _temp_player.impact_location_on_head.toLowerCase().replace(/ /g, "-");
+                                //playerData["simulation"]["impact-point"] = _temp_player.impact_location_on_head.toLowerCase().replace(/ /g, "-");
 
                             }
 
@@ -962,7 +991,7 @@ function generateSimulationForPlayers(player_data_array, reader) {
                                 upload_simulation_data(simulation_data)
                                     .then(job => {
                                         // Submitting simulation job
-                                        return submitJobsToBatch(simulation_data, job.job_id, job.path);
+                                        return submitJobsToBatch(simulation_data, job.job_id, job.path, apiMode);
                                     })
                                     .then(value => {
                                         resolve(simulation_result_urls);
@@ -993,7 +1022,7 @@ function generateSimulationForPlayers(player_data_array, reader) {
     })
 }
 
-function generateSimulationForPlayersFromJson(player_data_array) {
+function generateSimulationForPlayersFromJson(player_data_array, apiMode) {
     return new Promise((resolve, reject) => {
         var counter = 0;
         var simulation_result_urls = [];
@@ -1030,29 +1059,44 @@ function generateSimulationForPlayersFromJson(player_data_array) {
                                     "position": ""
                                 },
                                 "sensor": "",
+                                "impact-date": "",
+                                "impact-time": "",
+                                "player_id": "",
+                                "organization": "",
                                 "simulation": {
                                     "mesh": "coarse_brain.inp",
+                                    "time": "",
+                                    "time-units": "",
                                     "linear-acceleration": [0.0, 0.0, 0.0],
-                                    "angular-acceleration": 0.0,
-                                    "time-peak-acceleration": 2.0e-2,
+                                    "angular-acceleration": [0.0, 0.0, 0.0],
+                                    //"time-peak-acceleration": 2.0e-2,
                                     "maximum-time": 4.0e-2,
                                     "head-cg": [0, -0.3308, -0.037],
-                                    "impact-point": ""
+                                    //"impact-point": ""
                                 }
                             }
 
                             playerData["uid"] = _temp_player.player_id.split("$")[0].replace(/ /g, "-") + '_' + _temp_player.image_id;
+                            playerData["sensor"] = _temp_player.sensor;
+                            playerData["impact-date"] = _temp_player['impact-date'].split(":").join("-");
+                            playerData["impact-time"] = _temp_player['impact-time'];
+                            playerData["player_id"] = _temp_player.player_id.split("$")[0].split(" ").join("-")
+                            playerData["organization"] = _temp_player.organization;
+
                             playerData["player"]["first-name"] = _temp_player.player['first-name'];
                             playerData["player"]["last-name"] = _temp_player.player['last-name'];
                             playerData["player"]["sport"] = _temp_player.player.sport;
                             playerData["player"]["team"] = _temp_player.player.team;
                             playerData["player"]["position"] = _temp_player.player.position;
-                            playerData["sensor"] = _temp_player.sensor;
-
+                            
+                            playerData["simulation"]["time"] = _temp_player.simulation.time;
+                            playerData["simulation"]["time-units"] = _temp_player.simulation['time-units'];
                             playerData["simulation"]["linear-acceleration"] = _temp_player.simulation['linear-acceleration'];
                             playerData["simulation"]["angular-acceleration"] = _temp_player.simulation['angular-acceleration'];
-                            playerData["simulation"]["maximum-time"] = parseFloat(_temp_player.simulation['linear-acceleration']['xt'][_temp_player.simulation['linear-acceleration']['xt'].length - 1]);
+                            //playerData["simulation"]["maximum-time"] = parseFloat(_temp_player.simulation['linear-acceleration']['xt'][_temp_player.simulation['linear-acceleration']['xt'].length - 1]);
+                            playerData["simulation"]["maximum-time"] = _temp_player["maximum-time"];
                             playerData["simulation"]["mesh-transformation"] = _temp_player['mesh-transformation'];
+
                             if (cg_coordinates) {
                                 playerData.simulation["head-cg"] = (cg_coordinates.length == 0) ? [0, -0.3308, -0.037] : cg_coordinates.map(function (x) { return parseFloat(x) });
                             }
@@ -1063,7 +1107,7 @@ function generateSimulationForPlayersFromJson(player_data_array) {
                                 "image_id": _temp_player.image_id,
                                 "image_token": image_token,
                                 "token_secret": token_secret,
-                                "date": _temp_player.date.split("/").join("-"),
+                                "date": _temp_player['impact-date'].split(":").join("-"),
                                 "player_id": _temp_player.player_id.split("$")[0].split(" ").join("-")
                             }
 
@@ -1081,7 +1125,7 @@ function generateSimulationForPlayersFromJson(player_data_array) {
                                 upload_simulation_data(simulation_data)
                                     .then(job => {
                                         // Submitting simulation job
-                                        return submitJobsToBatch(simulation_data, job.job_id, job.path);
+                                        return submitJobsToBatch(simulation_data, job.job_id, job.path, apiMode);
                                     })
                                     .then(value => {
                                         resolve(simulation_result_urls);
@@ -1146,13 +1190,13 @@ function generateJWTokenWithNoExpiry(obj, secret) {
     })
 }
 
-function submitJobsToBatch(simulation_data, job_name, file_path) {
+function submitJobsToBatch(simulation_data, job_name, file_path, apiMode) {
     return new Promise((resolve, reject) => {
         const array_size = simulation_data.length;
         let simulation_params = {
-            jobDefinition: config.jobDefinition, /* required */
+            jobDefinition: apiMode === 'production' ? config.jobDefinitionProduction : config.jobDefinitionBeta, /* required */
             jobName: job_name, /* required */
-            jobQueue: config.jobQueue, /* required */
+            jobQueue: apiMode === 'production' ?  config.jobQueueProduction : config.jobQueueBeta, /* required */
             parameters: {
                 'simulation_data': `s3://${config.simulation_bucket}/${file_path}`,
             },
@@ -1165,10 +1209,6 @@ function submitJobsToBatch(simulation_data, job_name, file_path) {
                 ]
             }
         };
-
-        if (config.jobQueue == "beta") {
-            simulation_params.jobDefinition = config.jobDefinitionBeta
-        }
 
         if (array_size > 1) {
             simulation_params['arrayProperties'] = {
@@ -1238,7 +1278,7 @@ function cleanUp(obj) {
 module.exports = {
     convertFileDataToJson,
     storeSensorData,
-    addPlayerToTeamInDDB,
+    addPlayerToTeamOfOrganization,
     uploadPlayerSelfieIfNotPresent,
     generateSimulationForPlayers,
     generateSimulationForPlayersFromJson,
