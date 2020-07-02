@@ -77,8 +77,6 @@ if (cluster.isMaster) {
     // ======================================
     //       CONFIGURING AWS SDK & EXPESS
     // ======================================
-    // Avatar Configuration
-    //
     var config = {
         "awsAccessKeyId": process.env.AWS_ACCESS_KEY_ID,
         "awsSecretAccessKey": process.env.AWS_ACCESS_SECRET_KEY,
@@ -107,7 +105,7 @@ if (cluster.isMaster) {
 
     const subject_signature = fs.readFileSync("data/base64")
 
-    // var config = require('./config/configuration_keys.json');
+    //var config = require('./config/configuration_keys.json');
     var config_env = config;
 
     //AWS.config.loadFromPath('./config/configuration_keys.json');
@@ -1374,7 +1372,7 @@ if (cluster.isMaster) {
     })
 
     // Configuring port for APP
-    const port = process.env.PORT || 5000;
+    const port = process.env.PORT || 3000;
     const server = app.listen(port, function () {
         console.log('Magic happens on ' + port);
     });
