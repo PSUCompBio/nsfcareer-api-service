@@ -105,7 +105,7 @@ if (cluster.isMaster) {
 
     const subject_signature = fs.readFileSync("data/base64")
 
-    //var config = require('./config/configuration_keys.json');
+    // var config = require('./config/configuration_keys.json');
     var config_env = config;
 
     //AWS.config.loadFromPath('./config/configuration_keys.json');

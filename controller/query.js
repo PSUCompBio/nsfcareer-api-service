@@ -871,10 +871,14 @@ function getAllSensorBrands() {
     return new Promise((resolve, reject) => {
         const params = {
             TableName: "users",
-            FilterExpression: "is_sensor_company = :is_sensor_company",
+            FilterExpression:
+                "#user_level = :user_level_value",
             ExpressionAttributeValues: {
-                ":is_sensor_company": true
-            }
+                ":user_level_value": 400,
+            },
+            ExpressionAttributeNames: {
+                "#user_level": "level",
+            },
         };
         var item = [];
         docClient.scan(params).eachPage((err, data, done) => {
