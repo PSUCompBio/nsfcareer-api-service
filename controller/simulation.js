@@ -964,13 +964,14 @@ function generateSimulationForPlayers(player_data_array, reader, apiMode) {
                                     "angular-acceleration": 0.0,
                                     //"time-peak-acceleration": 2.0e-2,
                                     "maximum-time": 4.0e-2,
-                                    //"impact-point": ""
+                                    //"impact-point": "",
+                                    "head-cg": [0, -0.3308, -0.037],
+                                    "angular-sensor-position": [0.025, -0.281, -0.089757]
                                 }
                             }
                             if (cg_coordinates) {
                                 playerData.simulation["head-cg"] = (cg_coordinates.length == 0) ? [0, -0.3308, -0.037] : cg_coordinates.map(function (x) { return parseFloat(x) });
-                            } else {
-                                playerData.simulation["head-cg"] = [0, -0.3308, -0.037]
+                                playerData.simulation["angular-sensor-position"] = (cg_coordinates.length == 0) ? [0.025, -0.281, -0.089757] : cg_coordinates.map(function (x) { return parseFloat(x) });
                             }
 
                             playerData["player"]["name"] = _temp_player.player_id.replace(/ /g, "-");
@@ -1029,6 +1030,7 @@ function generateSimulationForPlayers(player_data_array, reader, apiMode) {
                                         return submitJobsToBatch(simulation_data, job.job_id, job.path, apiMode);
                                     })
                                     .then(value => {
+                                        console.log('simulation_result_urls ', simulation_result_urls);
                                         resolve(simulation_result_urls);
                                     })
                                     .catch(err => {
@@ -1107,7 +1109,8 @@ function generateSimulationForPlayersFromJson(player_data_array, apiMode) {
                                     //"time-peak-acceleration": 2.0e-2,
                                     "maximum-time": 4.0e-2,
                                     "head-cg": [0, -0.3308, -0.037],
-                                    //"impact-point": ""
+                                    //"impact-point": "",
+                                    "angular-sensor-position": [0.025, -0.281, -0.089757]
                                 }
                             }
 
@@ -1134,6 +1137,7 @@ function generateSimulationForPlayersFromJson(player_data_array, apiMode) {
 
                             if (cg_coordinates) {
                                 playerData.simulation["head-cg"] = (cg_coordinates.length == 0) ? [0, -0.3308, -0.037] : cg_coordinates.map(function (x) { return parseFloat(x) });
+                                playerData.simulation["angular-sensor-position"] = (cg_coordinates.length == 0) ? [0.025, -0.281, -0.089757] : cg_coordinates.map(function (x) { return parseFloat(x) });
                             }
                            
                             let temp_simulation_data = {
@@ -1163,6 +1167,7 @@ function generateSimulationForPlayersFromJson(player_data_array, apiMode) {
                                         return submitJobsToBatch(simulation_data, job.job_id, job.path, apiMode);
                                     })
                                     .then(value => {
+                                        console.log('simulation_result_urls ', simulation_result_urls);
                                         resolve(simulation_result_urls);
                                     })
                                     .catch(err => {
@@ -1256,13 +1261,13 @@ function submitJobsToBatch(simulation_data, job_name, file_path, apiMode) {
                 console.log(err, err.stack);
                 reject(err);
             } else {
-                console.log(data);
+                // console.log(data);
                 let cnt = 0;
                 simulation_data.forEach((value) => {
                     let obj = {};
                     obj.image_id = value.image_id;
                     obj.job_id = array_size > 1 ? data.jobId + ':' + value.index : data.jobId;
-                    console.log(obj);
+                    // console.log(obj);
                     updateSimulationData(obj, function (err, dbdata) {
                         if (err) {
                             reject(err);
@@ -1270,6 +1275,7 @@ function submitJobsToBatch(simulation_data, job_name, file_path, apiMode) {
                         else {
                             cnt++;
                             if (cnt === array_size) {
+                                console.log(data);
                                 resolve(data);
                             }
                         }

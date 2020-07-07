@@ -206,7 +206,7 @@ if (cluster.isMaster) {
         let reader = 0;
         let filename = req.body.data_filename !== undefined ? req.body.data_filename : null;
 
-        if (sensor === 'sensor_company_x') {
+        if (sensor === 'sensor_company_x' || sensor === 'SWA' ) {
             reader = 1;
             filename = req.body.data_filename
         }
@@ -314,7 +314,7 @@ if (cluster.isMaster) {
                 if (req.body.sensor_brand === 'Prevent') {
                     _temp_sensor_data['mesh-transformation'] = [ "-y", "z", "-x" ];
                     _temp_sensor_data['maximum-time'] = 49.6875;
-                } else if (req.body.sensor_brand === 'Sensor Company X') {
+                } else if (req.body.sensor_brand === 'Sensor Company X' || req.body.sensor_brand === 'SWA') {
                     _temp_sensor_data['mesh-transformation'] = ["-z", "x", "-y" ];
                     _temp_sensor_data['maximum-time'] = 49.6875;
                 } else if (req.body.sensor_brand === 'SISU') {
