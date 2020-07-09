@@ -261,6 +261,7 @@ if (cluster.isMaster) {
                 _temp_sensor_data["player"] = _temp["player"];
 
                 _temp_sensor_data["simulation"] = {
+                    "la-units" : "",
                     "linear-acceleration" : {},
                     "angular-acceleration" : {}
                 };
@@ -274,28 +275,54 @@ if (cluster.isMaster) {
                     })
                 }
 
+                let x_g = [];
+                let y_g = [];
+                let z_g = [];
+
                 if (_temp["simulation"]['linear-acceleration']['la-units'] === 'g') {
                     _temp["simulation"]['linear-acceleration']['x-la'].forEach((la, x) => {
                         var _temp_la = parseFloat(la) * 9.80665;
                         _temp["simulation"]['linear-acceleration']['x-la'][x] = _temp_la;
+                        x_g.push(_temp_la);
                     })
 
                     _temp["simulation"]['linear-acceleration']['y-la'].forEach((la, y) => {
                         var _temp_la = parseFloat(la) * 9.80665;
                         _temp["simulation"]['linear-acceleration']['y-la'][y] = _temp_la;
+                        y_g.push(_temp_la);
                     })
 
                     _temp["simulation"]['linear-acceleration']['z-la'].forEach((la, z) => {
                         var _temp_la = parseFloat(la) * 9.80665;
                         _temp["simulation"]['linear-acceleration']['z-la'][z] = _temp_la;
+                        z_g.push(_temp_la);
+                    })
+                } else {
+                    _temp["simulation"]['linear-acceleration']['x-la'].forEach((la, x) => {
+                        var _temp_la = parseFloat(la) / 9.80665;
+                        x_g.push(_temp_la);
+                    })
+                    
+                    _temp["simulation"]['linear-acceleration']['y-la'].forEach((la, y) => {
+                        var _temp_la = parseFloat(la) / 9.80665;
+                        y_g.push(_temp_la);
+                    })
+                    
+                    _temp["simulation"]['linear-acceleration']['z-la'].forEach((la, z) => {
+                        var _temp_la = parseFloat(la) / 9.80665;
+                        z_g.push(_temp_la);
                     })
                 }
 
+                _temp_sensor_data["simulation"]["la-units"] = _temp["simulation"]['linear-acceleration']['la-units'];
                 _temp_sensor_data["simulation"]["linear-acceleration"]['xv'] = _temp["simulation"]['linear-acceleration']['x-la'];
+                _temp_sensor_data["simulation"]["linear-acceleration"]['xv-g'] = x_g;
                 _temp_sensor_data["simulation"]["linear-acceleration"]['xt'] = _temp["simulation"]['time'];
                 _temp_sensor_data["simulation"]["linear-acceleration"]['yv'] = _temp["simulation"]['linear-acceleration']['y-la'];
+                _temp_sensor_data["simulation"]["linear-acceleration"]['yv-g'] = y_g;
                 _temp_sensor_data["simulation"]["linear-acceleration"]['yt'] = _temp["simulation"]['time'];
                 _temp_sensor_data["simulation"]["linear-acceleration"]['zv'] = _temp["simulation"]['linear-acceleration']['z-la'];
+                _temp_sensor_data["simulation"]["linear-acceleration"]['zv-g'] = z_g;
                 _temp_sensor_data["simulation"]["linear-acceleration"]['zt'] = _temp["simulation"]['time'];
 
                 _temp_sensor_data["simulation"]["angular-acceleration"]['xv'] = _temp["simulation"]['angular-acceleration']['x-aa-rad/s^2'];
@@ -1387,7 +1414,7 @@ if (cluster.isMaster) {
     })
 
     // Configuring port for APP
-    const port = process.env.PORT || 5000;
+    const port = process.env.PORT || 3000;
     const server = app.listen(port, function () {
         console.log('Magic happens on ' + port);
     });

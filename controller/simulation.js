@@ -23,33 +23,33 @@ const {
 // ======================================
 //       CONFIGURING AWS SDK & EXPESS
 // ======================================
-// var config = {
-//     "awsAccessKeyId": process.env.AWS_ACCESS_KEY_ID,
-//     "awsSecretAccessKey": process.env.AWS_ACCESS_SECRET_KEY,
-//     "avatar3dClientId": process.env.AVATAR_3D_CLIENT_ID,
-//     "avatar3dclientSecret": process.env.AVATAR_3D_CLIENT_SECRET,
-//     "region" : process.env.REGION,
-//     "usersbucket": process.env.USERS_BUCKET,
-//     "apiVersion" : process.env.API_VERSION,
-//     "jwt_secret" : process.env.JWT_SECRET,
-//     "email_id" : process.env.EMAIL_ID,
-//     "mail_list" : process.env.MAIL_LIST,
-//     "ComputeInstanceEndpoint" : process.env.COMPUTE_INSTANCE_ENDPOINT,
-//     "userPoolId": process.env.USER_POOL_ID,
-//     "ClientId" : process.env.CLIENT_ID,
-//     "react_website_url" : process.env.REACT_WEBSITE_URL,
-//     "simulation_result_host_url" : process.env.SIMULATION_RESULT_HOST_URL,
-//     "jobQueueBeta" : process.env.JOB_QUEUE_BETA,
-//     "jobDefinitionBeta" : process.env.JOB_DEFINITION_BETA,
-//     "jobQueueProduction" : process.env.JOB_QUEUE_PRODUCTION,
-//     "jobDefinitionProduction" : process.env.JOB_DEFINITION_PRODUCTION,
-//     "simulation_bucket" : process.env.SIMULATION_BUCKET,
-//     "queue_x" : process.env.QUEUE_X,
-//     "queue_y" : process.env.QUEUE_Y,
-//     "queue_beta" : process.env.QUEUE_BETA
-// };
+var config = {
+    "awsAccessKeyId": process.env.AWS_ACCESS_KEY_ID,
+    "awsSecretAccessKey": process.env.AWS_ACCESS_SECRET_KEY,
+    "avatar3dClientId": process.env.AVATAR_3D_CLIENT_ID,
+    "avatar3dclientSecret": process.env.AVATAR_3D_CLIENT_SECRET,
+    "region" : process.env.REGION,
+    "usersbucket": process.env.USERS_BUCKET,
+    "apiVersion" : process.env.API_VERSION,
+    "jwt_secret" : process.env.JWT_SECRET,
+    "email_id" : process.env.EMAIL_ID,
+    "mail_list" : process.env.MAIL_LIST,
+    "ComputeInstanceEndpoint" : process.env.COMPUTE_INSTANCE_ENDPOINT,
+    "userPoolId": process.env.USER_POOL_ID,
+    "ClientId" : process.env.CLIENT_ID,
+    "react_website_url" : process.env.REACT_WEBSITE_URL,
+    "simulation_result_host_url" : process.env.SIMULATION_RESULT_HOST_URL,
+    "jobQueueBeta" : process.env.JOB_QUEUE_BETA,
+    "jobDefinitionBeta" : process.env.JOB_DEFINITION_BETA,
+    "jobQueueProduction" : process.env.JOB_QUEUE_PRODUCTION,
+    "jobDefinitionProduction" : process.env.JOB_DEFINITION_PRODUCTION,
+    "simulation_bucket" : process.env.SIMULATION_BUCKET,
+    "queue_x" : process.env.QUEUE_X,
+    "queue_y" : process.env.QUEUE_Y,
+    "queue_beta" : process.env.QUEUE_BETA
+};
 
-var config = require('../config/configuration_keys.json'); 
+//var config = require('../config/configuration_keys.json'); 
 var config_env = config;
 const BUCKET_NAME = config_env.usersbucket;
 
@@ -154,10 +154,13 @@ function groupSensorDataForY(arr, filename) {
         'linear-acceleration': {
             'xt': [],
             'xv': [],
+            'xv-g': [],
             'yt': [],
             'yv': [],
+            'yv-g': [],
             'zt': [],
-            'zv': []
+            'zv': [],
+            'zv-g': []
         },
         'angular-acceleration': {
             'xt': [],
@@ -198,10 +201,13 @@ function groupSensorDataForY(arr, filename) {
         arr[i]['PAA']['Z']['radsec^2'] = arr[i]['PAA']['Z']['radsec^2'] && arr[i]['PAA']['Z']['radsec^2'] != '' ? arr[i]['PAA']['Z']['radsec^2'] : 0
 
         data['linear-acceleration']['xv'].push(parseFloat(arr[i]["PLA"]['X']['msec^2']))
+        data['linear-acceleration']['xv-g'].push(parseFloat(arr[i]["PLA"]['X']['msec^2']) / 9.80665)
         data['linear-acceleration']['xt'].push(curr_time)
         data['linear-acceleration']['yv'].push(parseFloat(arr[i]['PLA']['Y']['msec^2']))
+        data['linear-acceleration']['yv-g'].push(parseFloat(arr[i]["PLA"]['Y']['msec^2']) / 9.80665)
         data['linear-acceleration']['yt'].push(curr_time)
         data['linear-acceleration']['zv'].push(parseFloat(arr[i]['PLA']['Z']['msec^2']))
+        data['linear-acceleration']['zv-g'].push(parseFloat(arr[i]["PLA"]['Z']['msec^2']) / 9.80665)
         data['linear-acceleration']['zt'].push(curr_time)
 
         data['angular-velocity']['xv'].push(parseFloat(arr[i]['PAV']['X']['radsec']))
@@ -260,10 +266,13 @@ function groupSensorData(arr) {
                 'linear-acceleration': {
                     'xt': [parseFloat(data_point['Sample Num'])],
                     'xv': [parseFloat(data_point['Linear Acc x g'])],
+                    'xv-g': [parseFloat(data_point['Linear Acc x g']) / 9.80665],
                     'yt': [parseFloat(data_point['Sample Num'])],
                     'yv': [parseFloat(data_point['Linear Acc y g'])],
+                    'yv-g': [parseFloat(data_point['Linear Acc y g']) / 9.80665],
                     'zt': [parseFloat(data_point['Sample Num'])],
-                    'zv': [parseFloat(data_point['Linear Acc z g'])]
+                    'zv': [parseFloat(data_point['Linear Acc z g'])],
+                    'zv-g': [parseFloat(data_point['Linear Acc z g']) / 9.80665]
                 },
                 'angular-acceleration': {
                     'xt': [parseFloat(data_point['Sample Num'])],
@@ -293,10 +302,13 @@ function groupSensorData(arr) {
             // Concat acceleration data
 
             helper[key]['linear-acceleration']['xv'].push(parseFloat(data_point['Linear Acc x g']))
+            helper[key]['linear-acceleration']['xv-g'].push(parseFloat(data_point['Linear Acc x g']) / 9.80665)
             helper[key]['linear-acceleration']['xt'].push(parseFloat(data_point['Sample Num']))
             helper[key]['linear-acceleration']['yv'].push(parseFloat(data_point['Linear Acc y g']))
+            helper[key]['linear-acceleration']['yv-g'].push(parseFloat(data_point['Linear Acc y g']) / 9.80665)
             helper[key]['linear-acceleration']['yt'].push(parseFloat(data_point['Sample Num']))
             helper[key]['linear-acceleration']['zv'].push(parseFloat(data_point['Linear Acc z g']))
+            helper[key]['linear-acceleration']['zv-g'].push(parseFloat(data_point['Linear Acc z g']) / 9.80665)
             helper[key]['linear-acceleration']['zt'].push(parseFloat(data_point['Sample Num']))
 
             helper[key]['linear-acceleration-mag'].push(parseFloat(data_point['Linear Acc Mag g']))
