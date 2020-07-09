@@ -77,35 +77,35 @@ if (cluster.isMaster) {
     // ======================================
     //       CONFIGURING AWS SDK & EXPESS
     // ======================================
-    // var config = {
-    //     "awsAccessKeyId": process.env.AWS_ACCESS_KEY_ID,
-    //     "awsSecretAccessKey": process.env.AWS_ACCESS_SECRET_KEY,
-    //     "avatar3dClientId": process.env.AVATAR_3D_CLIENT_ID,
-    //     "avatar3dclientSecret": process.env.AVATAR_3D_CLIENT_SECRET,
-    //     "region" : process.env.REGION,
-    //     "usersbucket": process.env.USERS_BUCKET,
-    //     "apiVersion" : process.env.API_VERSION,
-    //     "jwt_secret" : process.env.JWT_SECRET,
-    //     "email_id" : process.env.EMAIL_ID,
-    //     "mail_list" : process.env.MAIL_LIST,
-    //     "ComputeInstanceEndpoint" : process.env.COMPUTE_INSTANCE_ENDPOINT,
-    //     "userPoolId": process.env.USER_POOL_ID,
-    //     "ClientId" : process.env.CLIENT_ID,
-    //     "react_website_url" : process.env.REACT_WEBSITE_URL,
-    //     "simulation_result_host_url" : process.env.SIMULATION_RESULT_HOST_URL,
-    //     "jobQueueBeta" : process.env.JOB_QUEUE_BETA,
-    //     "jobDefinitionBeta" : process.env.JOB_DEFINITION_BETA,
-    //     "jobQueueProduction" : process.env.JOB_QUEUE_PRODUCTION,
-    //     "jobDefinitionProduction" : process.env.JOB_DEFINITION_PRODUCTION,
-    //     "simulation_bucket" : process.env.SIMULATION_BUCKET,
-    //     "queue_x" : process.env.QUEUE_X,
-    //     "queue_y" : process.env.QUEUE_Y,
-    //     "queue_beta" : process.env.QUEUE_BETA
-    // };
+    var config = {
+        "awsAccessKeyId": process.env.AWS_ACCESS_KEY_ID,
+        "awsSecretAccessKey": process.env.AWS_ACCESS_SECRET_KEY,
+        "avatar3dClientId": process.env.AVATAR_3D_CLIENT_ID,
+        "avatar3dclientSecret": process.env.AVATAR_3D_CLIENT_SECRET,
+        "region" : process.env.REGION,
+        "usersbucket": process.env.USERS_BUCKET,
+        "apiVersion" : process.env.API_VERSION,
+        "jwt_secret" : process.env.JWT_SECRET,
+        "email_id" : process.env.EMAIL_ID,
+        "mail_list" : process.env.MAIL_LIST,
+        "ComputeInstanceEndpoint" : process.env.COMPUTE_INSTANCE_ENDPOINT,
+        "userPoolId": process.env.USER_POOL_ID,
+        "ClientId" : process.env.CLIENT_ID,
+        "react_website_url" : process.env.REACT_WEBSITE_URL,
+        "simulation_result_host_url" : process.env.SIMULATION_RESULT_HOST_URL,
+        "jobQueueBeta" : process.env.JOB_QUEUE_BETA,
+        "jobDefinitionBeta" : process.env.JOB_DEFINITION_BETA,
+        "jobQueueProduction" : process.env.JOB_QUEUE_PRODUCTION,
+        "jobDefinitionProduction" : process.env.JOB_DEFINITION_PRODUCTION,
+        "simulation_bucket" : process.env.SIMULATION_BUCKET,
+        "queue_x" : process.env.QUEUE_X,
+        "queue_y" : process.env.QUEUE_Y,
+        "queue_beta" : process.env.QUEUE_BETA
+    };
 
     const subject_signature = fs.readFileSync("data/base64")
 
-    var config = require('./config/configuration_keys.json');
+    // var config = require('./config/configuration_keys.json');
     var config_env = config;
 
     //AWS.config.loadFromPath('./config/configuration_keys.json');
@@ -884,7 +884,7 @@ if (cluster.isMaster) {
                             .then(image_data => {
                                 imageData = image_data;
                                 if (image_data.path && image_data.path != 'null')
-                                    return getImageFromS3(image_data);
+                                    return getFileFromS3(image_data.path);
                             })
                             .then(image_s3 => {
                                 if (imageData.path && imageData.path != 'null')
@@ -965,21 +965,25 @@ if (cluster.isMaster) {
         getCumulativeAccelerationData(req.body)
             .then(data => {
                 var acceleration_data_list = [];
+                var frontal_Lobe = [];
                 let cnt = 1;
                 data.forEach(function (acc_data) {
                     let accData = acc_data;
                     let imageData = '';
+                    let outputFile = '';
                     getPlayerSimulationFile(acc_data)
-                    // .then(image_data => {
-                    //     return getImageFromS3(image_data);
-                    // })
-                    // .then(image_s3 => {
-                    //     return getImageFromS3Buffer(image_s3);
-                    // })
                     .then(image_data => {
                         imageData = image_data;
-                        if (image_data.path && image_data.path != 'null')
-                            return getImageFromS3(image_data);
+                        if (imageData.ouput_file_path && imageData.ouput_file_path != 'null') {
+                            let file_path = image_data.ouput_file_path;
+                            file_path = file_path.replace(/'/g, "");
+                            return getFileFromS3(file_path);
+                        }
+                    })
+                   .then(output_file => {
+                        outputFile = output_file;
+                        if (imageData.path && imageData.path != 'null')
+                            return getFileFromS3(imageData.path);
                     })
                     .then(image_s3 => {
                         if (imageData.path && imageData.path != 'null')
@@ -998,15 +1002,26 @@ if (cluster.isMaster) {
                             angular_acceleration: angular_acceleration,
                             time: time,
                             simulation_image: image ? image : '',
+                            //simulation_output_data: outputFile ? JSON.parse(outputFile.Body.toString('utf-8')) : '',
                             timestamp: accData.date,
                             record_time: accData.time,
                             sensor_data: accData
                         })
 
+                        if (outputFile) {
+                            outputFile = JSON.parse(outputFile.Body.toString('utf-8'));
+                            let coordinate = {};
+                            coordinate.x = outputFile['principal-max-strain'] ? outputFile['principal-max-strain'].location[0] : ''
+                            coordinate.y = outputFile['principal-max-strain'] ? outputFile['principal-max-strain'].location[1] : ''
+                            coordinate.z = outputFile['principal-max-strain'] ? outputFile['principal-max-strain'].location[2] : ''
+                            frontal_Lobe.push(coordinate);
+                        }
+
                         if (data.length === cnt) {
                             res.send({
                                 message: "success",
-                                data: acceleration_data_list
+                                data: acceleration_data_list,
+                                frontal_Lobe: frontal_Lobe
                             })
                         }
 
@@ -1887,11 +1902,11 @@ if (cluster.isMaster) {
         return new Buffer(bitmap).toString('base64');
     }
 
-    function getImageFromS3(image_record){
+    function getFileFromS3(url){
         return new Promise((resolve, reject) =>{
             var params = {
                 Bucket: config_env.usersbucket,
-                Key: image_record.path
+                Key: url
             };
             s3.getObject(params, function(err, data) {
                 if (err) {
