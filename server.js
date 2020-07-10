@@ -1024,6 +1024,12 @@ if (cluster.isMaster) {
                         let angular_acceleration = accData.player.position !== 'Unknown' ? accData.simulation['angular-acceleration'] : accData['angular-acceleration'];
                         // Y Axis timestamp
                         let time = accData.player.position !== 'Unknown' ? accData.simulation['linear-acceleration']['xt'] : accData['linear-acceleration']['xt'];
+
+                        time.forEach((t, i) => {
+                            var _temp_time = parseFloat(t).toFixed(1);
+                            time[i] = _temp_time;
+                        })
+
                         acceleration_data_list.push({
                             linear_acceleration: linear_acceleration,
                             angular_acceleration: angular_acceleration,
@@ -1073,6 +1079,7 @@ if (cluster.isMaster) {
                 res.send({
                     message: "failure",
                     data: acceleration_data_list,
+                    frontal_Lobe: [],
                     error: err
                 })
             })

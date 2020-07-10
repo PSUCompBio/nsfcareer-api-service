@@ -49,7 +49,7 @@ var config = {
     "queue_beta" : process.env.QUEUE_BETA
 };
 
-//var config = require('../config/configuration_keys.json'); 
+// var config = require('../config/configuration_keys.json'); 
 var config_env = config;
 const BUCKET_NAME = config_env.usersbucket;
 
