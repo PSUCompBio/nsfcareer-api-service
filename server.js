@@ -822,17 +822,48 @@ if (cluster.isMaster) {
     app.post(`${apiPrefix}getSimulationStatusCount`, function (req, res) {
         console.log(req.body);
 
-        getTeamData(req.body)
-            .then(simulation_records => {
-                res.send({
-                    message: "success",
-                    data: {
-                        completed: simulation_records.length,
-                        failed: 0,
-                        pending: 0
-                    }
-                })
+        let completed = 0;
+        let failed = 0;
+        let pending = 0;
 
+        getTeamData(req.body)
+            .then(sensor_data => {
+                let k = 0
+                sensor_data.forEach(function (record, index) {
+                    getPlayerSimulationFile(record)
+                        .then(simulation => {
+                            k++;
+                            if (simulation.status === 'pending') {
+                                pending++;
+                            } else if (simulation.status === 'completed') {
+                                completed++;
+                            } else {
+                                failed++;
+                            }
+
+                            if (k == sensor_data.length) {
+                                res.send({
+                                    message: "success",
+                                    data: {
+                                        completed: completed,
+                                        failed: failed,
+                                        pending: pending
+                                    }
+                                })
+                            }
+                        })
+                        .catch(err => {
+                            res.send({
+                                message: "failure",
+                                error: err,
+                                data: {
+                                    completed: 0,
+                                    failed: 0,
+                                    pending: 0
+                                }
+                            })
+                        })
+                })        
             })
             .catch(err => {
                 res.send({
