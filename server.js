@@ -77,35 +77,35 @@ if (cluster.isMaster) {
     // ======================================
     //       CONFIGURING AWS SDK & EXPESS
     // ======================================
-    // var config = {
-    //     "awsAccessKeyId": process.env.AWS_ACCESS_KEY_ID,
-    //     "awsSecretAccessKey": process.env.AWS_ACCESS_SECRET_KEY,
-    //     "avatar3dClientId": process.env.AVATAR_3D_CLIENT_ID,
-    //     "avatar3dclientSecret": process.env.AVATAR_3D_CLIENT_SECRET,
-    //     "region" : process.env.REGION,
-    //     "usersbucket": process.env.USERS_BUCKET,
-    //     "apiVersion" : process.env.API_VERSION,
-    //     "jwt_secret" : process.env.JWT_SECRET,
-    //     "email_id" : process.env.EMAIL_ID,
-    //     "mail_list" : process.env.MAIL_LIST,
-    //     "ComputeInstanceEndpoint" : process.env.COMPUTE_INSTANCE_ENDPOINT,
-    //     "userPoolId": process.env.USER_POOL_ID,
-    //     "ClientId" : process.env.CLIENT_ID,
-    //     "react_website_url" : process.env.REACT_WEBSITE_URL,
-    //     "simulation_result_host_url" : process.env.SIMULATION_RESULT_HOST_URL,
-    //     "jobQueueBeta" : process.env.JOB_QUEUE_BETA,
-    //     "jobDefinitionBeta" : process.env.JOB_DEFINITION_BETA,
-    //     "jobQueueProduction" : process.env.JOB_QUEUE_PRODUCTION,
-    //     "jobDefinitionProduction" : process.env.JOB_DEFINITION_PRODUCTION,
-    //     "simulation_bucket" : process.env.SIMULATION_BUCKET,
-    //     "queue_x" : process.env.QUEUE_X,
-    //     "queue_y" : process.env.QUEUE_Y,
-    //     "queue_beta" : process.env.QUEUE_BETA
-    // };
+    var config = {
+        "awsAccessKeyId": process.env.AWS_ACCESS_KEY_ID,
+        "awsSecretAccessKey": process.env.AWS_ACCESS_SECRET_KEY,
+        "avatar3dClientId": process.env.AVATAR_3D_CLIENT_ID,
+        "avatar3dclientSecret": process.env.AVATAR_3D_CLIENT_SECRET,
+        "region" : process.env.REGION,
+        "usersbucket": process.env.USERS_BUCKET,
+        "apiVersion" : process.env.API_VERSION,
+        "jwt_secret" : process.env.JWT_SECRET,
+        "email_id" : process.env.EMAIL_ID,
+        "mail_list" : process.env.MAIL_LIST,
+        "ComputeInstanceEndpoint" : process.env.COMPUTE_INSTANCE_ENDPOINT,
+        "userPoolId": process.env.USER_POOL_ID,
+        "ClientId" : process.env.CLIENT_ID,
+        "react_website_url" : process.env.REACT_WEBSITE_URL,
+        "simulation_result_host_url" : process.env.SIMULATION_RESULT_HOST_URL,
+        "jobQueueBeta" : process.env.JOB_QUEUE_BETA,
+        "jobDefinitionBeta" : process.env.JOB_DEFINITION_BETA,
+        "jobQueueProduction" : process.env.JOB_QUEUE_PRODUCTION,
+        "jobDefinitionProduction" : process.env.JOB_DEFINITION_PRODUCTION,
+        "simulation_bucket" : process.env.SIMULATION_BUCKET,
+        "queue_x" : process.env.QUEUE_X,
+        "queue_y" : process.env.QUEUE_Y,
+        "queue_beta" : process.env.QUEUE_BETA
+    };
 
     const subject_signature = fs.readFileSync("data/base64")
 
-    var config = require('./config/configuration_keys.json');
+    // var config = require('./config/configuration_keys.json');
     var config_env = config;
 
     //AWS.config.loadFromPath('./config/configuration_keys.json');
@@ -339,10 +339,11 @@ if (cluster.isMaster) {
                 _temp_sensor_data["team"] = _temp.player.team;
               
                 if (req.body.sensor_brand === 'Prevent') {
-                    _temp_sensor_data['mesh-transformation'] = [ "-y", "z", "-x" ];
+                    _temp_sensor_data['mesh-transformation'] = [ "-y", "z", "-x"];
                     _temp_sensor_data['maximum-time'] = 49.6875;
                 } else if (req.body.sensor_brand === 'Sensor Company X' || req.body.sensor_brand === 'SWA') {
-                    _temp_sensor_data['mesh-transformation'] = ["-z", "x", "-y" ];
+                    _temp_sensor_data['mesh-transformation'] = ["-z", "x", "-y"];
+                    _temp_sensor_data['angular-to-linear-frame'] = ["-y", "-x", "z"];
                     _temp_sensor_data['maximum-time'] = 49.6875;
                 } else if (req.body.sensor_brand === 'SISU') {
                     _temp_sensor_data['mesh-transformation'] = ["-z", "-x", "-y"];
@@ -522,7 +523,7 @@ if (cluster.isMaster) {
                                                 // Generate simulation for player
                                                 uploadPlayerSelfieIfNotPresent(req.body.selfie, temp.player_id, req.body.filename)
                                                     .then((selfieDetails) => {
-                                                        return generateSimulationForPlayers(new_items_array, reader, apiMode);
+                                                        return generateSimulationForPlayers(new_items_array, reader, apiMode, sensor);
                                                     })
                                                     .then(urls => {
                                                         simulation_result_urls.push(urls)
@@ -1452,7 +1453,7 @@ if (cluster.isMaster) {
     })
 
     // Configuring port for APP
-    const port = process.env.PORT || 5000;
+    const port = process.env.PORT || 3000;
     const server = app.listen(port, function () {
         console.log('Magic happens on ' + port);
     });

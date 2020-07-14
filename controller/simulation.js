@@ -23,33 +23,33 @@ const {
 // ======================================
 //       CONFIGURING AWS SDK & EXPESS
 // ======================================
-// var config = {
-//     "awsAccessKeyId": process.env.AWS_ACCESS_KEY_ID,
-//     "awsSecretAccessKey": process.env.AWS_ACCESS_SECRET_KEY,
-//     "avatar3dClientId": process.env.AVATAR_3D_CLIENT_ID,
-//     "avatar3dclientSecret": process.env.AVATAR_3D_CLIENT_SECRET,
-//     "region" : process.env.REGION,
-//     "usersbucket": process.env.USERS_BUCKET,
-//     "apiVersion" : process.env.API_VERSION,
-//     "jwt_secret" : process.env.JWT_SECRET,
-//     "email_id" : process.env.EMAIL_ID,
-//     "mail_list" : process.env.MAIL_LIST,
-//     "ComputeInstanceEndpoint" : process.env.COMPUTE_INSTANCE_ENDPOINT,
-//     "userPoolId": process.env.USER_POOL_ID,
-//     "ClientId" : process.env.CLIENT_ID,
-//     "react_website_url" : process.env.REACT_WEBSITE_URL,
-//     "simulation_result_host_url" : process.env.SIMULATION_RESULT_HOST_URL,
-//     "jobQueueBeta" : process.env.JOB_QUEUE_BETA,
-//     "jobDefinitionBeta" : process.env.JOB_DEFINITION_BETA,
-//     "jobQueueProduction" : process.env.JOB_QUEUE_PRODUCTION,
-//     "jobDefinitionProduction" : process.env.JOB_DEFINITION_PRODUCTION,
-//     "simulation_bucket" : process.env.SIMULATION_BUCKET,
-//     "queue_x" : process.env.QUEUE_X,
-//     "queue_y" : process.env.QUEUE_Y,
-//     "queue_beta" : process.env.QUEUE_BETA
-// };
+var config = {
+    "awsAccessKeyId": process.env.AWS_ACCESS_KEY_ID,
+    "awsSecretAccessKey": process.env.AWS_ACCESS_SECRET_KEY,
+    "avatar3dClientId": process.env.AVATAR_3D_CLIENT_ID,
+    "avatar3dclientSecret": process.env.AVATAR_3D_CLIENT_SECRET,
+    "region" : process.env.REGION,
+    "usersbucket": process.env.USERS_BUCKET,
+    "apiVersion" : process.env.API_VERSION,
+    "jwt_secret" : process.env.JWT_SECRET,
+    "email_id" : process.env.EMAIL_ID,
+    "mail_list" : process.env.MAIL_LIST,
+    "ComputeInstanceEndpoint" : process.env.COMPUTE_INSTANCE_ENDPOINT,
+    "userPoolId": process.env.USER_POOL_ID,
+    "ClientId" : process.env.CLIENT_ID,
+    "react_website_url" : process.env.REACT_WEBSITE_URL,
+    "simulation_result_host_url" : process.env.SIMULATION_RESULT_HOST_URL,
+    "jobQueueBeta" : process.env.JOB_QUEUE_BETA,
+    "jobDefinitionBeta" : process.env.JOB_DEFINITION_BETA,
+    "jobQueueProduction" : process.env.JOB_QUEUE_PRODUCTION,
+    "jobDefinitionProduction" : process.env.JOB_DEFINITION_PRODUCTION,
+    "simulation_bucket" : process.env.SIMULATION_BUCKET,
+    "queue_x" : process.env.QUEUE_X,
+    "queue_y" : process.env.QUEUE_Y,
+    "queue_beta" : process.env.QUEUE_BETA
+};
 
-var config = require('../config/configuration_keys.json'); 
+// var config = require('../config/configuration_keys.json'); 
 var config_env = config;
 const BUCKET_NAME = config_env.usersbucket;
 
@@ -248,7 +248,7 @@ function groupSensorData(arr) {
         data_point['Angular Acc z rad/s2'] = data_point['Angular Acc z rad/s2'] && data_point['Angular Acc z rad/s2'] != '' ? data_point['Angular Acc z rad/s2'] : 0
         
         data_point['Angular Vel x rad/s'] = data_point['Angular Vel x rad/s'] && data_point['Angular Vel x rad/s'] != '' ? data_point['Angular Vel x rad/s'] : 0
-        data_point['Angular Vel y rad/s2'] = data_point['Angular Vel y rad/s2'] && data_point['Angular Vel y rad/s2'] != '' ? data_point['Angular Vel y rad/s2'] : 0
+        data_point['Angular Vel y rad/s'] = data_point['Angular Vel y rad/s'] && data_point['Angular Vel y rad/s'] != '' ? data_point['Angular Vel y rad/s'] : 0
         data_point['Angular Vel z rad/s'] = data_point['Angular Vel z rad/s'] && data_point['Angular Vel z rad/s'] != '' ? data_point['Angular Vel z rad/s'] : 0
 
         data_point['Linear Acc Mag g'] = data_point['Linear Acc Mag g'] && data_point['Linear Acc Mag g'] != '' ? data_point['Linear Acc Mag g'] : 0
@@ -286,7 +286,7 @@ function groupSensorData(arr) {
                     'xt': [parseFloat(data_point['Sample Num'])],
                     'xv': [parseFloat(data_point['Angular Vel x rad/s'])],
                     'yt': [parseFloat(data_point['Sample Num'])],
-                    'yv': [parseFloat(data_point['Angular Vel y rad/s2'])],
+                    'yv': [parseFloat(data_point['Angular Vel y rad/s'])],
                     'zt': [parseFloat(data_point['Sample Num'])],
                     'zv': [parseFloat(data_point['Angular Vel z rad/s'])]
                 },
@@ -933,7 +933,7 @@ function generateParametersFileFromStl(obj) {
     })
 }
 
-function generateSimulationForPlayers(player_data_array, reader, apiMode) {
+function generateSimulationForPlayers(player_data_array, reader, apiMode, sensor) {
     return new Promise((resolve, reject) => {
         var counter = 0;
         var simulation_result_urls = [];
@@ -1012,7 +1012,10 @@ function generateSimulationForPlayers(player_data_array, reader, apiMode) {
                                 playerData["simulation"]["linear-acceleration"][0] = _temp_player.linear_acceleration_pla;
                                 playerData["simulation"]["angular-acceleration"] = _temp_player.angular_acceleration_paa;
                                 //playerData["simulation"]["impact-point"] = _temp_player.impact_location_on_head.toLowerCase().replace(/ /g, "-");
+                            }
 
+                            if (sensor === 'sensor_company_x' || sensor === 'SWA' ) {
+                                playerData["simulation"]["angular-to-linear-frame"] = ["-y", "-x", "z"];
                             }
 
                             let temp_simulation_data = {
@@ -1150,6 +1153,10 @@ function generateSimulationForPlayersFromJson(player_data_array, apiMode) {
                             if (cg_coordinates) {
                                 playerData.simulation["head-cg"] = (cg_coordinates.length == 0) ? [0, -0.3308, -0.037] : cg_coordinates.map(function (x) { return parseFloat(x) });
                                 playerData.simulation["angular-sensor-position"] = (cg_coordinates.length == 0) ? [0.025, -0.281, -0.089757] : cg_coordinates.map(function (x) { return parseFloat(x) });
+                            }
+
+                            if (_temp_player['angular-to-linear-frame']) {
+                                playerData["simulation"]["angular-to-linear-frame"] = _temp_player['angular-to-linear-frame'];
                             }
                            
                             let temp_simulation_data = {
