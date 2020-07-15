@@ -346,10 +346,11 @@ if (cluster.isMaster) {
                     _temp_sensor_data['angular-to-linear-frame'] = ["-y", "-x", "z"];
                     _temp_sensor_data['maximum-time'] = 49.6875;
                 } else if (req.body.sensor_brand === 'SISU') {
-                    _temp_sensor_data['mesh-transformation'] = ["-z", "-x", "-y"];
-                    _temp_sensor_data['maximum-time'] = 40.0;
+                    _temp_sensor_data['mesh-transformation'] = ["-z", "-x", "y"];
+                    _temp_sensor_data['time-peak-acceleration'] = 0.2;
+                    _temp_sensor_data['maximum-time'] = 0.4;
                 } else {
-                    _temp_sensor_data['mesh-transformation'] = [ "-y", "z", "-x" ];
+                    _temp_sensor_data['mesh-transformation'] = [ "-y", "z", "-x"];
                     _temp_sensor_data['maximum-time'] = 49.6875; 
                 }
 
@@ -1051,12 +1052,12 @@ if (cluster.isMaster) {
                     .then(image => {
                         console.log(accData);
                         // X- Axis Linear Acceleration
-                        let linear_acceleration = accData.player.position !== 'Unknown' ? accData.simulation['linear-acceleration'] : accData['linear-acceleration'];
+                        let linear_acceleration = accData.sensor ? accData.simulation['linear-acceleration'] : accData['linear-acceleration'];
                         // X- Axis Angular Acceleration
-                        let angular_acceleration = accData.player.position !== 'Unknown' ? accData.simulation['angular-acceleration'] : accData['angular-acceleration'];
+                        let angular_acceleration = accData.sensor ? accData.simulation['angular-acceleration'] : accData['angular-acceleration'];
                         // Y Axis timestamp
-                        let time = accData.player.position !== 'Unknown' ? accData.simulation['linear-acceleration']['xt'] : accData['linear-acceleration']['xt'];
-
+                        let time = accData.sensor ? accData.simulation['linear-acceleration']['xt'] : accData['linear-acceleration']['xt'];
+                        console.log(time);
                         time.forEach((t, i) => {
                             var _temp_time = parseFloat(t).toFixed(1);
                             time[i] = _temp_time;
