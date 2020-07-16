@@ -935,46 +935,58 @@ if (cluster.isMaster) {
                         let p = player;
                         let i = index;
                         let playerData = '';
-                        let imageData = '';
+                        // let imageData = '';
                         getTeamDataWithPlayerRecords({ player_id: p, team: req.body.team_name, user_cognito_id: req.body.user_cognito_id, organization: req.body.organization })
                             .then(player_data => {
-                               playerData = player_data;
-                               return getPlayerSimulationFile(player_data[0]);
-                            })
-                            .then(image_data => {
-                                imageData = image_data;
-                                if (image_data.path && image_data.path != 'null')
-                                    return getFileFromS3(image_data.path);
-                            })
-                            .then(image_s3 => {
-                                if (imageData.path && imageData.path != 'null')
-                                    return getImageFromS3Buffer(image_s3);
-                            })     
-                            .then(image => {
+                                playerData = player_data;
                                 counter++;
                                 p_data.push({
                                     player_name: p,
-                                    simulation_image: image ? image : '',
+                                    //vsimulation_image: image ? image : '',
                                     simulation_data: playerData
                                 });
-
-                                if (counter == player_list.length) {
+                               if (counter == player_list.length) {
                                     res.send({
                                         message: "success",
                                         data: p_data
                                     })
                                 }
+                               //return getPlayerSimulationFile(player_data[0]);
                             })
-                            // .catch(err => {
-                            //     console.log(err);
+                            // .then(image_data => {
+                            //     imageData = image_data;
+                            //     if (image_data.path && image_data.path != 'null')
+                            //         return getFileFromS3(image_data.path);
+                            // })
+                            // .then(image_s3 => {
+                            //     if (imageData.path && imageData.path != 'null')
+                            //         return getImageFromS3Buffer(image_s3);
+                            // })     
+                            // .then(image => {
                             //     counter++;
+                            //     p_data.push({
+                            //         player_name: p,
+                            //         simulation_image: image ? image : '',
+                            //         simulation_data: playerData
+                            //     });
+
                             //     if (counter == player_list.length) {
                             //         res.send({
-                            //             message: "failure",
+                            //             message: "success",
                             //             data: p_data
                             //         })
                             //     }
                             // })
+                            .catch(err => {
+                                console.log(err);
+                                counter++;
+                                if (counter == player_list.length) {
+                                    res.send({
+                                        message: "failure",
+                                        data: p_data
+                                    })
+                                }
+                            })
                     })
                 }
             })

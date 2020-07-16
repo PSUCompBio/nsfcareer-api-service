@@ -651,63 +651,20 @@ function getFileSignedUrl(key, cb) {
     });
 }
 
-function generateMorphedVTK(obj) {
-    return new Promise((resolve, reject) => {
-        var cmd = `mkdir -p ./../users_data/${obj.user_cognito_id}/morphed_vtk/ && python3  ./../rbf-brain/RBF_coarse.py  --p ./../users_data/${obj.user_cognito_id}/parameters/${obj.file_name}.prm --m ./../rbf-brain/coarse_brain.vtk --output ./../users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}.vtk`;
-        console.log(cmd);
-        let cg_val = '';
-        executeShellCommands(cmd)
-            .then(d => {
-                console.log("MORPHED VTK POST<<<<<--------------\n", d);
-                let fiber_cmd = `python3  ./../rbf-brain/RBF_coarse.py  --p ./../users_data/${obj.user_cognito_id}/parameters/${obj.file_name}.prm --m ./../rbf-brain/fiber_mesh.vtk --output ./../users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_fiber.vtk`;
-                return executeShellCommands(fiber_cmd);
-            })
-            .then(output => {
-                console.log('Output of fiber mesh ', output);
-                let cg_cmd = `python3  ./../rbf-brain/RBF_CG.py  --p ./../users_data/${obj.user_cognito_id}/parameters/${obj.file_name}.prm --m ./../rbf-brain/cg.vtk --output ./../users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_cg.txt`;
-                return executeShellCommands(cg_cmd);
-            })
-            .then(cg => {
-                console.log('output of cg value ', cg);
-                cg_val = cg;
-                let sensor_cmd = `python3 ./../rbf-brain/RBF_CG.py --p ./../users_data/${obj.user_cognito_id}/parameters/${obj.file_name}.prm --m ./../rbf-brain/sensor.vtk --output ./../users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_sensor.txt`;
-                return executeShellCommands(sensor_cmd);
-            })
-            .then(sensor => {
-                console.log('output of sensor value ', sensor);
-                resolve(cg_val);
-            })
-            .catch(err => {
-                console.log("MORPHED VTK <<<<<--------------\n", err);
-                reject(err);
-            })
-    })
-}
-
 // function generateMorphedVTK(obj) {
 //     return new Promise((resolve, reject) => {
-//         var cmd = `mkdir -p ./../users_data/${obj.user_cognito_id}/morphed_vtk/ && python3 ./../rbf-brain/RBF_coarse.py --p ./../users_data/${obj.user_cognito_id}/parameters/${obj.file_name}.prm --m ./../rbf-brain/coarse_brain.vtk --output ./../users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}.vtk`;
+//         var cmd = `mkdir -p ./../users_data/${obj.user_cognito_id}/morphed_vtk/ && python3  ./../rbf-brain/RBF_coarse.py  --p ./../users_data/${obj.user_cognito_id}/parameters/${obj.file_name}.prm --m ./../rbf-brain/coarse_brain.vtk --output ./../users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}.vtk`;
 //         console.log(cmd);
 //         let cg_val = '';
 //         executeShellCommands(cmd)
 //             .then(d => {
 //                 console.log("MORPHED VTK POST<<<<<--------------\n", d);
-//                 let meshrotate_cmd = `python3 ./../rbf-brain/meshrotate.py --input ./../users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}.vtk --output ./../users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}.vtk`;
-//                 return executeShellCommands(meshrotate_cmd);
-//             })
-//             .then(mesh_output => {
-//                 console.log("MESROTATE VTK POST<<<<<--------------\n", mesh_output);
-//                 let fiber_cmd = `python3 ./../rbf-brain/RBF_coarse.py --p ./../users_data/${obj.user_cognito_id}/parameters/${obj.file_name}.prm --m ./../rbf-brain/fiber_mesh.vtk --output ./../users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_fiber.vtk`;
+//                 let fiber_cmd = `python3  ./../rbf-brain/RBF_coarse.py  --p ./../users_data/${obj.user_cognito_id}/parameters/${obj.file_name}.prm --m ./../rbf-brain/fiber_mesh.vtk --output ./../users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_fiber.vtk`;
 //                 return executeShellCommands(fiber_cmd);
 //             })
 //             .then(output => {
 //                 console.log('Output of fiber mesh ', output);
-//                 let meshrotate_cmd2 = `python3 ./../rbf-brain/meshrotate.py --input ./../users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_fiber.vtk --output ./../users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}.vtk`;
-//                 return executeShellCommands(meshrotate_cmd2);
-//             })
-//             .then(mesh_output2 => {
-//                 console.log("MESROTATE VTK2 POST<<<<<--------------\n", mesh_output2);
-//                 let cg_cmd = `python3 ./../rbf-brain/RBF_CG.py --p ./../users_data/${obj.user_cognito_id}/parameters/${obj.file_name}.prm --m ./../rbf-brain/cg.vtk --output ./../users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_cg.txt`;
+//                 let cg_cmd = `python3  ./../rbf-brain/RBF_CG.py  --p ./../users_data/${obj.user_cognito_id}/parameters/${obj.file_name}.prm --m ./../rbf-brain/cg.vtk --output ./../users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_cg.txt`;
 //                 return executeShellCommands(cg_cmd);
 //             })
 //             .then(cg => {
@@ -726,6 +683,49 @@ function generateMorphedVTK(obj) {
 //             })
 //     })
 // }
+
+function generateMorphedVTK(obj) {
+    return new Promise((resolve, reject) => {
+        var cmd = `mkdir -p ./../users_data/${obj.user_cognito_id}/morphed_vtk/ && python3 ./../rbf-brain/RBF_coarse.py --p ./../users_data/${obj.user_cognito_id}/parameters/${obj.file_name}.prm --m ./../rbf-brain/coarse_brain.vtk --output ./../users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}.vtk`;
+        console.log(cmd);
+        let cg_val = '';
+        executeShellCommands(cmd)
+            .then(d => {
+                console.log("MORPHED VTK POST<<<<<--------------\n", d);
+                let meshrotate_cmd = `python3 ./../rbf-brain/meshrotate.py --input ./../users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}.vtk --output ./../users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_rotated.vtk`;
+                return executeShellCommands(meshrotate_cmd);
+            })
+            .then(mesh_output => {
+                console.log("MESROTATE VTK POST<<<<<--------------\n", mesh_output);
+                let fiber_cmd = `python3 ./../rbf-brain/RBF_coarse.py --p ./../users_data/${obj.user_cognito_id}/parameters/${obj.file_name}.prm --m ./../rbf-brain/fiber_mesh.vtk --output ./../users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_fiber.vtk`;
+                return executeShellCommands(fiber_cmd);
+            })
+            .then(output => {
+                console.log('Output of fiber mesh ', output);
+                let meshrotate_cmd2 = `python3 ./../rbf-brain/meshrotate.py --input ./../users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_fiber.vtk --output ./../users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_rotated.vtk`;
+                return executeShellCommands(meshrotate_cmd2);
+            })
+            .then(mesh_output2 => {
+                console.log("MESROTATE VTK2 POST<<<<<--------------\n", mesh_output2);
+                let cg_cmd = `python3 ./../rbf-brain/RBF_CG.py --p ./../users_data/${obj.user_cognito_id}/parameters/${obj.file_name}.prm --m ./../rbf-brain/cg.vtk --output ./../users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_cg.txt`;
+                return executeShellCommands(cg_cmd);
+            })
+            .then(cg => {
+                console.log('output of cg value ', cg);
+                cg_val = cg;
+                let sensor_cmd = `python3 ./../rbf-brain/RBF_CG.py --p ./../users_data/${obj.user_cognito_id}/parameters/${obj.file_name}.prm --m ./../rbf-brain/sensor.vtk --output ./../users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_sensor.txt`;
+                return executeShellCommands(sensor_cmd);
+            })
+            .then(sensor => {
+                console.log('output of sensor value ', sensor);
+                resolve(cg_val);
+            })
+            .catch(err => {
+                console.log("MORPHED VTK <<<<<--------------\n", err);
+                reject(err);
+            })
+    })
+}
 
 function uploadCentroidLookUpFile(obj) {
     return new Promise((resolve, reject) => {
@@ -807,7 +807,7 @@ function uploadVTKFile(user_id, timestamp) {
 
         const params = uploadParams;
 
-        fs.readFile(`../users_data/${user_id}/morphed_vtk/${timestamp}.vtk`, function (err, headBuffer) {
+        fs.readFile(`../users_data/${user_id}/morphed_vtk/${timestamp}_rotated.vtk`, function (err, headBuffer) {
             if (err) {
                 reject(err);
             }
