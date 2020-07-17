@@ -528,7 +528,7 @@ function createMorphedVTKZip(user_id, timestamp) {
             archive.pipe(output);
 
             // append files from a glob pattern
-            archive.glob(`*.vtk`, { cwd: `./../users_data/${user_id}/morphed_vtk` });
+            archive.glob(`*_rotated.vtk`, { cwd: `./../users_data/${user_id}/morphed_vtk` });
 
             archive.finalize();
 
@@ -692,7 +692,7 @@ function generateMorphedVTK(obj) {
         executeShellCommands(cmd)
             .then(d => {
                 console.log("MORPHED VTK POST<<<<<--------------\n", d);
-                let meshrotate_cmd = `pvpython ./../rbf-brain/meshrotate.py --input ./../users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}.vtk --output ./../users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_rotated.vtk`;
+                let meshrotate_cmd = `pvpython ./../rbf-brain/meshrotate.py --input ./../users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}.vtk --output ./../users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_brain_rotated.vtk`;
                 return executeShellCommands(meshrotate_cmd);
             })
             .then(mesh_output => {
@@ -702,7 +702,7 @@ function generateMorphedVTK(obj) {
             })
             .then(output => {
                 console.log('Output of fiber mesh ', output);
-                let meshrotate_cmd2 = `pvpython ./../rbf-brain/meshrotate.py --input ./../users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_fiber.vtk --output ./../users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_rotated.vtk`;
+                let meshrotate_cmd2 = `pvpython ./../rbf-brain/meshrotate.py --input ./../users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_fiber.vtk --output ./../users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_fiber_rotated.vtk`;
                 return executeShellCommands(meshrotate_cmd2);
             })
             .then(mesh_output2 => {
