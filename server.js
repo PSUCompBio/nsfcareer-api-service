@@ -452,13 +452,8 @@ if (cluster.isMaster) {
                 //Converting file data into JSON
                 convertFileDataToJson(buffer, reader, filename)
                 .then(items => {
-                    // Adding default organization PSU to the impact data
-
-                    items.map((element) => {
-                        return element.organization = "PSU";
-                    });
-
-                    const new_items_array = _.map(items, o => _.extend({ organization: "PSU" }, o));
+                    // Adding default organization Unknown to the impact data
+                    const new_items_array = _.map(items, o => _.extend({ organization: "Unknown" }, o));
 
                     // Adding image id in array data
                     for (var i = 0; i < new_items_array.length; i++) {
@@ -470,10 +465,8 @@ if (cluster.isMaster) {
                         _temp['player']['last-name'] = "Unknown";
                         _temp['player']['sport'] = "Unknown";
                         _temp['player']['position'] = "Unknown";
-                        if (reader == 1) {
-                            _temp["team"] = config_env.queue_x;
-                        }
-                        _temp['player']['team'] = _temp.team;
+                        _temp['player']['team'] = "Unknown";
+                        _temp["team"] = "Unknown";
                         new_items_array[i] = _temp;
 
                     }
@@ -486,10 +479,10 @@ if (cluster.isMaster) {
                     storeSensorData(new_items_array)
                         .then(flag => {
 
-                            var players = items.map(function (player) {
+                            var players = new_items_array.map(function (player) {
                                 return {
                                     player_id: player.player_id.split("$")[0],
-                                    team: (reader == 1) ? config_env.queue_x : player.team,
+                                    team: player.player.team,
                                     organization: player.organization,
                                 }
                             });
@@ -1319,9 +1312,9 @@ if (cluster.isMaster) {
     })
 
     app.post(`${apiPrefix}getAllSensorBrands`, function (req, res) {
+        console.log('getAllSensorBrands');
         getAllSensorBrands()
         .then(list => {
-
             var brandList = list.filter(function (brand) {
                 return (!("brandList" in brand));
             });
@@ -1333,6 +1326,7 @@ if (cluster.isMaster) {
                     data: []
                 })
             } else {
+                
                 brandList.forEach(function (brand, index) {
                     let data = brand;
                     let i = index;
