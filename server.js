@@ -254,7 +254,7 @@ if (cluster.isMaster) {
                 // new_items_array[i] = _temp;
 
                 var _temp_sensor_data = {};
-                _temp_sensor_data["sensor"] = _temp["sensor"];
+                _temp_sensor_data["sensor"] = req.body.sensor_brand;
                 _temp_sensor_data["impact-date"] = _temp["impact-date"];
                 _temp_sensor_data["impact-time"] = _temp["impact-time"];
                 _temp_sensor_data["organization"] = _temp["organization"];
@@ -395,7 +395,7 @@ if (cluster.isMaster) {
                             var temp = result[i];
 
                             // Adds team details in db if doesn't already exist
-                            addPlayerToTeamOfOrganization(req.body.user_cognito_id, temp.organization, temp.team, temp.player_id)
+                            addPlayerToTeamOfOrganization(req.body.sensor_brand, req.body.user_cognito_id, temp.organization, temp.team, temp.player_id)
                                 .then(d => {
                                     counter++;
                                     if (counter == result.length) {
@@ -459,6 +459,7 @@ if (cluster.isMaster) {
                     for (var i = 0; i < new_items_array.length; i++) {
                         var _temp = new_items_array[i];
                         _temp["user_cognito_id"] = req.body.user_cognito_id;
+                        _temp["sensor"] = req.body.sensor_brand;
                         _temp["image_id"] = shortid.generate();
                         _temp['player'] = {};
                         _temp['player']['first-name'] = "Unknown";
@@ -509,7 +510,7 @@ if (cluster.isMaster) {
                                     var temp = result[i];
 
                                     // Adds team details in db if doesn't already exist
-                                    addPlayerToTeamOfOrganization(req.body.user_cognito_id, temp.organization, temp.team, temp.player_id)
+                                    addPlayerToTeamOfOrganization(req.body.sensor_brand, req.body.user_cognito_id, temp.organization, temp.team, temp.player_id)
                                         .then(d => {
                                             counter++;
                                             if (counter == result.length) {
@@ -929,7 +930,7 @@ if (cluster.isMaster) {
                         let i = index;
                         let playerData = '';
                         // let imageData = '';
-                        getTeamDataWithPlayerRecords({ player_id: p, team: req.body.team_name, user_cognito_id: req.body.user_cognito_id, organization: req.body.organization })
+                        getTeamDataWithPlayerRecords({ player_id: p, team: req.body.team_name, sensor: req.body.brand, organization: req.body.organization })
                             .then(player_data => {
                                 playerData = player_data;
                                 counter++;
@@ -1057,11 +1058,11 @@ if (cluster.isMaster) {
                     .then(image => {
                         console.log(accData);
                         // X- Axis Linear Acceleration
-                        let linear_acceleration = accData.sensor ? accData.simulation['linear-acceleration'] : accData['linear-acceleration'];
+                        let linear_acceleration = accData['impact-date'] ? accData.simulation['linear-acceleration'] : accData['linear-acceleration'];
                         // X- Axis Angular Acceleration
-                        let angular_acceleration = accData.sensor ? accData.simulation['angular-acceleration'] : accData['angular-acceleration'];
+                        let angular_acceleration = accData['impact-date'] ? accData.simulation['angular-acceleration'] : accData['angular-acceleration'];
                         // Y Axis timestamp
-                        let time = accData.sensor ? accData.simulation['linear-acceleration']['xt'] : accData['linear-acceleration']['xt'];
+                        let time = accData['impact-date'] ? accData.simulation['linear-acceleration']['xt'] : accData['linear-acceleration']['xt'];
                         console.log(time);
                         time.forEach((t, i) => {
                             var _temp_time = parseFloat(t).toFixed(1);
@@ -1312,7 +1313,6 @@ if (cluster.isMaster) {
     })
 
     app.post(`${apiPrefix}getAllSensorBrands`, function (req, res) {
-        console.log('getAllSensorBrands');
         getAllSensorBrands()
         .then(list => {
             var brandList = list.filter(function (brand) {
@@ -1330,8 +1330,7 @@ if (cluster.isMaster) {
                 brandList.forEach(function (brand, index) {
                     let data = brand;
                     let i = index;
-                    // console.log(data.user_cognito_id);
-                    getBrandData({ user_cognito_id: data.user_cognito_id })
+                    getBrandData({ sensor: data.sensor })
                         .then(simulation_records => {
                             counter++;
                             brand["simulation_count"] = Number(simulation_records.length).toString();
@@ -1385,7 +1384,7 @@ if (cluster.isMaster) {
                 orgList.forEach(function (org, index) {
                     let data = org;
                     let i = index;
-                    getBrandOrganizationData({ user_cognito_id: data.user_cognito_id, organization: data.organization })
+                    getBrandOrganizationData({ sensor: data.sensor, organization: data.organization })
                         .then(simulation_records => {
                             counter++;
                             org["simulation_count"] = Number(simulation_records.length).toString();
@@ -1399,7 +1398,7 @@ if (cluster.isMaster) {
                         })
                         .catch(err => {
                            counter++
-                            if (counter == brandList.length) {
+                            if (counter == orgList.length) {
                                 res.send({
                                     message: "failure",
                                     error: err
@@ -1429,10 +1428,11 @@ if (cluster.isMaster) {
                     data: []
                 })
             } else {
+                // console.log(teamList);
                 teamList.forEach(function (team, index) {
                     let data = team;
                     let i = index;
-                    getOrganizationTeamData({ user_cognito_id: data.user_cognito_id, organization: data.organization, team: data.team_name})
+                    getOrganizationTeamData({ sensor: data.sensor, organization: data.organization, team: data.team_name})
                         .then(simulation_records => {
                             counter++;
                             team["simulation_count"] = Number(simulation_records.length).toString();
@@ -1447,7 +1447,7 @@ if (cluster.isMaster) {
                         })
                         .catch(err => {
                            counter++
-                            if (counter == brandList.length) {
+                            if (counter == teamList.length) {
                                 res.send({
                                     message: "failure",
                                     error: err

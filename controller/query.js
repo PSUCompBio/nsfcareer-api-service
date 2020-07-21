@@ -248,9 +248,9 @@ function getCumulativeAccelerationData(obj) {
     return new Promise((resolve, reject) => {
         let params = {
             TableName: "sensor_data",
-            FilterExpression: "user_cognito_id = :user_cognito_id and begins_with(player_id,:player_id) and organization = :organization and team = :team",
+            FilterExpression: "sensor = :sensor and begins_with(player_id,:player_id) and organization = :organization and team = :team",
             ExpressionAttributeValues: {
-               ":user_cognito_id": obj.user_cognito_id,
+               ":sensor": obj.brand,
                ":organization": obj.organization,
                ":team": obj.team,
                ":player_id": obj.player_id,
@@ -298,13 +298,13 @@ function getTeamDataWithPlayerRecords(obj) {
     return new Promise((resolve, reject) => {
         let params = {
             TableName: "sensor_data",
-            FilterExpression: "user_cognito_id = :user_cognito_id and organization = :organization and team = :team and begins_with(player_id,:player_id)",
+            FilterExpression: "sensor = :sensor and organization = :organization and team = :team and begins_with(player_id,:player_id)",
             ExpressionAttributeValues: {
-               ":user_cognito_id": obj.user_cognito_id,
+               ":sensor": obj.sensor,
                ":organization": obj.organization,
                ":team": obj.team,
                ":player_id": obj.player_id,
-            },
+            }
         };
         var item = [];
         docClient.scan(params).eachPage((err, data, done) => {
@@ -347,12 +347,13 @@ function getTeamData(obj) {
     return new Promise((resolve, reject) => {
         let params = {
             TableName: "sensor_data",
-            FilterExpression: "user_cognito_id = :user_cognito_id and organization = :organization and team = :team",
+            FilterExpression: "sensor = :sensor and organization = :organization and team = :team",
             ExpressionAttributeValues: {
-               ":user_cognito_id": obj.user_cognito_id,
+               ":sensor": obj.brand,
                ":organization": obj.organization,
                ":team": obj.team
             },
+            ProjectionExpression: "image_id"
         };
         var item = [];
         docClient.scan(params).eachPage((err, data, done) => {
@@ -389,9 +390,9 @@ function getPlayersListFromTeamsDB(obj) {
     return new Promise((resolve, reject) => {
         let params = {
             TableName: "organizations",
-            FilterExpression: "user_cognito_id = :user_cognito_id and organization = :organization and team_name = :team_name",
+            FilterExpression: "sensor = :sensor and organization = :organization and team_name = :team_name",
             ExpressionAttributeValues: {
-               ":user_cognito_id": obj.user_cognito_id,
+               ":sensor": obj.brand,
                ":organization": obj.organization,
                ":team_name": obj.team_name
             },
@@ -504,13 +505,13 @@ function addPlayerToTeamInDDB(org, team, player_id) {
     });
 }
 
-function addPlayerToTeamOfOrganization(user_cognito_id, org, team, player_id) {
+function addPlayerToTeamOfOrganization(sensor, user_cognito_id, org, team, player_id) {
     return new Promise((resolve, reject) => {
         const params = {
             TableName: "organizations",
-            FilterExpression: "organization = :organization and user_cognito_id = :user_cognito_id and team_name = :team",
+            FilterExpression: "organization = :organization and sensor = :sensor and team_name = :team",
             ExpressionAttributeValues: {
-                ":user_cognito_id": user_cognito_id,
+                ":sensor": sensor,
                 ":organization": org,
                 ":team": team,
             }
@@ -557,6 +558,7 @@ function addPlayerToTeamOfOrganization(user_cognito_id, org, team, player_id) {
                         TableName: "organizations",
                         Item: {
                             organization_id: 'org-' + Date.now(),
+                            sensor: sensor,
                             user_cognito_id: user_cognito_id,
                             organization: org,
                             team_name: team,
@@ -870,15 +872,7 @@ function uploadCGValuesAndSetINPStatus(user_cognito_id, file_name) {
 function getAllSensorBrands() {
     return new Promise((resolve, reject) => {
         const params = {
-            TableName: "users",
-            FilterExpression:
-                "#user_level = :user_level_value",
-            ExpressionAttributeValues: {
-                ":user_level_value": 400,
-            },
-            ExpressionAttributeNames: {
-                "#user_level": "level",
-            },
+            TableName: "sensors"
         };
         var item = [];
         docClient.scan(params).eachPage((err, data, done) => {
@@ -897,12 +891,41 @@ function getAllSensorBrands() {
 
 function getBrandData(obj) {
     return new Promise((resolve, reject) => {
+
+        // var users = obj.users;
+        // var userObject = {};
+        // var index = 0;
+        // users.forEach(function(value) {
+        //     index++;
+        //     var userKey = ":uservalue"+index;
+        //     userObject[userKey.toString()] = value;
+        // });
+
+        // let params = {
+        //     TableName: "sensor_data",
+        //     FilterExpression: "user_cognito_id IN (" + Object.keys(userObject).toString() + ")",
+        //     ExpressionAttributeValues: userObject
+        // };
+        // var item = [];
+        // docClient.scan(params).eachPage((err, data, done) => {
+        //     if (err) {
+        //         reject(err);
+        //     }
+        //     if (data == null) {
+        //         resolve(concatArrays(item));
+        //     } else {
+        //         item.push(data.Items);
+        //     }
+        //     done();
+        // });
+
         let params = {
             TableName: "sensor_data",
-            FilterExpression: "user_cognito_id = :user_cognito_id",
+            FilterExpression: "sensor = :sensor",
             ExpressionAttributeValues: {
-               ":user_cognito_id": obj.user_cognito_id
+               ":sensor": obj.sensor
             },
+            ProjectionExpression: "sensor"
         };
         var item = [];
         docClient.scan(params).eachPage((err, data, done) => {
@@ -923,10 +946,11 @@ function getAllOrganizationsOfSensorBrand(obj) {
     return new Promise((resolve, reject) => {
         let params = {
             TableName: "organizations",
-            FilterExpression: "user_cognito_id = :user_cognito_id",
+            FilterExpression: "sensor = :sensor",
             ExpressionAttributeValues: {
-               ":user_cognito_id": obj.user_cognito_id
+               ":sensor": obj.brand
             },
+            ProjectionExpression: "organization, sensor"
         };
         var item = [];
         docClient.scan(params).eachPage((err, data, done) => {
@@ -947,11 +971,12 @@ function getBrandOrganizationData(obj) {
     return new Promise((resolve, reject) => {
         let params = {
             TableName: "sensor_data",
-            FilterExpression: "user_cognito_id = :user_cognito_id and organization = :organization",
+            FilterExpression: "sensor = :sensor and organization = :organization",
             ExpressionAttributeValues: {
-               ":user_cognito_id": obj.user_cognito_id,
-               ":organization": obj.organization
+                ":sensor": obj.sensor,
+                ":organization": obj.organization
             },
+            ProjectionExpression: "sensor"
         };
         var item = [];
         docClient.scan(params).eachPage((err, data, done) => {
@@ -972,11 +997,12 @@ function getAllTeamsOfOrganizationsOfSensorBrand(obj) {
     return new Promise((resolve, reject) => {
         let params = {
             TableName: "organizations",
-            FilterExpression: "user_cognito_id = :user_cognito_id and organization = :organization",
+            FilterExpression: "sensor = :sensor and organization = :organization",
             ExpressionAttributeValues: {
-               ":user_cognito_id": obj.user_cognito_id,
+               ":sensor": obj.brand,
                ":organization": obj.organization
             },
+            ProjectionExpression: "sensor, organization, team_name"
         };
         var item = [];
         docClient.scan(params).eachPage((err, data, done) => {
@@ -997,12 +1023,13 @@ function getOrganizationTeamData(obj) {
     return new Promise((resolve, reject) => {
         let params = {
             TableName: "sensor_data",
-            FilterExpression: "user_cognito_id = :user_cognito_id and organization = :organization and team = :team",
+            FilterExpression: "sensor = :sensor and organization = :organization and team = :team",
             ExpressionAttributeValues: {
-               ":user_cognito_id": obj.user_cognito_id,
+               ":sensor": obj.sensor,
                ":organization": obj.organization,
                ":team": obj.team
             },
+            ProjectionExpression: "sensor"
         };
         var item = [];
         docClient.scan(params).eachPage((err, data, done) => {
@@ -1025,6 +1052,24 @@ function getPlayerSimulationFile(obj) {
             TableName: "simulation_images",
             Key: {
                 image_id: obj.image_id,
+            },
+        };
+        docClient.get(params, function (err, data) {
+            if (err) {
+                reject(err);
+            } else {
+                resolve(data.Item);
+            }
+        });
+    });
+}
+
+function getSensorAdmins(sensor) {
+    return new Promise((resolve, reject) => {
+        let params = {
+            TableName: "sensors",
+            Key: {
+                sensor: sensor,
             },
         };
         docClient.get(params, function (err, data) {
@@ -1066,5 +1111,6 @@ module.exports = {
     getBrandOrganizationData,
     getAllTeamsOfOrganizationsOfSensorBrand,
     getOrganizationTeamData,
-    getPlayerSimulationFile
+    getPlayerSimulationFile,
+    getSensorAdmins
 };
