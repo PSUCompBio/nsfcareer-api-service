@@ -992,7 +992,7 @@ function generateSimulationForPlayers(player_data_array, reader, apiMode, sensor
             generateJWTokenWithNoExpiry({ image_id: _temp_player.image_id }, token_secret)
                 .then(image_token => {
 
-                    let player_id = _temp_player.player_id + '-' + _temp_player.sensor;
+                    let player_id = _temp_player.player_id.split("$")[0] + '-' + _temp_player.sensor;
                     player_id = player_id.replace(/ /g, "-");
 
                     updateSimulationImageToDDB(_temp_player.image_id, config.usersbucket, "null", "pending", image_token, token_secret)
@@ -1137,7 +1137,7 @@ function generateSimulationForPlayersFromJson(player_data_array, apiMode) {
             generateJWTokenWithNoExpiry({ image_id: _temp_player.image_id }, token_secret)
                 .then(image_token => {
 
-                    let player_id = _temp_player.player_id + '-' + _temp_player.sensor;
+                    let player_id = _temp_player.player_id.split("$")[0] + '-' + _temp_player.sensor;
                     player_id = player_id.replace(/ /g, "-");
 
                     updateSimulationImageToDDB(_temp_player.image_id, config.usersbucket, "null", "pending", image_token, token_secret)
