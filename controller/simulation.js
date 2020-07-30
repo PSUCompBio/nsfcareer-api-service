@@ -23,33 +23,33 @@ const {
 // ======================================
 //       CONFIGURING AWS SDK & EXPESS
 // ======================================
-// var config = {
-//     "awsAccessKeyId": process.env.AWS_ACCESS_KEY_ID,
-//     "awsSecretAccessKey": process.env.AWS_ACCESS_SECRET_KEY,
-//     "avatar3dClientId": process.env.AVATAR_3D_CLIENT_ID,
-//     "avatar3dclientSecret": process.env.AVATAR_3D_CLIENT_SECRET,
-//     "region" : process.env.REGION,
-//     "usersbucket": process.env.USERS_BUCKET,
-//     "apiVersion" : process.env.API_VERSION,
-//     "jwt_secret" : process.env.JWT_SECRET,
-//     "email_id" : process.env.EMAIL_ID,
-//     "mail_list" : process.env.MAIL_LIST,
-//     "ComputeInstanceEndpoint" : process.env.COMPUTE_INSTANCE_ENDPOINT,
-//     "userPoolId": process.env.USER_POOL_ID,
-//     "ClientId" : process.env.CLIENT_ID,
-//     "react_website_url" : process.env.REACT_WEBSITE_URL,
-//     "simulation_result_host_url" : process.env.SIMULATION_RESULT_HOST_URL,
-//     "jobQueueBeta" : process.env.JOB_QUEUE_BETA,
-//     "jobDefinitionBeta" : process.env.JOB_DEFINITION_BETA,
-//     "jobQueueProduction" : process.env.JOB_QUEUE_PRODUCTION,
-//     "jobDefinitionProduction" : process.env.JOB_DEFINITION_PRODUCTION,
-//     "simulation_bucket" : process.env.SIMULATION_BUCKET,
-//     "queue_x" : process.env.QUEUE_X,
-//     "queue_y" : process.env.QUEUE_Y,
-//     "queue_beta" : process.env.QUEUE_BETA
-// };
+var config = {
+    "awsAccessKeyId": process.env.AWS_ACCESS_KEY_ID,
+    "awsSecretAccessKey": process.env.AWS_ACCESS_SECRET_KEY,
+    "avatar3dClientId": process.env.AVATAR_3D_CLIENT_ID,
+    "avatar3dclientSecret": process.env.AVATAR_3D_CLIENT_SECRET,
+    "region" : process.env.REGION,
+    "usersbucket": process.env.USERS_BUCKET,
+    "apiVersion" : process.env.API_VERSION,
+    "jwt_secret" : process.env.JWT_SECRET,
+    "email_id" : process.env.EMAIL_ID,
+    "mail_list" : process.env.MAIL_LIST,
+    "ComputeInstanceEndpoint" : process.env.COMPUTE_INSTANCE_ENDPOINT,
+    "userPoolId": process.env.USER_POOL_ID,
+    "ClientId" : process.env.CLIENT_ID,
+    "react_website_url" : process.env.REACT_WEBSITE_URL,
+    "simulation_result_host_url" : process.env.SIMULATION_RESULT_HOST_URL,
+    "jobQueueBeta" : process.env.JOB_QUEUE_BETA,
+    "jobDefinitionBeta" : process.env.JOB_DEFINITION_BETA,
+    "jobQueueProduction" : process.env.JOB_QUEUE_PRODUCTION,
+    "jobDefinitionProduction" : process.env.JOB_DEFINITION_PRODUCTION,
+    "simulation_bucket" : process.env.SIMULATION_BUCKET,
+    "queue_x" : process.env.QUEUE_X,
+    "queue_y" : process.env.QUEUE_Y,
+    "queue_beta" : process.env.QUEUE_BETA
+};
 
-var config = require('../config/configuration_keys.json'); 
+// var config = require('../config/configuration_keys.json'); 
 var config_env = config;
 const BUCKET_NAME = config_env.usersbucket;
 
@@ -992,9 +992,12 @@ function generateSimulationForPlayers(player_data_array, reader, apiMode, sensor
             generateJWTokenWithNoExpiry({ image_id: _temp_player.image_id }, token_secret)
                 .then(image_token => {
 
+                    let player_id = _temp_player.player_id + '-' + _temp_player.sensor;
+                    player_id = player_id.replace(/ /g, "-");
+
                     updateSimulationImageToDDB(_temp_player.image_id, config.usersbucket, "null", "pending", image_token, token_secret)
                         .then(value => {
-                            return fetchCGValues(_temp_player.player_id.split("$")[0].replace(/ /g, "-"));
+                            return fetchCGValues(player_id);
                         })
                         .then(cg_coordinates => {
                             console.log('CG coordinates are ', cg_coordinates);
@@ -1069,7 +1072,7 @@ function generateSimulationForPlayers(player_data_array, reader, apiMode, sensor
                                 "image_token": image_token,
                                 "token_secret": token_secret,
                                 "date": _temp_player.date.split("/").join("-"),
-                                "player_id": _temp_player.player_id.split("$")[0].split(" ").join("-")
+                                "player_id": player_id
                             }
 
                             if ("impact" in _temp_player) {
@@ -1134,9 +1137,12 @@ function generateSimulationForPlayersFromJson(player_data_array, apiMode) {
             generateJWTokenWithNoExpiry({ image_id: _temp_player.image_id }, token_secret)
                 .then(image_token => {
 
+                    let player_id = _temp_player.player_id + '-' + _temp_player.sensor;
+                    player_id = player_id.replace(/ /g, "-");
+
                     updateSimulationImageToDDB(_temp_player.image_id, config.usersbucket, "null", "pending", image_token, token_secret)
                         .then(value => {
-                            return fetchCGValues(_temp_player.player_id.split("$")[0].replace(/ /g, "-"));
+                            return fetchCGValues(player_id);
                         })
                         .then(cg_coordinates => {
                             console.log('CG coordinates are ', cg_coordinates);
@@ -1178,7 +1184,7 @@ function generateSimulationForPlayersFromJson(player_data_array, apiMode) {
                             playerData["sensor"] = _temp_player.sensor;
                             playerData["impact-date"] = _temp_player['impact-date'].split(":").join("-");
                             playerData["impact-time"] = _temp_player['impact-time'];
-                            playerData["player_id"] = _temp_player.player_id.split("$")[0].split(" ").join("-")
+                            playerData["player_id"] = player_id
                             playerData["organization"] = _temp_player.organization;
 
                             playerData["player"]["first-name"] = _temp_player.player['first-name'];
@@ -1215,7 +1221,7 @@ function generateSimulationForPlayersFromJson(player_data_array, apiMode) {
                                 "image_token": image_token,
                                 "token_secret": token_secret,
                                 "date": _temp_player['impact-date'].split(":").join("-"),
-                                "player_id": _temp_player.player_id.split("$")[0].split(" ").join("-")
+                                "player_id": player_id
                             }
 
                             if ("impact" in _temp_player) {
