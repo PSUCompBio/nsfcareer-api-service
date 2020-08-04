@@ -304,7 +304,8 @@ function getTeamDataWithPlayerRecords(obj) {
                ":organization": obj.organization,
                ":team": obj.team,
                ":player_id": obj.player_id,
-            }
+            },
+            ScanIndexForward: false
         };
         var item = [];
         docClient.scan(params).eachPage((err, data, done) => {
