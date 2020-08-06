@@ -216,8 +216,10 @@ if (cluster.isMaster) {
             filename = req.body.data_filename
         }
 
-        // The file content will be in 'upload_file' parameter
-        let buffer = Buffer.from(req.body.upload_file, 'base64');
+        if (req.body.upload_file) {
+            // The file content will be in 'upload_file' parameter
+            let buffer = Buffer.from(req.body.upload_file, 'base64');
+        }
 
         let file_extension = null;
         if (filename !== null) {
@@ -225,35 +227,15 @@ if (cluster.isMaster) {
             file_extension = file_extension[file_extension.length - 1];
         }
         
-        if (file_extension === 'json') { // Reading json from file 
-            const new_items_array = JSON.parse(buffer);
-            //console.log(new_items_array);
+        if (file_extension === 'json' || filename == null) { // Reading json from file 
+            const new_items_array = file_extension === 'json' ? JSON.parse(buffer) : JSON.parse(req.body.json);
+            // console.log(new_items_array);
             const sensor_data_array = [];
 
             // Adding image id in array data
             for (var i = 0; i < new_items_array.length; i++) {
-                var _temp = new_items_array[i];
-                // _temp["user_cognito_id"] = req.body.user_cognito_id;
-                // _temp["image_id"] = shortid.generate();
-                // _temp["player_id"] = _temp["player_id"] + '$' + Date.now();
-                // _temp["simulation_status"] = 'pending';
-                // _temp["team"] = _temp.player.team;
-              
-                // if (_temp["sensor"] === 'prevent') {
-                //     _temp['mesh-transformation'] = [ "-y", "z", "-x" ];
-                // }
-
-                // if (_temp["sensor"] === 'sensor_company_x') {
-                //     _temp['mesh-transformation'] = ["-z", "x", "-y" ];
-                // }
-
-                //  if (_temp["sensor"] === 'sisu') {
-                //     _temp['mesh-transformation'] = ["-z", "-x", "-y"];
-                // }
-
-                // new_items_array[i] = _temp;
-
-                var _temp_sensor_data = {};
+                const _temp = new_items_array[i];
+                let _temp_sensor_data = {};
                 _temp_sensor_data["sensor"] = req.body.sensor_brand;
                 _temp_sensor_data["impact-date"] = _temp["impact-date"];
                 _temp_sensor_data["impact-time"] = _temp["impact-time"];
@@ -270,7 +252,7 @@ if (cluster.isMaster) {
 
                 if (_temp["simulation"]['time-units'] === 'seconds') {
                     _temp["simulation"]['time'].forEach((time, i) => {
-                        var _temp_time = parseFloat(time) * 0.001;
+                        const _temp_time = parseFloat(time) * 0.001;
                         _temp["simulation"]['time'][i] = _temp_time;
                     })
                 }
@@ -281,35 +263,35 @@ if (cluster.isMaster) {
 
                 if (_temp["simulation"]['linear-acceleration']['la-units'] === 'g') {
                     _temp["simulation"]['linear-acceleration']['x-la'].forEach((la, x) => {
-                        var _temp_la = parseFloat(la) * 9.80665;
+                        const _temp_la = parseFloat(la) * 9.80665;
                         _temp["simulation"]['linear-acceleration']['x-la'][x] = _temp_la;
                         x_g.push(_temp_la);
                     })
 
                     _temp["simulation"]['linear-acceleration']['y-la'].forEach((la, y) => {
-                        var _temp_la = parseFloat(la) * 9.80665;
+                        const _temp_la = parseFloat(la) * 9.80665;
                         _temp["simulation"]['linear-acceleration']['y-la'][y] = _temp_la;
                         y_g.push(_temp_la);
                     })
 
                     _temp["simulation"]['linear-acceleration']['z-la'].forEach((la, z) => {
-                        var _temp_la = parseFloat(la) * 9.80665;
+                        const _temp_la = parseFloat(la) * 9.80665;
                         _temp["simulation"]['linear-acceleration']['z-la'][z] = _temp_la;
                         z_g.push(_temp_la);
                     })
                 } else {
                     _temp["simulation"]['linear-acceleration']['x-la'].forEach((la, x) => {
-                        var _temp_la = parseFloat(la) / 9.80665;
+                        const _temp_la = parseFloat(la) / 9.80665;
                         x_g.push(_temp_la);
                     })
                     
                     _temp["simulation"]['linear-acceleration']['y-la'].forEach((la, y) => {
-                        var _temp_la = parseFloat(la) / 9.80665;
+                        const _temp_la = parseFloat(la) / 9.80665;
                         y_g.push(_temp_la);
                     })
                     
                     _temp["simulation"]['linear-acceleration']['z-la'].forEach((la, z) => {
-                        var _temp_la = parseFloat(la) / 9.80665;
+                        const _temp_la = parseFloat(la) / 9.80665;
                         z_g.push(_temp_la);
                     })
                 }
@@ -932,15 +914,34 @@ if (cluster.isMaster) {
                                 playerData = player_data;
                                 counter++;
                                 p_data.push({
-                                    player_name: p,
+                                    date_time: playerData[0].player_id.split('$')[1],
                                     //vsimulation_image: image ? image : '',
                                     simulation_data: playerData
                                 });
                                if (counter == player_list.length) {
-                                    res.send({
-                                        message: "success",
-                                        data: p_data
-                                    })
+                                    p_data.sort(function(b, a) {
+                                        var keyA = a.date_time,
+                                        keyB = b.date_time;
+                                        if (keyA < keyB) return -1;
+                                        if (keyA > keyB) return 1;
+                                        return 0;
+                                    });
+
+                                    let k = 0;
+                                    p_data.forEach(function (record, index) {
+                                        getPlayerSimulationFile(record.simulation_data[0])
+                                            .then(simulation => {
+                                                k++;
+                                                p_data[index]['simulation_data'][0]['simulation_status'] = simulation.status
+
+                                                if (k == p_data.length) {
+                                                    res.send({
+                                                        message: "success",
+                                                        data: p_data
+                                                    })
+                                                }
+                                            })
+                                    })    
                                 }
                                //return getPlayerSimulationFile(player_data[0]);
                             })
@@ -1066,6 +1067,8 @@ if (cluster.isMaster) {
                         let angular_acceleration = accData['impact-date'] ? accData.simulation['angular-acceleration'] : accData['angular-acceleration'];
                         // Y Axis timestamp
                         let time = accData['impact-date'] ? accData.simulation['linear-acceleration']['xt'] : accData['linear-acceleration']['xt'];
+                        time = time ? time : [];
+                        
                         console.log(time);
                         time.forEach((t, i) => {
                             var _temp_time = parseFloat(t).toFixed(1);

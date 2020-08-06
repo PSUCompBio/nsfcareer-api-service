@@ -253,7 +253,7 @@ function getCumulativeAccelerationData(obj) {
                ":sensor": obj.brand,
                ":organization": obj.organization,
                ":team": obj.team,
-               ":player_id": obj.player_id,
+               ":player_id": obj.player_id + '$',
             },
         };
         var item = [];
@@ -298,17 +298,18 @@ function getTeamDataWithPlayerRecords(obj) {
     return new Promise((resolve, reject) => {
         let params = {
             TableName: "sensor_data",
-            FilterExpression: "sensor = :sensor and organization = :organization and team = :team and begins_with(player_id,:player_id)",
+            KeyConditionExpression:  "team = :team and begins_with(player_id,:player_id)",
+            FilterExpression: "sensor = :sensor and organization = :organization",
             ExpressionAttributeValues: {
                ":sensor": obj.sensor,
                ":organization": obj.organization,
                ":team": obj.team,
-               ":player_id": obj.player_id,
+               ":player_id": obj.player_id + '$',
             },
             ScanIndexForward: false
         };
         var item = [];
-        docClient.scan(params).eachPage((err, data, done) => {
+        docClient.query(params).eachPage((err, data, done) => {
             if (err) {
                 reject(err);
             }
@@ -348,7 +349,8 @@ function getTeamData(obj) {
     return new Promise((resolve, reject) => {
         let params = {
             TableName: "sensor_data",
-            FilterExpression: "sensor = :sensor and organization = :organization and team = :team",
+            KeyConditionExpression:  "team = :team",
+            FilterExpression: "sensor = :sensor and organization = :organization",
             ExpressionAttributeValues: {
                ":sensor": obj.brand,
                ":organization": obj.organization,
@@ -357,7 +359,7 @@ function getTeamData(obj) {
             ProjectionExpression: "image_id"
         };
         var item = [];
-        docClient.scan(params).eachPage((err, data, done) => {
+        docClient.query(params).eachPage((err, data, done) => {
             if (err) {
                 reject(err);
             }
