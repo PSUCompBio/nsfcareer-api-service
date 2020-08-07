@@ -202,15 +202,15 @@ if (cluster.isMaster) {
     app.post(`${apiPrefix}generateSimulationForSensorData`, setConnectionTimeout('10m'), function (req, res) {
         // console.log('user_cognito_id', req.body.user_cognito_id);
         let apiMode = req.body.mode;
-        let sensor =  req.body.sensor !== undefined ? req.body.sensor : null;
+        let sensor = req.body.sensor !== undefined ? req.body.sensor : null;
         let reader = 0;
         let filename = req.body.data_filename !== undefined ? req.body.data_filename : null;
 
-        if (sensor === 'sensor_company_x' || sensor === 'SWA' ) {
+        if (sensor === 'sensor_company_x' || sensor === 'SWA') {
             reader = 1;
             filename = req.body.data_filename
         }
-        
+
         if (sensor === 'prevent') {
             reader = 2;
             filename = req.body.data_filename
@@ -226,7 +226,7 @@ if (cluster.isMaster) {
             file_extension = filename.split(".");
             file_extension = file_extension[file_extension.length - 1];
         }
-        
+
         if (file_extension === 'json' || filename == null) { // Reading json from file 
             const new_items_array = file_extension === 'json' ? JSON.parse(buffer) : JSON.parse(req.body.json);
             // console.log(new_items_array);
@@ -243,9 +243,9 @@ if (cluster.isMaster) {
                 _temp_sensor_data["player"] = _temp["player"];
 
                 _temp_sensor_data["simulation"] = {
-                    "la-units" : "",
-                    "linear-acceleration" : {},
-                    "angular-acceleration" : {}
+                    "la-units": "",
+                    "linear-acceleration": {},
+                    "angular-acceleration": {}
                 };
 
                 _temp_sensor_data["simulation"]["linear-acceleration"] = {};
@@ -284,12 +284,12 @@ if (cluster.isMaster) {
                         const _temp_la = parseFloat(la) / 9.80665;
                         x_g.push(_temp_la);
                     })
-                    
+
                     _temp["simulation"]['linear-acceleration']['y-la'].forEach((la, y) => {
                         const _temp_la = parseFloat(la) / 9.80665;
                         y_g.push(_temp_la);
                     })
-                    
+
                     _temp["simulation"]['linear-acceleration']['z-la'].forEach((la, z) => {
                         const _temp_la = parseFloat(la) / 9.80665;
                         z_g.push(_temp_la);
@@ -313,22 +313,22 @@ if (cluster.isMaster) {
                 _temp_sensor_data["simulation"]["angular-acceleration"]['yt'] = _temp["simulation"]['time'];
                 _temp_sensor_data["simulation"]["angular-acceleration"]['zv'] = _temp["simulation"]['angular-acceleration']['z-aa-rad/s^2'];
                 _temp_sensor_data["simulation"]["angular-acceleration"]['zt'] = _temp["simulation"]['time'];
-         
+
                 _temp_sensor_data["user_cognito_id"] = req.body.user_cognito_id;
                 _temp_sensor_data["image_id"] = shortid.generate();
                 _temp_sensor_data["player_id"] = _temp["player_id"] + '$' + Date.now();
                 _temp_sensor_data["simulation_status"] = 'pending';
                 _temp_sensor_data["team"] = _temp.player.team;
-              
+
                 if (req.body.sensor_brand === 'Prevent') {
-                    _temp_sensor_data['mesh-transformation'] = [ "-y", "z", "-x"];
+                    _temp_sensor_data['mesh-transformation'] = ["-y", "z", "-x"];
                 } else if (req.body.sensor_brand === 'Sensor Company X' || req.body.sensor_brand === 'SWA') {
                     _temp_sensor_data['mesh-transformation'] = ["-z", "x", "-y"];
                     _temp_sensor_data['angular-to-linear-frame'] = ["-y", "-x", "z"];
                 } else if (req.body.sensor_brand === 'SISU') {
                     _temp_sensor_data['mesh-transformation'] = ["-z", "-x", "y"];
                 } else {
-                    _temp_sensor_data['mesh-transformation'] = [ "-y", "z", "-x"];
+                    _temp_sensor_data['mesh-transformation'] = ["-y", "z", "-x"];
                 }
 
                 sensor_data_array.push(_temp_sensor_data);
@@ -412,14 +412,14 @@ if (cluster.isMaster) {
                                 })
                         }
                     }
-                }) 
+                })
                 .catch(err => {
                     console.log(err);
                     res.send({
                         message: "failure",
                         error: err
                     })
-                })            
+                })
         } else {
             if (sensor === null || sensor === '') {
                 res.send({
@@ -429,113 +429,113 @@ if (cluster.isMaster) {
             } else {
                 //Converting file data into JSON
                 convertFileDataToJson(buffer, reader, filename)
-                .then(items => {
-                    // Adding default organization Unknown to the impact data
-                    const new_items_array = _.map(items, o => _.extend({ organization: "Unknown" }, o));
+                    .then(items => {
+                        // Adding default organization Unknown to the impact data
+                        const new_items_array = _.map(items, o => _.extend({ organization: "Unknown" }, o));
 
-                    // Adding image id in array data
-                    for (var i = 0; i < new_items_array.length; i++) {
-                        var _temp = new_items_array[i];
-                        _temp["user_cognito_id"] = req.body.user_cognito_id;
-                        _temp["sensor"] = req.body.sensor_brand;
-                        _temp["image_id"] = shortid.generate();
-                        _temp['player'] = {};
-                        _temp['player']['first-name'] = "Unknown";
-                        _temp['player']['last-name'] = "Unknown";
-                        _temp['player']['sport'] = "Unknown";
-                        _temp['player']['position'] = "Unknown";
-                        _temp['player']['team'] = "Unknown";
-                        _temp["team"] = "Unknown";
-                        new_items_array[i] = _temp;
+                        // Adding image id in array data
+                        for (var i = 0; i < new_items_array.length; i++) {
+                            var _temp = new_items_array[i];
+                            _temp["user_cognito_id"] = req.body.user_cognito_id;
+                            _temp["sensor"] = req.body.sensor_brand;
+                            _temp["image_id"] = shortid.generate();
+                            _temp['player'] = {};
+                            _temp['player']['first-name'] = "Unknown";
+                            _temp['player']['last-name'] = "Unknown";
+                            _temp['player']['sport'] = "Unknown";
+                            _temp['player']['position'] = "Unknown";
+                            _temp['player']['team'] = "Unknown";
+                            _temp["team"] = "Unknown";
+                            new_items_array[i] = _temp;
 
-                    }
-                    console.log('New items array is ', new_items_array);
+                        }
+                        console.log('New items array is ', new_items_array);
 
-                    // Stores sensor data in db 
-                    // TableName: "sensor_data"
-                    // team, player_id
+                        // Stores sensor data in db 
+                        // TableName: "sensor_data"
+                        // team, player_id
 
-                    storeSensorData(new_items_array)
-                        .then(flag => {
+                        storeSensorData(new_items_array)
+                            .then(flag => {
 
-                            var players = new_items_array.map(function (player) {
-                                return {
-                                    player_id: player.player_id.split("$")[0],
-                                    team: player.player.team,
-                                    sensor: player.sensor,
-                                    organization: player.organization,
-                                }
-                            });
+                                var players = new_items_array.map(function (player) {
+                                    return {
+                                        player_id: player.player_id.split("$")[0],
+                                        team: player.player.team,
+                                        sensor: player.sensor,
+                                        organization: player.organization,
+                                    }
+                                });
 
-                            // Fetching unique players
-                            const result = _.uniqBy(players, 'player_id')
+                                // Fetching unique players
+                                const result = _.uniqBy(players, 'player_id')
 
-                            var simulation_result_urls = [];
+                                var simulation_result_urls = [];
 
-                            if (result.length == 0) {
-                                res.send({
-                                    message: "success"
-                                })
-                            } else {
-                                // Run simulation here and send data
-                                // {
-                                //     "player_id" : "STRING",
-                                //     "team" : "STRING",
-                                //     "organization" : "STRING"
-                                // }
-                                var counter = 0;
+                                if (result.length == 0) {
+                                    res.send({
+                                        message: "success"
+                                    })
+                                } else {
+                                    // Run simulation here and send data
+                                    // {
+                                    //     "player_id" : "STRING",
+                                    //     "team" : "STRING",
+                                    //     "organization" : "STRING"
+                                    // }
+                                    var counter = 0;
 
-                                for (var i = 0; i < result.length; i++) {
-                                    var temp = result[i];
+                                    for (var i = 0; i < result.length; i++) {
+                                        var temp = result[i];
 
-                                    // Adds team details in db if doesn't already exist
-                                    addPlayerToTeamOfOrganization(req.body.sensor_brand, req.body.user_cognito_id, temp.organization, temp.team, temp.player_id)
-                                        .then(d => {
-                                            counter++;
-                                            if (counter == result.length) {
-                                                // Upload player selfie if not present and generate meshes
-                                                // Generate simulation for player
-                                                uploadPlayerSelfieIfNotPresent(req.body.selfie, temp.player_id + '-' + temp.sensor, req.body.filename)
-                                                    .then((selfieDetails) => {
-                                                        return generateSimulationForPlayers(new_items_array, reader, apiMode, sensor);
-                                                    })
-                                                    .then(urls => {
-                                                        simulation_result_urls.push(urls)
-                                                        res.send({
-                                                            message: "success",
-                                                            image_url: _.spread(_.union)(simulation_result_urls)
+                                        // Adds team details in db if doesn't already exist
+                                        addPlayerToTeamOfOrganization(req.body.sensor_brand, req.body.user_cognito_id, temp.organization, temp.team, temp.player_id)
+                                            .then(d => {
+                                                counter++;
+                                                if (counter == result.length) {
+                                                    // Upload player selfie if not present and generate meshes
+                                                    // Generate simulation for player
+                                                    uploadPlayerSelfieIfNotPresent(req.body.selfie, temp.player_id + '-' + temp.sensor, req.body.filename)
+                                                        .then((selfieDetails) => {
+                                                            return generateSimulationForPlayers(new_items_array, reader, apiMode, sensor);
                                                         })
-                                                    })
-                                                    .catch(err => {
-                                                        console.log(err);
-                                                        counter = result.length;
-                                                        i = result.length;
-                                                        res.send({
-                                                            message: "failure",
-                                                            error: err
+                                                        .then(urls => {
+                                                            simulation_result_urls.push(urls)
+                                                            res.send({
+                                                                message: "success",
+                                                                image_url: _.spread(_.union)(simulation_result_urls)
+                                                            })
                                                         })
-                                                    })
-                                            }
-                                        })
-                                        .catch(err => {
-                                            console.log(err);
-                                            counter = result.length;
-                                            i = result.length;
-                                            res.send({
-                                                message: "failure",
-                                                error: err
+                                                        .catch(err => {
+                                                            console.log(err);
+                                                            counter = result.length;
+                                                            i = result.length;
+                                                            res.send({
+                                                                message: "failure",
+                                                                error: err
+                                                            })
+                                                        })
+                                                }
                                             })
-                                        })
+                                            .catch(err => {
+                                                console.log(err);
+                                                counter = result.length;
+                                                i = result.length;
+                                                res.send({
+                                                    message: "failure",
+                                                    error: err
+                                                })
+                                            })
+                                    }
                                 }
-                            }
-                        })
-                })
-                .catch(err => {
-                    res.send({
-                        message: "failure",
-                        error: "Incorrect file format"
+                            })
                     })
-                })
+                    .catch(err => {
+                        res.send({
+                            message: "failure",
+                            error: "Incorrect file format"
+                        })
+                    })
             }
         }
     })
@@ -838,7 +838,7 @@ if (cluster.isMaster) {
                                 }
                             })
                         })
-                })        
+                })
             })
             .catch(err => {
                 res.send({
@@ -918,10 +918,10 @@ if (cluster.isMaster) {
                                     //vsimulation_image: image ? image : '',
                                     simulation_data: playerData
                                 });
-                               if (counter == player_list.length) {
-                                    p_data.sort(function(b, a) {
+                                if (counter == player_list.length) {
+                                    p_data.sort(function (b, a) {
                                         var keyA = a.date_time,
-                                        keyB = b.date_time;
+                                            keyB = b.date_time;
                                         if (keyA < keyB) return -1;
                                         if (keyA > keyB) return 1;
                                         return 0;
@@ -941,9 +941,9 @@ if (cluster.isMaster) {
                                                     })
                                                 }
                                             })
-                                    })    
+                                    })
                                 }
-                               //return getPlayerSimulationFile(player_data[0]);
+                                //return getPlayerSimulationFile(player_data[0]);
                             })
                             // .then(image_data => {
                             //     imageData = image_data;
@@ -1041,149 +1041,174 @@ if (cluster.isMaster) {
                     let accData = acc_data;
                     let imageData = '';
                     let outputFile = '';
+                    let image = '';
                     getPlayerSimulationFile(acc_data)
-                    .then(image_data => {
-                        imageData = image_data;
-                        if (imageData.ouput_summary_file_path && imageData.ouput_summary_file_path != 'null') {
-                            let file_path = image_data.ouput_summary_file_path;
-                            file_path = file_path.replace(/'/g, "");
-                            return getFileFromS3(file_path);
-                        }
-                    })
-                   .then(output_file => {
-                        outputFile = output_file;
-                        if (imageData.path && imageData.path != 'null')
-                            return getFileFromS3(imageData.path);
-                    })
-                    .then(image_s3 => {
-                        if (imageData.path && imageData.path != 'null')
-                            return getImageFromS3Buffer(image_s3);
-                    })
-                    .then(image => {
-                        console.log(accData);
-                        // X- Axis Linear Acceleration
-                        let linear_acceleration = accData['impact-date'] ? accData.simulation['linear-acceleration'] : accData['linear-acceleration'];
-                        // X- Axis Angular Acceleration
-                        let angular_acceleration = accData['impact-date'] ? accData.simulation['angular-acceleration'] : accData['angular-acceleration'];
-                        // Y Axis timestamp
-                        let time = accData['impact-date'] ? accData.simulation['linear-acceleration']['xt'] : accData['linear-acceleration']['xt'];
-                        time = time ? time : [];
-                        
-                        console.log(time);
-                        time.forEach((t, i) => {
-                            var _temp_time = parseFloat(t).toFixed(1);
-                            time[i] = _temp_time;
-                        })
+                        .then(image_data => {
+                            imageData = image_data;
+                            if (imageData.ouput_summary_file_path && imageData.ouput_summary_file_path != 'null') {
+                                let file_path = image_data.ouput_summary_file_path;
+                                file_path = file_path.replace(/'/g, "");
+                                console.log('Imagepath', file_path)
 
-                        acceleration_data_list.push({
-                            linear_acceleration: linear_acceleration,
-                            angular_acceleration: angular_acceleration,
-                            time: time,
-                            simulation_image: image ? image : '',
-                            //simulation_output_data: outputFile ? JSON.parse(outputFile.Body.toString('utf-8')) : '',
-                            timestamp: accData.date,
-                            record_time: accData.time,
-                            sensor_data: accData,
-                            date_time: accData.player_id.split('$')[1]
+                                return getFileFromS3(file_path);
+                            }
                         })
+                        .then(output_file => {
+                            outputFile = output_file;
+                            if (imageData.path && imageData.path != 'null')
+                                return getFileFromS3(imageData.path);
+                        })
+                        .then(image_s3 => {
+                            if (imageData.path && imageData.path != 'null')
+                                return getImageFromS3Buffer(image_s3);
+                        })
+                        .then(img => {
+                            image = img
+                            // console.log(accData);
+                            if (imageData.log_path && imageData.log_path != 'null') {
+                                let key = imageData.log_path;
+                                key = key.replace(/'/g, "");
+                                console.log('key', key);
+                                return getFileFromS3(key);
+                            }
+                        })
+                        .then(log_s3 => {
+                            let log = '';
+                            if (log_s3) {
+                                log = Buffer.from(log_s3.Body).toString('utf8');
+                                // console.log('body',body)
+                            }
+                            // if (imageData.log_path && imageData.log_path != 'null') {
+                            //     // console.log('log_s3',log_s3 );    
+                            //     return getImageFromS3Buffer(log_s3);
+                            // }  
+                            // console.log('log',JSON.stringify( log))
+                            // const body = Buffer.from(log).toString('utf8');
+                            //     console.log(body);
+                            // X- Axis Linear Acceleration
+                            let linear_acceleration = accData['impact-date'] ? accData.simulation['linear-acceleration'] : accData['linear-acceleration'];
+                            // X- Axis Angular Acceleration
+                            let angular_acceleration = accData['impact-date'] ? accData.simulation['angular-acceleration'] : accData['angular-acceleration'];
+                            // Y Axis timestamp
+                            let time = accData['impact-date'] ? accData.simulation['linear-acceleration']['xt'] : accData['linear-acceleration']['xt'];
+                            time = time ? time : [];
 
-                        if (outputFile) {
-                            outputFile = JSON.parse(outputFile.Body.toString('utf-8'));
-                            if (outputFile.Insults) {
-                                outputFile.Insults.forEach(function (summary_data, index) {
-                                    if (summary_data['principal-max-strain']) {
-                                        summary_data['principal-max-strain']['brain-region'].forEach(function (region) {
-                                            let coordinate = {};
-                                            coordinate.x = summary_data['principal-max-strain'] ? summary_data['principal-max-strain'].location[0] : ''
-                                            coordinate.y = summary_data['principal-max-strain'] ? summary_data['principal-max-strain'].location[1] : ''
-                                            coordinate.z = summary_data['principal-max-strain'] ? summary_data['principal-max-strain'].location[2] : ''
-                                            region = region.toLowerCase();
-                                            // console.log(region);
-                                            principal_max_strain[region] = principal_max_strain[region] || [];
-                                            principal_max_strain[region].push(coordinate);
-                                        })
-                                    }
-                                    if (summary_data['principal-min-strain']) {
-                                        summary_data['principal-min-strain']['brain-region'].forEach(function (region) {
-                                            let coordinate = {};
-                                            coordinate.x = summary_data['principal-min-strain'] ? summary_data['principal-min-strain'].location[0] : ''
-                                            coordinate.y = summary_data['principal-min-strain'] ? summary_data['principal-min-strain'].location[1] : ''
-                                            coordinate.z = summary_data['principal-min-strain'] ? summary_data['principal-min-strain'].location[2] : ''
-                                            region = region.toLowerCase();
-                                            // console.log(region);
-                                            principal_min_strain[region] = principal_min_strain[region] || [];
-                                            principal_min_strain[region].push(coordinate);
-                                        })
-                                    }
-                                    if (summary_data['axonal-strain-max']) {
-                                        summary_data['axonal-strain-max']['brain-region'].forEach(function (region) {
-                                            let coordinate = {};
-                                            coordinate.x = summary_data['axonal-strain-max'] ? summary_data['axonal-strain-max'].location[0] : ''
-                                            coordinate.y = summary_data['axonal-strain-max'] ? summary_data['axonal-strain-max'].location[1] : ''
-                                            coordinate.z = summary_data['axonal-strain-max'] ? summary_data['axonal-strain-max'].location[2] : ''
-                                            region = region.toLowerCase();
-                                            // console.log(region);
-                                            axonal_strain_max[region] = axonal_strain_max[region] || [];
-                                            axonal_strain_max[region].push(coordinate);
-                                        })
-                                    }
-                                    if (summary_data['csdm-max']) {
-                                        summary_data['csdm-max']['brain-region'].forEach(function (region) {
-                                            let coordinate = {};
-                                            coordinate.x = summary_data['csdm-max'] ? summary_data['csdm-max'].location[0] : ''
-                                            coordinate.y = summary_data['csdm-max'] ? summary_data['csdm-max'].location[1] : ''
-                                            coordinate.z = summary_data['csdm-max'] ? summary_data['csdm-max'].location[2] : ''
-                                            region = region.toLowerCase();
-                                            // console.log(region);
-                                            csdm_max[region] = csdm_max[region] || [];
-                                            csdm_max[region].push(coordinate);
-                                        })
-                                    }
-                                    if (summary_data['masXsr-15-max']) {
-                                        summary_data['masXsr-15-max']['brain-region'].forEach(function (region) {
-                                            let coordinate = {};
-                                            coordinate.x = summary_data['masXsr-15-max'] ? summary_data['masXsr-15-max'].location[0] : ''
-                                            coordinate.y = summary_data['masXsr-15-max'] ? summary_data['masXsr-15-max'].location[1] : ''
-                                            coordinate.z = summary_data['masXsr-15-max'] ? summary_data['masXsr-15-max'].location[2] : ''
-                                            region = region.toLowerCase();
-                                            // console.log(region);
-                                            masXsr_15_max[region] = masXsr_15_max[region] || [];
-                                            masXsr_15_max[region].push(coordinate);
-                                        })
-                                    }
+                            // console.log(time);
+                            time.forEach((t, i) => {
+                                var _temp_time = parseFloat(t).toFixed(1);
+                                time[i] = _temp_time;
+                            })
+
+                            acceleration_data_list.push({
+                                linear_acceleration: linear_acceleration,
+                                angular_acceleration: angular_acceleration,
+                                time: time,
+                                simulation_image: image ? image : '',
+                                log_file: log ? log : '',
+                                //simulation_output_data: outputFile ? JSON.parse(outputFile.Body.toString('utf-8')) : '',
+                                timestamp: accData.date,
+                                record_time: accData.time,
+                                sensor_data: accData,
+                                date_time: accData.player_id.split('$')[1]
+                            })
+
+                            if (outputFile) {
+                                outputFile = JSON.parse(outputFile.Body.toString('utf-8'));
+                                if (outputFile.Insults) {
+                                    outputFile.Insults.forEach(function (summary_data, index) {
+                                        if (summary_data['principal-max-strain']) {
+                                            summary_data['principal-max-strain']['brain-region'].forEach(function (region) {
+                                                let coordinate = {};
+                                                coordinate.x = summary_data['principal-max-strain'] ? summary_data['principal-max-strain'].location[0] : ''
+                                                coordinate.y = summary_data['principal-max-strain'] ? summary_data['principal-max-strain'].location[1] : ''
+                                                coordinate.z = summary_data['principal-max-strain'] ? summary_data['principal-max-strain'].location[2] : ''
+                                                region = region.toLowerCase();
+                                                // console.log(region);
+                                                principal_max_strain[region] = principal_max_strain[region] || [];
+                                                principal_max_strain[region].push(coordinate);
+                                            })
+                                        }
+                                        if (summary_data['principal-min-strain']) {
+                                            summary_data['principal-min-strain']['brain-region'].forEach(function (region) {
+                                                let coordinate = {};
+                                                coordinate.x = summary_data['principal-min-strain'] ? summary_data['principal-min-strain'].location[0] : ''
+                                                coordinate.y = summary_data['principal-min-strain'] ? summary_data['principal-min-strain'].location[1] : ''
+                                                coordinate.z = summary_data['principal-min-strain'] ? summary_data['principal-min-strain'].location[2] : ''
+                                                region = region.toLowerCase();
+                                                // console.log(region);
+                                                principal_min_strain[region] = principal_min_strain[region] || [];
+                                                principal_min_strain[region].push(coordinate);
+                                            })
+                                        }
+                                        if (summary_data['axonal-strain-max']) {
+                                            summary_data['axonal-strain-max']['brain-region'].forEach(function (region) {
+                                                let coordinate = {};
+                                                coordinate.x = summary_data['axonal-strain-max'] ? summary_data['axonal-strain-max'].location[0] : ''
+                                                coordinate.y = summary_data['axonal-strain-max'] ? summary_data['axonal-strain-max'].location[1] : ''
+                                                coordinate.z = summary_data['axonal-strain-max'] ? summary_data['axonal-strain-max'].location[2] : ''
+                                                region = region.toLowerCase();
+                                                // console.log(region);
+                                                axonal_strain_max[region] = axonal_strain_max[region] || [];
+                                                axonal_strain_max[region].push(coordinate);
+                                            })
+                                        }
+                                        if (summary_data['csdm-max']) {
+                                            summary_data['csdm-max']['brain-region'].forEach(function (region) {
+                                                let coordinate = {};
+                                                coordinate.x = summary_data['csdm-max'] ? summary_data['csdm-max'].location[0] : ''
+                                                coordinate.y = summary_data['csdm-max'] ? summary_data['csdm-max'].location[1] : ''
+                                                coordinate.z = summary_data['csdm-max'] ? summary_data['csdm-max'].location[2] : ''
+                                                region = region.toLowerCase();
+                                                // console.log(region);
+                                                csdm_max[region] = csdm_max[region] || [];
+                                                csdm_max[region].push(coordinate);
+                                            })
+                                        }
+                                        if (summary_data['masXsr-15-max']) {
+                                            summary_data['masXsr-15-max']['brain-region'].forEach(function (region) {
+                                                let coordinate = {};
+                                                coordinate.x = summary_data['masXsr-15-max'] ? summary_data['masXsr-15-max'].location[0] : ''
+                                                coordinate.y = summary_data['masXsr-15-max'] ? summary_data['masXsr-15-max'].location[1] : ''
+                                                coordinate.z = summary_data['masXsr-15-max'] ? summary_data['masXsr-15-max'].location[2] : ''
+                                                region = region.toLowerCase();
+                                                // console.log(region);
+                                                masXsr_15_max[region] = masXsr_15_max[region] || [];
+                                                masXsr_15_max[region].push(coordinate);
+                                            })
+                                        }
+                                    })
+                                }
+                            }
+
+                            brainRegions['principal-max-strain'] = principal_max_strain;
+                            brainRegions['principal-min-strain'] = principal_min_strain;
+                            brainRegions['axonal-strain-max'] = axonal_strain_max;
+                            brainRegions['csdm-max'] = csdm_max;
+                            brainRegions['masXsr-15-max'] = masXsr_15_max;
+
+                            // console.log('brainRegions', JSON.stringify(brainRegions));
+
+                            if (data.length === cnt) {
+                                acceleration_data_list.sort(function (b, a) {
+                                    var keyA = a.date_time,
+                                        keyB = b.date_time;
+                                    if (keyA < keyB) return -1;
+                                    if (keyA > keyB) return 1;
+                                    return 0;
+                                });
+                                res.send({
+                                    message: "success",
+                                    data: acceleration_data_list,
+                                    // frontal_Lobe: frontal_Lobe,
+                                    brainRegions: brainRegions
                                 })
                             }
-                        }
 
-                        brainRegions['principal-max-strain'] = principal_max_strain;
-                        brainRegions['principal-min-strain'] = principal_min_strain;
-                        brainRegions['axonal-strain-max'] = axonal_strain_max;
-                        brainRegions['csdm-max'] = csdm_max;
-                        brainRegions['masXsr-15-max'] = masXsr_15_max;
+                            cnt++;
+                        })
 
-                        console.log('brainRegions', JSON.stringify(brainRegions));
-
-                        if (data.length === cnt) {
-                            acceleration_data_list.sort(function(b, a) {
-                                var keyA = a.date_time,
-                                keyB = b.date_time;
-                                if (keyA < keyB) return -1;
-                                if (keyA > keyB) return 1;
-                                return 0;
-                            });
-                            res.send({
-                                message: "success",
-                                data: acceleration_data_list,
-                                // frontal_Lobe: frontal_Lobe,
-                                brainRegions: brainRegions
-                            })
-                        }
-
-                        cnt++;
-                    })
-                    
                 })
-               
+
             })
             .catch(err => {
                 var acceleration_data_list = [];
@@ -1402,149 +1427,149 @@ if (cluster.isMaster) {
 
     app.post(`${apiPrefix}getAllSensorBrands`, function (req, res) {
         getAllSensorBrands()
-        .then(list => {
-            var brandList = list.filter(function (brand) {
-                return (!("brandList" in brand));
-            });
+            .then(list => {
+                var brandList = list.filter(function (brand) {
+                    return (!("brandList" in brand));
+                });
 
-            let counter = 0;
-            if (brandList.length == 0) {
-                res.send({
-                    message: "success",
-                    data: []
-                })
-            } else {
-                
-                brandList.forEach(function (brand, index) {
-                    let data = brand;
-                    let i = index;
-                    getBrandData({ sensor: data.sensor })
-                        .then(simulation_records => {
-                            counter++;
-                            brand["simulation_count"] = Number(simulation_records.length).toString();
+                let counter = 0;
+                if (brandList.length == 0) {
+                    res.send({
+                        message: "success",
+                        data: []
+                    })
+                } else {
 
-                            if (counter == brandList.length) {
-                                res.send({
-                                    message: "success",
-                                    data: brandList
-                                })
-                            }
-                        })
-                        .catch(err => {
-                           counter++
-                            if (counter == brandList.length) {
-                                res.send({
-                                    message: "failure",
-                                    error: err
-                                })
-                            }
-                        })
-                })
-            }
-        })
-        .catch(err => {
-            res.send({
-                message: "failure",
-                error: err
+                    brandList.forEach(function (brand, index) {
+                        let data = brand;
+                        let i = index;
+                        getBrandData({ sensor: data.sensor })
+                            .then(simulation_records => {
+                                counter++;
+                                brand["simulation_count"] = Number(simulation_records.length).toString();
+
+                                if (counter == brandList.length) {
+                                    res.send({
+                                        message: "success",
+                                        data: brandList
+                                    })
+                                }
+                            })
+                            .catch(err => {
+                                counter++
+                                if (counter == brandList.length) {
+                                    res.send({
+                                        message: "failure",
+                                        error: err
+                                    })
+                                }
+                            })
+                    })
+                }
             })
-        })
+            .catch(err => {
+                res.send({
+                    message: "failure",
+                    error: err
+                })
+            })
     })
 
     app.post(`${apiPrefix}getAllOrganizationsOfSensorBrand`, function (req, res) {
-       getAllOrganizationsOfSensorBrand(req.body)
-        .then(list => {
-            // console.log(list);
-            let uniqueList = [];
-            var orgList = list.filter(function (organization) {
-                if (uniqueList.indexOf(organization.organization) === -1) {
-                    uniqueList.push(organization.organization);
-                    return organization;
+        getAllOrganizationsOfSensorBrand(req.body)
+            .then(list => {
+                // console.log(list);
+                let uniqueList = [];
+                var orgList = list.filter(function (organization) {
+                    if (uniqueList.indexOf(organization.organization) === -1) {
+                        uniqueList.push(organization.organization);
+                        return organization;
+                    }
+                });
+
+                let counter = 0;
+                if (orgList.length == 0) {
+                    res.send({
+                        message: "success",
+                        data: []
+                    })
+                } else {
+                    orgList.forEach(function (org, index) {
+                        let data = org;
+                        let i = index;
+                        getBrandOrganizationData({ sensor: data.sensor, organization: data.organization })
+                            .then(simulation_records => {
+                                counter++;
+                                org["simulation_count"] = Number(simulation_records.length).toString();
+
+                                if (counter == orgList.length) {
+                                    res.send({
+                                        message: "success",
+                                        data: orgList
+                                    })
+                                }
+                            })
+                            .catch(err => {
+                                counter++
+                                if (counter == orgList.length) {
+                                    res.send({
+                                        message: "failure",
+                                        error: err
+                                    })
+                                }
+                            })
+                    })
                 }
-            });
-
-            let counter = 0;
-            if (orgList.length == 0) {
-                res.send({
-                    message: "success",
-                    data: []
-                })
-            } else {
-                orgList.forEach(function (org, index) {
-                    let data = org;
-                    let i = index;
-                    getBrandOrganizationData({ sensor: data.sensor, organization: data.organization })
-                        .then(simulation_records => {
-                            counter++;
-                            org["simulation_count"] = Number(simulation_records.length).toString();
-
-                            if (counter == orgList.length) {
-                                res.send({
-                                    message: "success",
-                                    data: orgList
-                                })
-                            }
-                        })
-                        .catch(err => {
-                           counter++
-                            if (counter == orgList.length) {
-                                res.send({
-                                    message: "failure",
-                                    error: err
-                                })
-                            }
-                        })
-                })
-            }
-        })    
+            })
     })
 
     app.post(`${apiPrefix}getAllteamsOfOrganizationOfSensorBrand`, function (req, res) {
         getAllTeamsOfOrganizationsOfSensorBrand(req.body)
-        .then(list => {
-            // console.log(list);
-            let uniqueList = [];
-            var teamList = list.filter(function (team_name) {
-                return (!("teamList" in team_name));
-            });
+            .then(list => {
+                // console.log(list);
+                let uniqueList = [];
+                var teamList = list.filter(function (team_name) {
+                    return (!("teamList" in team_name));
+                });
 
-            console.log(teamList);
+                console.log(teamList);
 
-            let counter = 0;
-            if (teamList.length == 0) {
-                res.send({
-                    message: "success",
-                    data: []
-                })
-            } else {
-                // console.log(teamList);
-                teamList.forEach(function (team, index) {
-                    let data = team;
-                    let i = index;
-                    getOrganizationTeamData({ sensor: data.sensor, organization: data.organization, team: data.team_name})
-                        .then(simulation_records => {
-                            counter++;
-                            team["simulation_count"] = Number(simulation_records.length).toString();
+                let counter = 0;
+                if (teamList.length == 0) {
+                    res.send({
+                        message: "success",
+                        data: []
+                    })
+                } else {
+                    // console.log(teamList);
+                    teamList.forEach(function (team, index) {
+                        let data = team;
+                        let i = index;
+                        getOrganizationTeamData({ sensor: data.sensor, organization: data.organization, team: data.team_name })
+                            .then(simulation_records => {
+                                counter++;
+                                team["simulation_count"] = Number(simulation_records.length).toString();
 
-                            if (counter == teamList.length) {
-                                console.log(teamList);
-                                res.send({
-                                    message: "success",
-                                    data: teamList
-                                })
-                            }
-                        })
-                        .catch(err => {
-                           counter++
-                            if (counter == teamList.length) {
-                                res.send({
-                                    message: "failure",
-                                    error: err
-                                })
-                            }
-                        })
-                })
-            }
-        })    
+                                if (counter == teamList.length) {
+                                    console.log(teamList);
+                                    res.send({
+                                        message: "success",
+                                        data: teamList
+                                    })
+                                }
+                            })
+                            .catch(err => {
+                                counter++
+                                if (counter == teamList.length) {
+                                    res.send({
+                                        message: "failure",
+                                        error: err
+                                    })
+                                }
+                            })
+                    })
+                }
+            })
     })
 
     // Configuring port for APP
@@ -2063,30 +2088,31 @@ if (cluster.isMaster) {
         return new Buffer(bitmap).toString('base64');
     }
 
-    function getFileFromS3(url){
-        return new Promise((resolve, reject) =>{
+    function getFileFromS3(url) {
+        console.log('url', url)
+        return new Promise((resolve, reject) => {
             var params = {
                 Bucket: config_env.usersbucket,
                 Key: url
             };
-            s3.getObject(params, function(err, data) {
+            s3.getObject(params, function (err, data) {
                 if (err) {
                     // reject(err)
                     resolve(null);
                 }
-                else{
+                else {
                     resolve(data);
                 }
             });
         })
     }
 
-    function getImageFromS3Buffer(image_data){
+    function getImageFromS3Buffer(image_data) {
         return new Promise((resolve, reject) => {
             try {
                 resolve(image_data.Body.toString('base64'))
             }
-            catch (e){
+            catch (e) {
                 // reject(e)
                 resolve(null);
             }
