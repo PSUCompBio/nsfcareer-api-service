@@ -1034,7 +1034,8 @@ function generateSimulationForPlayers(player_data_array, reader, apiMode, sensor
                             }
 
                             playerData["player"]["name"] = _temp_player.player_id.replace(/ /g, "-");
-                            playerData["uid"] = _temp_player.player_id.split("$")[0].replace(/ /g, "-") + '_' + _temp_player.image_id;
+                            // playerData["uid"] = _temp_player.player_id.split("$")[0].replace(/ /g, "-") + '_' + _temp_player.image_id;
+                            playerData["uid"] = _temp_player.image_id;
 
                             if (reader == 1 || reader == 2) {
                                 
@@ -1185,7 +1186,8 @@ function generateSimulationForPlayersFromJson(player_data_array, apiMode) {
                                 }
                             }
 
-                            playerData["uid"] = _temp_player.player_id.split("$")[0].replace(/ /g, "-") + '_' + _temp_player.image_id;
+                            // playerData["uid"] = _temp_player.player_id.split("$")[0].replace(/ /g, "-") + '_' + _temp_player.image_id;
+                            playerData["uid"] = _temp_player.image_id;
                             playerData["sensor"] = _temp_player.sensor;
                             playerData["impact-date"] = _temp_player['impact-date'].split(":").join("-");
                             playerData["impact-time"] = _temp_player['impact-time'];

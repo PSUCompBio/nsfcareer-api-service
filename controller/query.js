@@ -248,16 +248,18 @@ function getCumulativeAccelerationData(obj) {
     return new Promise((resolve, reject) => {
         let params = {
             TableName: "sensor_data",
-            FilterExpression: "sensor = :sensor and begins_with(player_id,:player_id) and organization = :organization and team = :team",
+            KeyConditionExpression:  "team = :team and begins_with(player_id,:player_id)",
+            FilterExpression: "sensor = :sensor and organization = :organization",
             ExpressionAttributeValues: {
                ":sensor": obj.brand,
                ":organization": obj.organization,
                ":team": obj.team,
                ":player_id": obj.player_id + '$',
             },
+            ScanIndexForward: false
         };
         var item = [];
-        docClient.scan(params).eachPage((err, data, done) => {
+        docClient.query(params).eachPage((err, data, done) => {
             if (err) {
                 reject(err);
             }

@@ -265,19 +265,19 @@ if (cluster.isMaster) {
                     _temp["simulation"]['linear-acceleration']['x-la'].forEach((la, x) => {
                         const _temp_la = parseFloat(la) * 9.80665;
                         _temp["simulation"]['linear-acceleration']['x-la'][x] = _temp_la;
-                        x_g.push(_temp_la);
+                        x_g.push(parseFloat(la));
                     })
 
                     _temp["simulation"]['linear-acceleration']['y-la'].forEach((la, y) => {
                         const _temp_la = parseFloat(la) * 9.80665;
                         _temp["simulation"]['linear-acceleration']['y-la'][y] = _temp_la;
-                        y_g.push(_temp_la);
+                        y_g.push(parseFloat(la));
                     })
 
                     _temp["simulation"]['linear-acceleration']['z-la'].forEach((la, z) => {
                         const _temp_la = parseFloat(la) * 9.80665;
                         _temp["simulation"]['linear-acceleration']['z-la'][z] = _temp_la;
-                        z_g.push(_temp_la);
+                        z_g.push(parseFloat(la));
                     })
                 } else {
                     _temp["simulation"]['linear-acceleration']['x-la'].forEach((la, x) => {
@@ -1083,7 +1083,8 @@ if (cluster.isMaster) {
                             //simulation_output_data: outputFile ? JSON.parse(outputFile.Body.toString('utf-8')) : '',
                             timestamp: accData.date,
                             record_time: accData.time,
-                            sensor_data: accData
+                            sensor_data: accData,
+                            date_time: accData.player_id.split('$')[1]
                         })
 
                         if (outputFile) {
@@ -1163,6 +1164,13 @@ if (cluster.isMaster) {
                         console.log('brainRegions', JSON.stringify(brainRegions));
 
                         if (data.length === cnt) {
+                            acceleration_data_list.sort(function(b, a) {
+                                var keyA = a.date_time,
+                                keyB = b.date_time;
+                                if (keyA < keyB) return -1;
+                                if (keyA > keyB) return 1;
+                                return 0;
+                            });
                             res.send({
                                 message: "success",
                                 data: acceleration_data_list,
@@ -2063,7 +2071,8 @@ if (cluster.isMaster) {
             };
             s3.getObject(params, function(err, data) {
                 if (err) {
-                    reject(err)
+                    // reject(err)
+                    resolve(null);
                 }
                 else{
                     resolve(data);
@@ -2074,15 +2083,13 @@ if (cluster.isMaster) {
 
     function getImageFromS3Buffer(image_data){
         return new Promise((resolve, reject) => {
-            console.log(image_data.Body);
-                try{
-                    resolve(image_data.Body.toString('base64'))
-                }
-                catch (e){
-                    reject(e)
-                }
-    
+            try {
+                resolve(image_data.Body.toString('base64'))
+            }
+            catch (e){
+                // reject(e)
+                resolve(null);
+            }
         })
     }
-
 }
