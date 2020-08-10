@@ -205,6 +205,7 @@ if (cluster.isMaster) {
         let sensor = req.body.sensor !== undefined ? req.body.sensor : null;
         let reader = 0;
         let filename = req.body.data_filename !== undefined ? req.body.data_filename : null;
+        let buffer = '';
 
         if (sensor === 'sensor_company_x' || sensor === 'SWA') {
             reader = 1;
@@ -218,7 +219,7 @@ if (cluster.isMaster) {
 
         if (req.body.upload_file) {
             // The file content will be in 'upload_file' parameter
-            let buffer = Buffer.from(req.body.upload_file, 'base64');
+            buffer = Buffer.from(req.body.upload_file, 'base64');
         }
 
         let file_extension = null;
@@ -932,7 +933,8 @@ if (cluster.isMaster) {
                                         getPlayerSimulationFile(record.simulation_data[0])
                                             .then(simulation => {
                                                 k++;
-                                                p_data[index]['simulation_data'][0]['simulation_status'] = simulation.status
+                                                p_data[index]['simulation_data'][0]['simulation_status'] = simulation.status;
+                                                p_data[index]['simulation_data'][0]['computed_time'] = simulation.computed_time;
 
                                                 if (k == p_data.length) {
                                                     res.send({
@@ -1071,6 +1073,7 @@ if (cluster.isMaster) {
                     let imageData = '';
                     let outputFile = '';
                     getPlayerSimulationFile(acc_data)
+<<<<<<< HEAD
                     .then(image_data => {
                         imageData = image_data;
                         if (imageData.ouput_summary_file_path && imageData.ouput_summary_file_path != 'null') {
@@ -1100,6 +1103,50 @@ if (cluster.isMaster) {
                         time.forEach((t, i) => {
                             var _temp_time = parseFloat(t).toFixed(1);
                             time[i] = _temp_time;
+=======
+                        .then(image_data => {
+                            imageData = image_data;
+                            if (imageData.ouput_summary_file_path && imageData.ouput_summary_file_path != 'null') {
+                                let file_path = image_data.ouput_summary_file_path;
+                                file_path = file_path.replace(/'/g, "");
+                                return getFileFromS3(file_path);
+                            } else {
+                                if (imageData.root_path && imageData.root_path != 'null') {
+                                    let summary_path = imageData.root_path + imageData.image_id + '_output_summary.json';
+                                    return getFileFromS3(summary_path);
+                                }
+                            }
+                        })
+                        .then(output_file => {
+                            outputFile = output_file;
+                            if (imageData.path && imageData.path != 'null') {
+                                return getFileFromS3(imageData.path);
+                            } else {
+                                if (imageData.root_path && imageData.root_path != 'null') {
+                                    let image_path = imageData.root_path + imageData.image_id + '.png';
+                                    return getFileFromS3(image_path);
+                                }
+                            }
+                        })
+                        .then(image_s3 => {
+                            if (image_s3) {
+                                return getImageFromS3Buffer(image_s3);
+                            }
+                        })
+                        .then(img => {
+                            image = img
+                            // console.log(accData);
+                            if (imageData.log_path && imageData.log_path != 'null') {
+                                let key = imageData.log_path;
+                                key = key.replace(/'/g, "");
+                                return getFileFromS3(key);
+                            } else {
+                                if (imageData.root_path && imageData.root_path != 'null') {
+                                    let log_path = imageData.root_path + 'logs/femtech_' + imageData.image_id + '.log';
+                                    return getFileFromS3(log_path);
+                                }
+                            }
+>>>>>>> a6861191c99625f911812e6469a1248a9fae2832
                         })
 
                         acceleration_data_list.push({
