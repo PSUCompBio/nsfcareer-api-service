@@ -1103,8 +1103,9 @@ if (cluster.isMaster) {
                         }
                     })
                     .then(image_s3 => {
-                        if (imageData.path && imageData.path != 'null')
+                        if (image_s3) {
                             return getImageFromS3Buffer(image_s3);
+                        }
                     })
                     .then(image => {
                         // console.log(accData);
