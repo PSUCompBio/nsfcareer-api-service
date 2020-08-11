@@ -1034,8 +1034,12 @@ if (cluster.isMaster) {
             if (imageData.log_path && imageData.log_path != 'null') {
                 let key = imageData.log_path;
                 key = key.replace(/'/g, "");
-                console.log('key', key);
                 return getFileFromS3(key);
+            } else {
+                if (imageData.root_path && imageData.root_path != 'null') {
+                    let log_path = imageData.root_path + 'logs/femtech_' + imageData.image_id + '.log';
+                    return getFileFromS3(log_path);
+                }
             }
         }) .then(log_s3 => {
             let log = '';
@@ -2106,7 +2110,7 @@ if (cluster.isMaster) {
     }
 
     function getFileFromS3(url) {
-        console.log('url', url)
+        // console.log('url', url)
         return new Promise((resolve, reject) => {
             var params = {
                 Bucket: config_env.usersbucket,
