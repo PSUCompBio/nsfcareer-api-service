@@ -1055,6 +1055,7 @@ if (cluster.isMaster) {
             })
         })
     })
+    
     app.post(`${apiPrefix}getAllCumulativeAccelerationTimeRecords`, function (req, res) {
 
         getCumulativeAccelerationData(req.body)
@@ -1073,80 +1074,48 @@ if (cluster.isMaster) {
                     let imageData = '';
                     let outputFile = '';
                     getPlayerSimulationFile(acc_data)
-<<<<<<< HEAD
                     .then(image_data => {
                         imageData = image_data;
                         if (imageData.ouput_summary_file_path && imageData.ouput_summary_file_path != 'null') {
                             let file_path = image_data.ouput_summary_file_path;
                             file_path = file_path.replace(/'/g, "");
                             return getFileFromS3(file_path);
+                        } else {
+                            if (imageData.root_path && imageData.root_path != 'null') {
+                                let summary_path = imageData.root_path + imageData.image_id + '_output_summary.json';
+                                return getFileFromS3(summary_path);
+                            }
                         }
                     })
                    .then(output_file => {
                         outputFile = output_file;
-                        if (imageData.path && imageData.path != 'null')
+                        if (imageData.path && imageData.path != 'null') {
                             return getFileFromS3(imageData.path);
+                        } else {
+                            if (imageData.root_path && imageData.root_path != 'null') {
+                                let image_path = imageData.root_path + imageData.image_id + '.png';
+                                return getFileFromS3(image_path);
+                            }
+                        }
                     })
                     .then(image_s3 => {
                         if (imageData.path && imageData.path != 'null')
                             return getImageFromS3Buffer(image_s3);
                     })
                     .then(image => {
-                        console.log(accData);
+                        // console.log(accData);
                         // X- Axis Linear Acceleration
                         let linear_acceleration = accData['impact-date'] ? accData.simulation['linear-acceleration'] : accData['linear-acceleration'];
                         // X- Axis Angular Acceleration
                         let angular_acceleration = accData['impact-date'] ? accData.simulation['angular-acceleration'] : accData['angular-acceleration'];
                         // Y Axis timestamp
                         let time = accData['impact-date'] ? accData.simulation['linear-acceleration']['xt'] : accData['linear-acceleration']['xt'];
+                        time = time ? time : [];
+                        
                         console.log(time);
                         time.forEach((t, i) => {
                             var _temp_time = parseFloat(t).toFixed(1);
                             time[i] = _temp_time;
-=======
-                        .then(image_data => {
-                            imageData = image_data;
-                            if (imageData.ouput_summary_file_path && imageData.ouput_summary_file_path != 'null') {
-                                let file_path = image_data.ouput_summary_file_path;
-                                file_path = file_path.replace(/'/g, "");
-                                return getFileFromS3(file_path);
-                            } else {
-                                if (imageData.root_path && imageData.root_path != 'null') {
-                                    let summary_path = imageData.root_path + imageData.image_id + '_output_summary.json';
-                                    return getFileFromS3(summary_path);
-                                }
-                            }
-                        })
-                        .then(output_file => {
-                            outputFile = output_file;
-                            if (imageData.path && imageData.path != 'null') {
-                                return getFileFromS3(imageData.path);
-                            } else {
-                                if (imageData.root_path && imageData.root_path != 'null') {
-                                    let image_path = imageData.root_path + imageData.image_id + '.png';
-                                    return getFileFromS3(image_path);
-                                }
-                            }
-                        })
-                        .then(image_s3 => {
-                            if (image_s3) {
-                                return getImageFromS3Buffer(image_s3);
-                            }
-                        })
-                        .then(img => {
-                            image = img
-                            // console.log(accData);
-                            if (imageData.log_path && imageData.log_path != 'null') {
-                                let key = imageData.log_path;
-                                key = key.replace(/'/g, "");
-                                return getFileFromS3(key);
-                            } else {
-                                if (imageData.root_path && imageData.root_path != 'null') {
-                                    let log_path = imageData.root_path + 'logs/femtech_' + imageData.image_id + '.log';
-                                    return getFileFromS3(log_path);
-                                }
-                            }
->>>>>>> a6861191c99625f911812e6469a1248a9fae2832
                         })
 
                         acceleration_data_list.push({
@@ -1157,7 +1126,8 @@ if (cluster.isMaster) {
                             //simulation_output_data: outputFile ? JSON.parse(outputFile.Body.toString('utf-8')) : '',
                             timestamp: accData.date,
                             record_time: accData.time,
-                            sensor_data: accData
+                            sensor_data: accData,
+                            date_time: accData.player_id.split('$')[1]
                         })
 
                         if (outputFile) {
@@ -1237,6 +1207,13 @@ if (cluster.isMaster) {
                         console.log('brainRegions', JSON.stringify(brainRegions));
 
                         if (data.length === cnt) {
+                            acceleration_data_list.sort(function(b, a) {
+                                var keyA = a.date_time,
+                                keyB = b.date_time;
+                                if (keyA < keyB) return -1;
+                                if (keyA > keyB) return 1;
+                                return 0;
+                            });
                             res.send({
                                 message: "success",
                                 data: acceleration_data_list,
@@ -1277,7 +1254,6 @@ if (cluster.isMaster) {
                 })
             })
     })
-
 
     app.post(`${apiPrefix}getCumulativeEventPressureData`, function (req, res) {
         res.send(getCumulativeEventPressureData());
