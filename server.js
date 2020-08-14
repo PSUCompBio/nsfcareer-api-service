@@ -77,35 +77,35 @@ if (cluster.isMaster) {
     // ======================================
     //       CONFIGURING AWS SDK & EXPESS
     // ======================================
-    var config = {
-        "awsAccessKeyId": process.env.AWS_ACCESS_KEY_ID,
-        "awsSecretAccessKey": process.env.AWS_ACCESS_SECRET_KEY,
-        "avatar3dClientId": process.env.AVATAR_3D_CLIENT_ID,
-        "avatar3dclientSecret": process.env.AVATAR_3D_CLIENT_SECRET,
-        "region" : process.env.REGION,
-        "usersbucket": process.env.USERS_BUCKET,
-        "apiVersion" : process.env.API_VERSION,
-        "jwt_secret" : process.env.JWT_SECRET,
-        "email_id" : process.env.EMAIL_ID,
-        "mail_list" : process.env.MAIL_LIST,
-        "ComputeInstanceEndpoint" : process.env.COMPUTE_INSTANCE_ENDPOINT,
-        "userPoolId": process.env.USER_POOL_ID,
-        "ClientId" : process.env.CLIENT_ID,
-        "react_website_url" : process.env.REACT_WEBSITE_URL,
-        "simulation_result_host_url" : process.env.SIMULATION_RESULT_HOST_URL,
-        "jobQueueBeta" : process.env.JOB_QUEUE_BETA,
-        "jobDefinitionBeta" : process.env.JOB_DEFINITION_BETA,
-        "jobQueueProduction" : process.env.JOB_QUEUE_PRODUCTION,
-        "jobDefinitionProduction" : process.env.JOB_DEFINITION_PRODUCTION,
-        "simulation_bucket" : process.env.SIMULATION_BUCKET,
-        "queue_x" : process.env.QUEUE_X,
-        "queue_y" : process.env.QUEUE_Y,
-        "queue_beta" : process.env.QUEUE_BETA
-    };
+    // var config = {
+    //     "awsAccessKeyId": process.env.AWS_ACCESS_KEY_ID,
+    //     "awsSecretAccessKey": process.env.AWS_ACCESS_SECRET_KEY,
+    //     "avatar3dClientId": process.env.AVATAR_3D_CLIENT_ID,
+    //     "avatar3dclientSecret": process.env.AVATAR_3D_CLIENT_SECRET,
+    //     "region" : process.env.REGION,
+    //     "usersbucket": process.env.USERS_BUCKET,
+    //     "apiVersion" : process.env.API_VERSION,
+    //     "jwt_secret" : process.env.JWT_SECRET,
+    //     "email_id" : process.env.EMAIL_ID,
+    //     "mail_list" : process.env.MAIL_LIST,
+    //     "ComputeInstanceEndpoint" : process.env.COMPUTE_INSTANCE_ENDPOINT,
+    //     "userPoolId": process.env.USER_POOL_ID,
+    //     "ClientId" : process.env.CLIENT_ID,
+    //     "react_website_url" : process.env.REACT_WEBSITE_URL,
+    //     "simulation_result_host_url" : process.env.SIMULATION_RESULT_HOST_URL,
+    //     "jobQueueBeta" : process.env.JOB_QUEUE_BETA,
+    //     "jobDefinitionBeta" : process.env.JOB_DEFINITION_BETA,
+    //     "jobQueueProduction" : process.env.JOB_QUEUE_PRODUCTION,
+    //     "jobDefinitionProduction" : process.env.JOB_DEFINITION_PRODUCTION,
+    //     "simulation_bucket" : process.env.SIMULATION_BUCKET,
+    //     "queue_x" : process.env.QUEUE_X,
+    //     "queue_y" : process.env.QUEUE_Y,
+    //     "queue_beta" : process.env.QUEUE_BETA
+    // };
 
     const subject_signature = fs.readFileSync("data/base64")
 
-    // var config = require('./config/configuration_keys.json');
+    var config = require('./config/configuration_keys.json');
     var config_env = config;
 
     //AWS.config.loadFromPath('./config/configuration_keys.json');
@@ -805,41 +805,53 @@ if (cluster.isMaster) {
         getTeamData(req.body)
             .then(sensor_data => {
                 let k = 0
-                sensor_data.forEach(function (record, index) {
-                    getPlayerSimulationFile(record)
-                        .then(simulation => {
-                            k++;
-                            if (simulation.status === 'pending') {
-                                pending++;
-                            } else if (simulation.status === 'completed') {
-                                completed++;
-                            } else {
-                                failed++;
-                            }
-
-                            if (k == sensor_data.length) {
-                                res.send({
-                                    message: "success",
-                                    data: {
-                                        completed: completed,
-                                        failed: failed,
-                                        pending: pending
-                                    }
-                                })
-                            }
-                        })
-                        .catch(err => {
-                            res.send({
-                                message: "failure",
-                                error: err,
-                                data: {
-                                    completed: 0,
-                                    failed: 0,
-                                    pending: 0
+                if (sensor_data.length > 0) {
+                    sensor_data.forEach(function (record, index) {
+                        getPlayerSimulationFile(record)
+                            .then(simulation => {
+                                k++;
+                                if (simulation.status === 'pending') {
+                                    pending++;
+                                } else if (simulation.status === 'completed') {
+                                    completed++;
+                                } else {
+                                    failed++;
+                                }
+    
+                                if (k == sensor_data.length) {
+                                    res.send({
+                                        message: "success",
+                                        data: {
+                                            completed: completed,
+                                            failed: failed,
+                                            pending: pending
+                                        }
+                                    })
                                 }
                             })
-                        })
-                })
+                            .catch(err => {
+                                res.send({
+                                    message: "failure",
+                                    error: err,
+                                    data: {
+                                        completed: 0,
+                                        failed: 0,
+                                        pending: 0
+                                    }
+                                })
+                            })
+                    })
+                } else {
+                    res.send({
+                        message: "success",
+                        data: {
+                            completed: 0,
+                            failed: 0,
+                            pending: 0
+                        }
+                    })
+                }
+                
             })
             .catch(err => {
                 res.send({
@@ -895,7 +907,7 @@ if (cluster.isMaster) {
         getPlayersListFromTeamsDB(req.body)
             .then(data => {
                 console.log(data[0].player_list);
-                let player_list = data[0].player_list;
+                let player_list = data[0].player_list ? data[0].player_list : [];
                 if (player_list.length == 0) {
                     res.send({
                         message: "success",
@@ -1554,7 +1566,7 @@ if (cluster.isMaster) {
                     return (!("teamList" in team_name));
                 });
 
-                console.log(teamList);
+                console.log('teamList', teamList);
 
                 let counter = 0;
                 if (teamList.length == 0) {
@@ -1567,7 +1579,7 @@ if (cluster.isMaster) {
                     teamList.forEach(function (team, index) {
                         let data = team;
                         let i = index;
-                        getOrganizationTeamData({ sensor: data.sensor, organization: data.organization, team: data.team_name })
+                        getOrganizationTeamData({ sensor: data.sensor ? data.sensor : false, organization: data.organization, team: data.team_name })
                             .then(simulation_records => {
                                 counter++;
                                 team["simulation_count"] = Number(simulation_records.length).toString();
