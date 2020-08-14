@@ -191,7 +191,8 @@ if (cluster.isMaster) {
         getBrandOrganizationData,
         getAllTeamsOfOrganizationsOfSensorBrand,
         getOrganizationTeamData,
-        getPlayerSimulationFile
+        getPlayerSimulationFile,
+        getPlayerSimulationStatus
     } = require('./controller/query');
 
     // Clearing the cookies
@@ -1535,12 +1536,44 @@ if (cluster.isMaster) {
                             .then(simulation_records => {
                                 counter++;
                                 org["simulation_count"] = Number(simulation_records.length).toString();
-
+                                let simulation_images = [];
                                 if (counter == orgList.length) {
-                                    res.send({
-                                        message: "success",
-                                        data: orgList
-                                    })
+                                    
+                                    var y = 0;
+                                    // console.log('simulation_records',simulation_records)
+                                    for(var i = 0; i < simulation_records.length; i++){
+                                        console.log('image_id',simulation_records[i].image_id)
+                                        getPlayerSimulationStatus(simulation_records[i].image_id)
+                                        .then(data => {
+                                            y++;
+                                            console.log(simulation_records.length,y)
+                                            simulation_images.push(data);
+                                            if(y == simulation_records.length){
+                                                org["simulation_image_data"] = simulation_images;
+                                                res.send({
+                                                    message: "success",
+                                                    data: orgList
+                                                })
+                                            }
+                                            // console.log('data',data);
+                                        }).catch(err => {
+                                            console.log('err',err)
+                                        })
+                                    }
+                                    
+                                }else{
+                                    var y = 0;
+                                    for(var i = 0; i < simulation_records.length; i++){
+                                        getPlayerSimulationStatus(simulation_records[i].image_id)
+                                        .then(data => {
+                                            y++;
+                                            console.log(simulation_records.length,y)
+                                            simulation_images.push(data);
+                                            org["simulation_image_data"] = simulation_images;
+                                        }).catch(err => {
+                                            console.log('err',err)
+                                        })
+                                    }
                                 }
                             })
                             .catch(err => {
@@ -1607,7 +1640,7 @@ if (cluster.isMaster) {
     })
 
     // Configuring port for APP
-    const port = process.env.PORT || 3000;
+    const port = process.env.PORT || 5000;
     const server = app.listen(port, function () {
         console.log('Magic happens on ' + port);
     });

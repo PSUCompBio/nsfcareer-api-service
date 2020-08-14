@@ -1045,7 +1045,7 @@ function getBrandOrganizationData(obj) {
                 ":sensor": obj.sensor,
                 ":organization": obj.organization
             },
-            ProjectionExpression: "sensor"
+            ProjectionExpression: "sensor,image_id"
         };
         var item = [];
         docClient.scan(params).eachPage((err, data, done) => {
@@ -1160,6 +1160,24 @@ function getPlayerSimulationFile(obj) {
     });
 }
 
+function getPlayerSimulationStatus(image_id) {
+    return new Promise((resolve, reject) => {
+        let params = {
+            TableName: "simulation_images",
+            Key: {
+                image_id: image_id,
+            },
+        };
+        docClient.get(params, function (err, data) {
+            if (err) {
+                reject(err);
+            } else {
+                resolve(data.Item);
+            }
+        });
+    });
+}
+
 function getSensorAdmins(sensor) {
     return new Promise((resolve, reject) => {
         let params = {
@@ -1208,5 +1226,6 @@ module.exports = {
     getAllTeamsOfOrganizationsOfSensorBrand,
     getOrganizationTeamData,
     getPlayerSimulationFile,
-    getSensorAdmins
+    getSensorAdmins,
+    getPlayerSimulationStatus
 };
