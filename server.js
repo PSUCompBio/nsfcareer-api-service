@@ -1566,26 +1566,25 @@ if (cluster.isMaster) {
                             .then(simulation_records => {
                                 counter++;
                                 org["simulation_count"] = Number(simulation_records.length).toString();
-                                let simulation_images = [];
+                                org["simulation_status"] = 'completed';
+
                                 if (counter == orgList.length) {
                                     
                                     var y = 0;
                                     // console.log('simulation_records',simulation_records)
                                     for(var i = 0; i < simulation_records.length; i++){
-                                        console.log('image_id',simulation_records[i].image_id)
                                         getPlayerSimulationStatus(simulation_records[i].image_id)
                                         .then(data => {
+                                            if(data.status != 'completed'){
+                                                org["simulation_status"] = 'pending';
+                                            }
                                             y++;
-                                            console.log(simulation_records.length,y)
-                                            simulation_images.push(data);
                                             if(y == simulation_records.length){
-                                                org["simulation_image_data"] = simulation_images;
                                                 res.send({
                                                     message: "success",
                                                     data: orgList
                                                 })
                                             }
-                                            // console.log('data',data);
                                         }).catch(err => {
                                             console.log('err',err)
                                         })
@@ -1596,10 +1595,11 @@ if (cluster.isMaster) {
                                     for(var i = 0; i < simulation_records.length; i++){
                                         getPlayerSimulationStatus(simulation_records[i].image_id)
                                         .then(data => {
+                                            console.log('data',data.status)
+                                            if(data.status != 'completed'){
+                                                org["simulation_status"] = 'pending';
+                                            }
                                             y++;
-                                            console.log(simulation_records.length,y)
-                                            simulation_images.push(data);
-                                            org["simulation_image_data"] = simulation_images;
                                         }).catch(err => {
                                             console.log('err',err)
                                         })
@@ -1644,15 +1644,45 @@ if (cluster.isMaster) {
                         let i = index;
                         getOrganizationTeamData({ sensor: data.sensor ? data.sensor : false, organization: data.organization, team: data.team_name })
                             .then(simulation_records => {
+                                // console.log('simulation_records',simulation_records)
                                 counter++;
                                 team["simulation_count"] = Number(simulation_records.length).toString();
-
+                                team["simulation_status"] = 'completed';
                                 if (counter == teamList.length) {
-                                    console.log(teamList);
-                                    res.send({
-                                        message: "success",
-                                        data: teamList
-                                    })
+                                    var y = 0;
+                                    // console.log('simulation_records',simulation_records)
+                                    for(var i = 0; i < simulation_records.length; i++){
+                                        getPlayerSimulationStatus(simulation_records[i].image_id)
+                                        .then(data => {
+                                            if(data.status != 'completed'){
+                                                team["simulation_status"] = 'pending';
+                                            }
+                                            y++;
+                                            if(y == simulation_records.length){
+                                                res.send({
+                                                    message: "success",
+                                                    data: teamList
+                                                })
+                                            }
+                                        }).catch(err => {
+                                            console.log('err',err)
+                                        })
+                                    }
+                                    
+                                }else{
+                                    var y = 0;
+                                    for(var i = 0; i < simulation_records.length; i++){
+                                        getPlayerSimulationStatus(simulation_records[i].image_id)
+                                        .then(data => {
+                                            console.log('data',data.status)
+                                            if(data.status != 'completed'){
+                                                team["simulation_status"] = 'pending';
+                                            }
+                                            y++;
+                                        }).catch(err => {
+                                            console.log('err',err)
+                                        })
+                                    }
                                 }
                             })
                             .catch(err => {

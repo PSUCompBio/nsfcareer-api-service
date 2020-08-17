@@ -1113,7 +1113,7 @@ function getOrganizationTeamData(obj) {
                    ":organization": obj.organization,
                    ":team": obj.team
                 },
-                ProjectionExpression: "sensor"
+                ProjectionExpression: "sensor,image_id"
             };
         } else {
             params = {
@@ -1123,7 +1123,7 @@ function getOrganizationTeamData(obj) {
                    ":organization": obj.organization,
                    ":team": obj.team
                 },
-                ProjectionExpression: "sensor"
+                ProjectionExpression: "sensor,image_id"
             };
         }
         
