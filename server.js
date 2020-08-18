@@ -960,7 +960,8 @@ if (cluster.isMaster) {
                                 p_data.push({
                                     date_time: playerData[0].player_id.split('$')[1],
                                     //vsimulation_image: image ? image : '',
-                                    simulation_data: playerData
+                                    simulation_data: playerData,
+                                    simulation_status : 'completed'
                                 });
                                 if (counter == player_list.length) {
                                     p_data.sort(function (b, a) {
@@ -975,10 +976,14 @@ if (cluster.isMaster) {
                                     p_data.forEach(function (record, index) {
                                         getPlayerSimulationFile(record.simulation_data[0])
                                             .then(simulation => {
+                                                console.log('simulation',simulation.status)
                                                 k++;
+                                                if(simulation.status != 'completed'){
+                                                   p_data[index].simulation_status = 'pending';
+                                                }
                                                 p_data[index]['simulation_data'][0]['simulation_status'] = simulation.status;
                                                 p_data[index]['simulation_data'][0]['computed_time'] = simulation.computed_time;
-
+                                                console.log(k, p_data.length)
                                                 if (k == p_data.length) {
                                                     res.send({
                                                         message: "success",
@@ -990,30 +995,6 @@ if (cluster.isMaster) {
                                 }
                                 //return getPlayerSimulationFile(player_data[0]);
                             })
-                            // .then(image_data => {
-                            //     imageData = image_data;
-                            //     if (image_data.path && image_data.path != 'null')
-                            //         return getFileFromS3(image_data.path);
-                            // })
-                            // .then(image_s3 => {
-                            //     if (imageData.path && imageData.path != 'null')
-                            //         return getImageFromS3Buffer(image_s3);
-                            // })     
-                            // .then(image => {
-                            //     counter++;
-                            //     p_data.push({
-                            //         player_name: p,
-                            //         simulation_image: image ? image : '',
-                            //         simulation_data: playerData
-                            //     });
-
-                            //     if (counter == player_list.length) {
-                            //         res.send({
-                            //             message: "success",
-                            //             data: p_data
-                            //         })
-                            //     }
-                            // })
                             .catch(err => {
                                 console.log(err);
                                 counter++;
@@ -1102,7 +1083,52 @@ if (cluster.isMaster) {
             })
         })
     })
-    
+    app.post(`${apiPrefix}getAllCumulativeAccelerationJsonData`, function (req, res) {
+        console.log('getAllCumulativeAccelerationJsonData',req.body)
+        getCumulativeAccelerationData(req.body)
+            .then(data => {
+                data.forEach(function (acc_data) {
+                    let accData = acc_data;
+                    let imageData = '';
+                    let outputFile = '';
+                    getPlayerSimulationFile(acc_data)
+                    .then(file_data => {
+                        // console.log('image_data',image_data)
+                         imageData = file_data;
+                        if (imageData.ouput_file_path && imageData.ouput_file_path != 'null') {
+                            let file_path = imageData.ouput_file_path;
+                            file_path = file_path.replace(/'/g, "");
+                            return getFileFromS3(file_path);
+                        }
+                    }).then(output_file => {
+                        outputFile = output_file;
+                        outputFile = JSON.parse(outputFile.Body.toString('utf-8'));
+                        console.log('outputFile',outputFile)
+                        // if (imageData.path && imageData.path != 'null')
+                        //     return getFileFromS3(imageData.path);
+                        res.send({
+                            message: "success",
+                            data: {
+                                'JsonFile':outputFile
+                            }
+                        })
+                    }).catch(err => {
+                        res.send({
+                            message: "failure",
+                            error: err
+                        })
+                    })
+                })
+
+                
+            }).catch(err => {
+             
+                res.send({
+                    message: "failure",
+                    error: err
+                })
+            })
+    });
     app.post(`${apiPrefix}getAllCumulativeAccelerationTimeRecords`, function (req, res) {
 
         getCumulativeAccelerationData(req.body)
