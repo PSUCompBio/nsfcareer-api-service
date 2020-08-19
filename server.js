@@ -1154,6 +1154,8 @@ if (cluster.isMaster) {
                     let accData = acc_data;
                     let imageData = '';
                     let outputFile = '';
+                    let jsonOutputFile = '';
+                    let image = '';
                     getPlayerSimulationFile(acc_data)
                     .then(image_data => {
                         imageData = image_data;
@@ -1185,6 +1187,27 @@ if (cluster.isMaster) {
                         }
                     })
                     .then(image => {
+                        image = image;
+
+                        if (imageData.ouput_file_path && imageData.ouput_file_path != 'null') {
+                            let file_path = imageData.ouput_file_path;
+                            file_path = file_path.replace(/'/g, "");
+                            return getFileFromS3(file_path);
+                        } else {
+                            if (imageData.root_path && imageData.root_path != 'null') {
+                                let summary_path = imageData.root_path + imageData.image_id + '_output.json';
+                                summary_path = summary_path.replace(/'/g, "");
+                                console.log('summary_path',summary_path)
+                                return getFileFromS3(summary_path);
+                            }
+                        }
+                    }).then(output_file => {
+                        console.log('output_file',output_file)
+                        jsonOutputFile = '';
+                        if (output_file){
+                            jsonOutputFile = JSON.parse(output_file.Body.toString('utf-8'));
+                        }
+                        // console.log(jsonOutputFile)
                         // console.log(accData);
                         // X- Axis Linear Acceleration
                         let linear_acceleration = accData['impact-date'] ? accData.simulation['linear-acceleration'] : accData['linear-acceleration'];
@@ -1194,7 +1217,7 @@ if (cluster.isMaster) {
                         let time = accData['impact-date'] ? accData.simulation['linear-acceleration']['xt'] : accData['linear-acceleration']['xt'];
                         time = time ? time : [];
                         
-                        console.log(time);
+                        // console.log(time);
                         time.forEach((t, i) => {
                             var _temp_time = parseFloat(t).toFixed(1);
                             time[i] = _temp_time;
@@ -1205,6 +1228,7 @@ if (cluster.isMaster) {
                             angular_acceleration: angular_acceleration,
                             time: time,
                             simulation_image: image ? image : '',
+                            jsonOutputFile: jsonOutputFile ? jsonOutputFile : '',
                             //simulation_output_data: outputFile ? JSON.parse(outputFile.Body.toString('utf-8')) : '',
                             timestamp: accData.date,
                             record_time: accData.time,
@@ -1286,7 +1310,7 @@ if (cluster.isMaster) {
                         brainRegions['csdm-max'] = csdm_max;
                         brainRegions['masXsr-15-max'] = masXsr_15_max;
 
-                        console.log('brainRegions', JSON.stringify(brainRegions));
+                        // console.log('brainRegions', JSON.stringify(brainRegions));
 
                         if (data.length === cnt) {
                             acceleration_data_list.sort(function(b, a) {
@@ -1575,6 +1599,7 @@ if (cluster.isMaster) {
     })
 
     app.post(`${apiPrefix}getAllOrganizationsOfSensorBrand`, function (req, res) {
+        // console.log('getAllOrganizationsOfSensorBrand',req.body)
         getAllOrganizationsOfSensorBrand(req.body)
             .then(list => {
                 // console.log(list);
@@ -1601,44 +1626,59 @@ if (cluster.isMaster) {
                                 counter++;
                                 org["simulation_count"] = Number(simulation_records.length).toString();
                                 org["simulation_status"] = 'completed';
-
-                                if (counter == orgList.length) {
-                                    
-                                    var y = 0;
-                                    // console.log('simulation_records',simulation_records)
-                                    for(var i = 0; i < simulation_records.length; i++){
-                                        getPlayerSimulationStatus(simulation_records[i].image_id)
-                                        .then(data => {
-                                            if(data.status != 'completed'){
-                                                org["simulation_status"] = 'pending';
-                                            }
-                                            y++;
-                                            if(y == simulation_records.length){
-                                                res.send({
-                                                    message: "success",
-                                                    data: orgList
-                                                })
-                                            }
-                                        }).catch(err => {
-                                            console.log('err',err)
-                                        })
+                                getPlayerSimulationStatus(simulation_records[0].image_id)
+                                .then(data => {
+                                    console.log(data.status)
+                                    if(data.status != 'completed'){
+                                        org["simulation_status"] = 'pending';
                                     }
-                                    
-                                }else{
-                                    var y = 0;
-                                    for(var i = 0; i < simulation_records.length; i++){
-                                        getPlayerSimulationStatus(simulation_records[i].image_id)
-                                        .then(data => {
-                                            console.log('data',data.status)
-                                            if(data.status != 'completed'){
-                                                org["simulation_status"] = 'pending';
-                                            }
-                                            y++;
-                                        }).catch(err => {
-                                            console.log('err',err)
-                                        })
+                                    if (counter == orgList.length) {
+                                        res.send({
+                                            message: "success",
+                                            data: orgList
+                                        })    
                                     }
-                                }
+                                   
+                                }).catch(err => {
+                                    console.log('err',err)
+                                })
+                               
+                                //     var y = 0;
+                                //     // console.log('simulation_records',simulation_records)
+                                //     for(var i = 0; i < simulation_records.length; i++){
+                                //         getPlayerSimulationStatus(simulation_records[i].image_id)
+                                //         .then(data => {
+                                //             console.log(y ,simulation_records.length)
+                                //             if(data.status != 'completed'){
+                                //                 org["simulation_status"] = 'pending';
+                                //             }
+                                //             y++;
+                                //             if(y == simulation_records.length){
+                                //                 res.send({
+                                //                     message: "success",
+                                //                     data: orgList
+                                //                 })
+                                //             }
+                                //         }).catch(err => {
+                                //             console.log('err',err)
+                                //         })
+                                //     }
+                                    
+                                // }else{
+                                //     var y = 0;
+                                //     for(var i = 0; i < simulation_records.length; i++){
+                                //         getPlayerSimulationStatus(simulation_records[i].image_id)
+                                //         .then(data => {
+                                //             console.log('data',data.status)
+                                //             if(data.status != 'completed'){
+                                //                 org["simulation_status"] = 'pending';
+                                //             }
+                                //             y++;
+                                //         }).catch(err => {
+                                //             console.log('err',err)
+                                //         })
+                                //     }
+                                // }
                             })
                             .catch(err => {
                                 counter++
