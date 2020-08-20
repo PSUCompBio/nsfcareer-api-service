@@ -1045,7 +1045,7 @@ function getBrandOrganizationData(obj) {
                 ":sensor": obj.sensor,
                 ":organization": obj.organization
             },
-            ProjectionExpression: "sensor,image_id"
+            ProjectionExpression: "sensor,image_id,player_id,computed_time"
         };
         var item = [];
         docClient.scan(params).eachPage((err, data, done) => {
@@ -1107,28 +1107,32 @@ function getOrganizationTeamData(obj) {
         if (obj.sensor) {
             params = {
                 TableName: "sensor_data",
-                FilterExpression: "sensor = :sensor and organization = :organization and team = :team",
+                KeyConditionExpression:  "team = :team",
+                FilterExpression: "sensor = :sensor and organization = :organization",
                 ExpressionAttributeValues: {
                    ":sensor": obj.sensor,
                    ":organization": obj.organization,
                    ":team": obj.team
                 },
-                ProjectionExpression: "sensor,image_id"
+                ProjectionExpression: "sensor,image_id,computed_time,player_id",
+                ScanIndexForward: false
             };
         } else {
             params = {
                 TableName: "sensor_data",
-                FilterExpression: "organization = :organization and team = :team",
+                KeyConditionExpression:  "team = :team",
+                FilterExpression: "organization = :organization",
                 ExpressionAttributeValues: {
                    ":organization": obj.organization,
                    ":team": obj.team
                 },
-                ProjectionExpression: "sensor,image_id"
+                ProjectionExpression: "sensor,image_id,computed_time,player_id",
+                ScanIndexForward: false
             };
         }
         
         var item = [];
-        docClient.scan(params).eachPage((err, data, done) => {
+        docClient.query(params).eachPage((err, data, done) => {
             if (err) {
                 reject(err);
             }

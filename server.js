@@ -976,11 +976,7 @@ if (cluster.isMaster) {
                                     p_data.forEach(function (record, index) {
                                         getPlayerSimulationFile(record.simulation_data[0])
                                             .then(simulation => {
-                                                console.log('simulation',simulation.status)
                                                 k++;
-                                                if(simulation.status != 'completed'){
-                                                   p_data[index].simulation_status = 'pending';
-                                                }
                                                 p_data[index]['simulation_data'][0]['simulation_status'] = simulation.status;
                                                 p_data[index]['simulation_data'][0]['computed_time'] = simulation.computed_time;
                                                 console.log(k, p_data.length)
@@ -1150,7 +1146,7 @@ if (cluster.isMaster) {
                 let csdm_max = {};
                 let masXsr_15_max = {};
                 let cnt = 1;
-                data.forEach(function (acc_data) {
+                data.forEach(function (acc_data, acc_index) {
                     let accData = acc_data;
                     let imageData = '';
                     let outputFile = '';
@@ -1159,19 +1155,16 @@ if (cluster.isMaster) {
                     getPlayerSimulationFile(acc_data)
                     .then(image_data => {
                         imageData = image_data;
-                        if (imageData.ouput_summary_file_path && imageData.ouput_summary_file_path != 'null') {
-                            let file_path = image_data.ouput_summary_file_path;
-                            file_path = file_path.replace(/'/g, "");
+
+                        if (acc_index === 0 && imageData.player_name && imageData.player_name != 'null') {
+                            console.log(imageData.player_name + '/simulation/summary.json');
+                            let file_path = imageData.player_name + '/simulation/summary.json';
                             return getFileFromS3(file_path);
-                        } else {
-                            if (imageData.root_path && imageData.root_path != 'null') {
-                                let summary_path = imageData.root_path + imageData.image_id + '_output_summary.json';
-                                return getFileFromS3(summary_path);
-                            }
                         }
                     })
                    .then(output_file => {
-                        outputFile = output_file;
+                        if (output_file)
+                            outputFile = output_file;
                         if (imageData.path && imageData.path != 'null') {
                             return getFileFromS3(imageData.path);
                         } else {
@@ -1625,60 +1618,49 @@ if (cluster.isMaster) {
                             .then(simulation_records => {
                                 counter++;
                                 org["simulation_count"] = Number(simulation_records.length).toString();
-                                org["simulation_status"] = 'completed';
-                                getPlayerSimulationStatus(simulation_records[0].image_id)
-                                .then(data => {
-                                    console.log(data.status)
-                                    if(data.status != 'completed'){
-                                        org["simulation_status"] = 'pending';
-                                    }
+
+                                simulation_records.forEach(function (simulation_record, index) {
+                                    simulation_record['date_time'] = simulation_record.player_id.split('$')[1];
+                                })
+
+                                simulation_records.sort(function (b, a) {
+                                    var keyA = a.date_time,
+                                        keyB = b.date_time;
+                                    if (keyA < keyB) return -1;
+                                    if (keyA > keyB) return 1;
+                                    return 0;
+                                });
+
+                                org["simulation_status"] = '';
+                                org["computed_time"] = '';
+                                org["simulation_timestamp"] = '';
+                                
+                                if (simulation_records.length > 0) {
+                                    console.log(simulation_records[0].image_id);
+                                    getPlayerSimulationStatus(simulation_records[0].image_id)
+                                        .then(simulation => {
+                                            org["simulation_status"] = simulation.status;
+                                            org["computed_time"] = simulation.computed_time;
+                                            org["simulation_timestamp"] = simulation_records[0].player_id.split('$')[1];
+
+                                            if (counter == orgList.length) {
+                                                res.send({
+                                                    message: "success",
+                                                    data: orgList
+                                                })
+                                            }
+
+                                        }).catch(err => {
+                                            console.log('err',err);
+                                        })
+                                } else {
                                     if (counter == orgList.length) {
                                         res.send({
                                             message: "success",
                                             data: orgList
-                                        })    
+                                        })
                                     }
-                                   
-                                }).catch(err => {
-                                    console.log('err',err)
-                                })
-                               
-                                //     var y = 0;
-                                //     // console.log('simulation_records',simulation_records)
-                                //     for(var i = 0; i < simulation_records.length; i++){
-                                //         getPlayerSimulationStatus(simulation_records[i].image_id)
-                                //         .then(data => {
-                                //             console.log(y ,simulation_records.length)
-                                //             if(data.status != 'completed'){
-                                //                 org["simulation_status"] = 'pending';
-                                //             }
-                                //             y++;
-                                //             if(y == simulation_records.length){
-                                //                 res.send({
-                                //                     message: "success",
-                                //                     data: orgList
-                                //                 })
-                                //             }
-                                //         }).catch(err => {
-                                //             console.log('err',err)
-                                //         })
-                                //     }
-                                    
-                                // }else{
-                                //     var y = 0;
-                                //     for(var i = 0; i < simulation_records.length; i++){
-                                //         getPlayerSimulationStatus(simulation_records[i].image_id)
-                                //         .then(data => {
-                                //             console.log('data',data.status)
-                                //             if(data.status != 'completed'){
-                                //                 org["simulation_status"] = 'pending';
-                                //             }
-                                //             y++;
-                                //         }).catch(err => {
-                                //             console.log('err',err)
-                                //         })
-                                //     }
-                                // }
+                                }
                             })
                             .catch(err => {
                                 counter++
@@ -1721,40 +1703,32 @@ if (cluster.isMaster) {
                                 // console.log('simulation_records',simulation_records)
                                 counter++;
                                 team["simulation_count"] = Number(simulation_records.length).toString();
-                                team["simulation_status"] = 'completed';
-                                if (counter == teamList.length) {
-                                    var y = 0;
-                                    // console.log('simulation_records',simulation_records)
-                                    for(var i = 0; i < simulation_records.length; i++){
-                                        getPlayerSimulationStatus(simulation_records[i].image_id)
-                                        .then(data => {
-                                            if(data.status != 'completed'){
-                                                team["simulation_status"] = 'pending';
-                                            }
-                                            y++;
-                                            if(y == simulation_records.length){
+                                team["simulation_status"] = '';
+                                team["computed_time"] = '';
+                                team["simulation_timestamp"] = '';
+                                if (simulation_records.length > 0) {
+                                    console.log(simulation_records[0].image_id);
+                                    getPlayerSimulationStatus(simulation_records[0].image_id)
+                                        .then(simulation => {
+                                            team["simulation_status"] = simulation.status;
+                                            team["computed_time"] = simulation.computed_time;
+                                            team["simulation_timestamp"] = simulation_records[0].player_id.split('$')[1];
+
+                                            if (counter == teamList.length) {
                                                 res.send({
                                                     message: "success",
                                                     data: teamList
                                                 })
                                             }
+
                                         }).catch(err => {
-                                            console.log('err',err)
+                                            console.log('err',err);
                                         })
-                                    }
-                                    
-                                }else{
-                                    var y = 0;
-                                    for(var i = 0; i < simulation_records.length; i++){
-                                        getPlayerSimulationStatus(simulation_records[i].image_id)
-                                        .then(data => {
-                                            console.log('data',data.status)
-                                            if(data.status != 'completed'){
-                                                team["simulation_status"] = 'pending';
-                                            }
-                                            y++;
-                                        }).catch(err => {
-                                            console.log('err',err)
+                                } else {
+                                    if (counter == teamList.length) {
+                                        res.send({
+                                            message: "success",
+                                            data: teamList
                                         })
                                     }
                                 }
