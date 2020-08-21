@@ -77,35 +77,35 @@ if (cluster.isMaster) {
     // ======================================
     //       CONFIGURING AWS SDK & EXPESS
     // ======================================
-    // var config = {
-    //     "awsAccessKeyId": process.env.AWS_ACCESS_KEY_ID,
-    //     "awsSecretAccessKey": process.env.AWS_ACCESS_SECRET_KEY,
-    //     "avatar3dClientId": process.env.AVATAR_3D_CLIENT_ID,
-    //     "avatar3dclientSecret": process.env.AVATAR_3D_CLIENT_SECRET,
-    //     "region" : process.env.REGION,
-    //     "usersbucket": process.env.USERS_BUCKET,
-    //     "apiVersion" : process.env.API_VERSION,
-    //     "jwt_secret" : process.env.JWT_SECRET,
-    //     "email_id" : process.env.EMAIL_ID,
-    //     "mail_list" : process.env.MAIL_LIST,
-    //     "ComputeInstanceEndpoint" : process.env.COMPUTE_INSTANCE_ENDPOINT,
-    //     "userPoolId": process.env.USER_POOL_ID,
-    //     "ClientId" : process.env.CLIENT_ID,
-    //     "react_website_url" : process.env.REACT_WEBSITE_URL,
-    //     "simulation_result_host_url" : process.env.SIMULATION_RESULT_HOST_URL,
-    //     "jobQueueBeta" : process.env.JOB_QUEUE_BETA,
-    //     "jobDefinitionBeta" : process.env.JOB_DEFINITION_BETA,
-    //     "jobQueueProduction" : process.env.JOB_QUEUE_PRODUCTION,
-    //     "jobDefinitionProduction" : process.env.JOB_DEFINITION_PRODUCTION,
-    //     "simulation_bucket" : process.env.SIMULATION_BUCKET,
-    //     "queue_x" : process.env.QUEUE_X,
-    //     "queue_y" : process.env.QUEUE_Y,
-    //     "queue_beta" : process.env.QUEUE_BETA
-    // };
+    var config = {
+        "awsAccessKeyId": process.env.AWS_ACCESS_KEY_ID,
+        "awsSecretAccessKey": process.env.AWS_ACCESS_SECRET_KEY,
+        "avatar3dClientId": process.env.AVATAR_3D_CLIENT_ID,
+        "avatar3dclientSecret": process.env.AVATAR_3D_CLIENT_SECRET,
+        "region" : process.env.REGION,
+        "usersbucket": process.env.USERS_BUCKET,
+        "apiVersion" : process.env.API_VERSION,
+        "jwt_secret" : process.env.JWT_SECRET,
+        "email_id" : process.env.EMAIL_ID,
+        "mail_list" : process.env.MAIL_LIST,
+        "ComputeInstanceEndpoint" : process.env.COMPUTE_INSTANCE_ENDPOINT,
+        "userPoolId": process.env.USER_POOL_ID,
+        "ClientId" : process.env.CLIENT_ID,
+        "react_website_url" : process.env.REACT_WEBSITE_URL,
+        "simulation_result_host_url" : process.env.SIMULATION_RESULT_HOST_URL,
+        "jobQueueBeta" : process.env.JOB_QUEUE_BETA,
+        "jobDefinitionBeta" : process.env.JOB_DEFINITION_BETA,
+        "jobQueueProduction" : process.env.JOB_QUEUE_PRODUCTION,
+        "jobDefinitionProduction" : process.env.JOB_DEFINITION_PRODUCTION,
+        "simulation_bucket" : process.env.SIMULATION_BUCKET,
+        "queue_x" : process.env.QUEUE_X,
+        "queue_y" : process.env.QUEUE_Y,
+        "queue_beta" : process.env.QUEUE_BETA
+    };
 
     const subject_signature = fs.readFileSync("data/base64")
 
-    var config = require('./config/configuration_keys.json');
+    // var config = require('./config/configuration_keys.json');
     var config_env = config;
 
     //AWS.config.loadFromPath('./config/configuration_keys.json');
@@ -937,7 +937,6 @@ if (cluster.isMaster) {
 
         getPlayersListFromTeamsDB(req.body)
             .then(data => {
-                console.log(data[0].player_list);
                 let player_list = data[0].player_list ? data[0].player_list : [];
                 if (player_list.length == 0) {
                     res.send({
@@ -952,14 +951,12 @@ if (cluster.isMaster) {
                         let p = player;
                         let i = index;
                         let playerData = '';
-                        // let imageData = '';
                         getTeamDataWithPlayerRecords({ player_id: p, team: req.body.team_name, sensor: req.body.brand, organization: req.body.organization })
                             .then(player_data => {
                                 playerData = player_data;
                                 counter++;
                                 p_data.push({
                                     date_time: playerData[0].player_id.split('$')[1],
-                                    //vsimulation_image: image ? image : '',
                                     simulation_data: playerData,
                                     simulation_status : 'completed'
                                 });
@@ -989,10 +986,8 @@ if (cluster.isMaster) {
                                             })
                                     })
                                 }
-                                //return getPlayerSimulationFile(player_data[0]);
                             })
                             .catch(err => {
-                                console.log(err);
                                 counter++;
                                 if (counter == player_list.length) {
                                     res.send({
@@ -1005,7 +1000,6 @@ if (cluster.isMaster) {
                 }
             })
             .catch(err => {
-                console.log(err);
                 res.send({
                     message: "failure",
                     error: err
@@ -1194,14 +1188,10 @@ if (cluster.isMaster) {
                                 return getFileFromS3(summary_path);
                             }
                         }
-                    }).then(output_file => {
-                        console.log('output_file',output_file)
-                        jsonOutputFile = '';
-                        if (output_file){
-                            jsonOutputFile = JSON.parse(output_file.Body.toString('utf-8'));
+                    }).then(json_output_file => {
+                        if (json_output_file){
+                            jsonOutputFile = JSON.parse(json_output_file.Body.toString('utf-8'));
                         }
-                        // console.log(jsonOutputFile)
-                        // console.log(accData);
                         // X- Axis Linear Acceleration
                         let linear_acceleration = accData['impact-date'] ? accData.simulation['linear-acceleration'] : accData['linear-acceleration'];
                         // X- Axis Angular Acceleration
@@ -1229,69 +1219,54 @@ if (cluster.isMaster) {
                             date_time: accData.player_id.split('$')[1]
                         })
 
-                        if (outputFile) {
+                        if (acc_index === 0 && outputFile) {
                             outputFile = JSON.parse(outputFile.Body.toString('utf-8'));
                             if (outputFile.Insults) {
                                 outputFile.Insults.forEach(function (summary_data, index) {
                                     if (summary_data['principal-max-strain']) {
-                                        summary_data['principal-max-strain']['brain-region'].forEach(function (region) {
-                                            let coordinate = {};
-                                            coordinate.x = summary_data['principal-max-strain'] ? summary_data['principal-max-strain'].location[0] : ''
-                                            coordinate.y = summary_data['principal-max-strain'] ? summary_data['principal-max-strain'].location[1] : ''
-                                            coordinate.z = summary_data['principal-max-strain'] ? summary_data['principal-max-strain'].location[2] : ''
-                                            region = region.toLowerCase();
-                                            // console.log(region);
-                                            principal_max_strain[region] = principal_max_strain[region] || [];
-                                            principal_max_strain[region].push(coordinate);
-                                        })
+                                        let coordinate = {};
+                                        coordinate.x = summary_data['principal-max-strain'].location[0];
+                                        coordinate.y = summary_data['principal-max-strain'].location[1];
+                                        coordinate.z = summary_data['principal-max-strain'].location[2];
+                                        region = summary_data['principal-max-strain']['brain-region'].toLowerCase();
+                                        principal_max_strain[region] = principal_max_strain[region] || [];
+                                        principal_max_strain[region].push(coordinate);
                                     }
                                     if (summary_data['principal-min-strain']) {
-                                        summary_data['principal-min-strain']['brain-region'].forEach(function (region) {
-                                            let coordinate = {};
-                                            coordinate.x = summary_data['principal-min-strain'] ? summary_data['principal-min-strain'].location[0] : ''
-                                            coordinate.y = summary_data['principal-min-strain'] ? summary_data['principal-min-strain'].location[1] : ''
-                                            coordinate.z = summary_data['principal-min-strain'] ? summary_data['principal-min-strain'].location[2] : ''
-                                            region = region.toLowerCase();
-                                            // console.log(region);
-                                            principal_min_strain[region] = principal_min_strain[region] || [];
-                                            principal_min_strain[region].push(coordinate);
-                                        })
+                                        let coordinate = {};
+                                        coordinate.x = summary_data['principal-min-strain'].location[0];
+                                        coordinate.y = summary_data['principal-min-strain'].location[1];
+                                        coordinate.z = summary_data['principal-min-strain'].location[2];
+                                        region = summary_data['principal-min-strain']['brain-region'].toLowerCase();
+                                        principal_min_strain[region] = principal_min_strain[region] || [];
+                                        principal_min_strain[region].push(coordinate);
                                     }
                                     if (summary_data['axonal-strain-max']) {
-                                        summary_data['axonal-strain-max']['brain-region'].forEach(function (region) {
-                                            let coordinate = {};
-                                            coordinate.x = summary_data['axonal-strain-max'] ? summary_data['axonal-strain-max'].location[0] : ''
-                                            coordinate.y = summary_data['axonal-strain-max'] ? summary_data['axonal-strain-max'].location[1] : ''
-                                            coordinate.z = summary_data['axonal-strain-max'] ? summary_data['axonal-strain-max'].location[2] : ''
-                                            region = region.toLowerCase();
-                                            // console.log(region);
-                                            axonal_strain_max[region] = axonal_strain_max[region] || [];
-                                            axonal_strain_max[region].push(coordinate);
-                                        })
+                                        let coordinate = {};
+                                        coordinate.x = summary_data['axonal-strain-max'].location[0];
+                                        coordinate.y = summary_data['axonal-strain-max'].location[1];
+                                        coordinate.z = summary_data['axonal-strain-max'].location[2];
+                                        region = summary_data['axonal-strain-max']['brain-region'].toLowerCase();
+                                        axonal_strain_max[region] = axonal_strain_max[region] || [];
+                                        axonal_strain_max[region].push(coordinate);
                                     }
                                     if (summary_data['csdm-max']) {
-                                        summary_data['csdm-max']['brain-region'].forEach(function (region) {
-                                            let coordinate = {};
-                                            coordinate.x = summary_data['csdm-max'] ? summary_data['csdm-max'].location[0] : ''
-                                            coordinate.y = summary_data['csdm-max'] ? summary_data['csdm-max'].location[1] : ''
-                                            coordinate.z = summary_data['csdm-max'] ? summary_data['csdm-max'].location[2] : ''
-                                            region = region.toLowerCase();
-                                            // console.log(region);
-                                            csdm_max[region] = csdm_max[region] || [];
-                                            csdm_max[region].push(coordinate);
-                                        })
+                                        let coordinate = {};
+                                        coordinate.x = summary_data['csdm-max'].location[0];
+                                        coordinate.y = summary_data['csdm-max'].location[1];
+                                        coordinate.z = summary_data['csdm-max'].location[2];
+                                        region = summary_data['csdm-max']['brain-region'].toLowerCase();
+                                        csdm_max[region] = csdm_max[region] || [];
+                                        csdm_max[region].push(coordinate);
                                     }
                                     if (summary_data['masXsr-15-max']) {
-                                        summary_data['masXsr-15-max']['brain-region'].forEach(function (region) {
-                                            let coordinate = {};
-                                            coordinate.x = summary_data['masXsr-15-max'] ? summary_data['masXsr-15-max'].location[0] : ''
-                                            coordinate.y = summary_data['masXsr-15-max'] ? summary_data['masXsr-15-max'].location[1] : ''
-                                            coordinate.z = summary_data['masXsr-15-max'] ? summary_data['masXsr-15-max'].location[2] : ''
-                                            region = region.toLowerCase();
-                                            // console.log(region);
-                                            masXsr_15_max[region] = masXsr_15_max[region] || [];
-                                            masXsr_15_max[region].push(coordinate);
-                                        })
+                                        let coordinate = {};
+                                        coordinate.x = summary_data['masXsr-15-max'].location[0];
+                                        coordinate.y = summary_data['masXsr-15-max'].location[1];
+                                        coordinate.z = summary_data['masXsr-15-max'].location[2];
+                                        region = summary_data['masXsr-15-max']['brain-region'].toLowerCase();
+                                        masXsr_15_max[region] = masXsr_15_max[region] || [];
+                                        masXsr_15_max[region].push(coordinate);
                                     }
                                 })
                             }
@@ -1561,14 +1536,48 @@ if (cluster.isMaster) {
                         let i = index;
                         getBrandData({ sensor: data.sensor })
                             .then(simulation_records => {
-                                counter++;
+                                
                                 brand["simulation_count"] = Number(simulation_records.length).toString();
+                                brand["simulation_status"] = '';
+                                brand["computed_time"] = '';
+                                brand["simulation_timestamp"] = '';
 
-                                if (counter == brandList.length) {
-                                    res.send({
-                                        message: "success",
-                                        data: brandList
-                                    })
+                                simulation_records.forEach(function (simulation_record, index) {
+                                    simulation_record['date_time'] = simulation_record.player_id.split('$')[1];
+                                })
+
+                                simulation_records.sort(function (b, a) {
+                                    var keyA = a.date_time,
+                                        keyB = b.date_time;
+                                    if (keyA < keyB) return -1;
+                                    if (keyA > keyB) return 1;
+                                    return 0;
+                                });
+                                                                
+                                if (simulation_records.length > 0) {
+                                    getPlayerSimulationStatus(simulation_records[0].image_id)
+                                        .then(simulation => {
+                                            brand["simulation_status"] = simulation.status;
+                                            brand["computed_time"] = simulation.computed_time;
+                                            brand["simulation_timestamp"] = simulation_records[0].player_id.split('$')[1];
+                                            counter++;
+                                            if (counter == brandList.length) {
+                                                res.send({
+                                                    message: "success",
+                                                    data: brandList
+                                                })
+                                            }
+                                        }).catch(err => {
+                                            console.log('err', err);
+                                        })
+                                } else {
+                                    counter++;
+                                    if (counter == brandList.length) {
+                                        res.send({
+                                            message: "success",
+                                            data: brandList
+                                        })
+                                    }
                                 }
                             })
                             .catch(err => {
@@ -1616,8 +1625,11 @@ if (cluster.isMaster) {
                         let i = index;
                         getBrandOrganizationData({ sensor: data.sensor, organization: data.organization })
                             .then(simulation_records => {
-                                counter++;
+                                
                                 org["simulation_count"] = Number(simulation_records.length).toString();
+                                org["simulation_status"] = '';
+                                org["computed_time"] = '';
+                                org["simulation_timestamp"] = '';
 
                                 simulation_records.forEach(function (simulation_record, index) {
                                     simulation_record['date_time'] = simulation_record.player_id.split('$')[1];
@@ -1630,30 +1642,25 @@ if (cluster.isMaster) {
                                     if (keyA > keyB) return 1;
                                     return 0;
                                 });
-
-                                org["simulation_status"] = '';
-                                org["computed_time"] = '';
-                                org["simulation_timestamp"] = '';
                                 
                                 if (simulation_records.length > 0) {
-                                    console.log(simulation_records[0].image_id);
                                     getPlayerSimulationStatus(simulation_records[0].image_id)
                                         .then(simulation => {
                                             org["simulation_status"] = simulation.status;
                                             org["computed_time"] = simulation.computed_time;
                                             org["simulation_timestamp"] = simulation_records[0].player_id.split('$')[1];
-
+                                            counter++;
                                             if (counter == orgList.length) {
                                                 res.send({
                                                     message: "success",
                                                     data: orgList
                                                 })
                                             }
-
                                         }).catch(err => {
                                             console.log('err',err);
                                         })
                                 } else {
+                                    counter++;
                                     if (counter == orgList.length) {
                                         res.send({
                                             message: "success",
@@ -1684,9 +1691,7 @@ if (cluster.isMaster) {
                 var teamList = list.filter(function (team_name) {
                     return (!("teamList" in team_name));
                 });
-
-                console.log('teamList', teamList);
-
+                
                 let counter = 0;
                 if (teamList.length == 0) {
                     res.send({
@@ -1694,37 +1699,47 @@ if (cluster.isMaster) {
                         data: []
                     })
                 } else {
-                    // console.log(teamList);
                     teamList.forEach(function (team, index) {
                         let data = team;
                         let i = index;
                         getOrganizationTeamData({ sensor: data.sensor ? data.sensor : false, organization: data.organization, team: data.team_name })
                             .then(simulation_records => {
-                                // console.log('simulation_records',simulation_records)
-                                counter++;
+                                
                                 team["simulation_count"] = Number(simulation_records.length).toString();
                                 team["simulation_status"] = '';
                                 team["computed_time"] = '';
                                 team["simulation_timestamp"] = '';
+
+                                simulation_records.forEach(function (simulation_record, index) {
+                                    simulation_record['date_time'] = simulation_record.player_id.split('$')[1];
+                                })
+
+                                simulation_records.sort(function (b, a) {
+                                    var keyA = a.date_time,
+                                        keyB = b.date_time;
+                                    if (keyA < keyB) return -1;
+                                    if (keyA > keyB) return 1;
+                                    return 0;
+                                });
+                                
                                 if (simulation_records.length > 0) {
-                                    console.log(simulation_records[0].image_id);
                                     getPlayerSimulationStatus(simulation_records[0].image_id)
                                         .then(simulation => {
                                             team["simulation_status"] = simulation.status;
                                             team["computed_time"] = simulation.computed_time;
                                             team["simulation_timestamp"] = simulation_records[0].player_id.split('$')[1];
-
+                                            counter++;
                                             if (counter == teamList.length) {
                                                 res.send({
                                                     message: "success",
                                                     data: teamList
                                                 })
                                             }
-
                                         }).catch(err => {
                                             console.log('err',err);
                                         })
                                 } else {
+                                    counter++;
                                     if (counter == teamList.length) {
                                         res.send({
                                             message: "success",
@@ -1748,7 +1763,7 @@ if (cluster.isMaster) {
     })
 
     // Configuring port for APP
-    const port = process.env.PORT || 5000;
+    const port = process.env.PORT || 3000;
     const server = app.listen(port, function () {
         console.log('Magic happens on ' + port);
     });

@@ -994,7 +994,7 @@ function getBrandData(obj) {
             ExpressionAttributeValues: {
                ":sensor": obj.sensor
             },
-            ProjectionExpression: "sensor"
+            ProjectionExpression: "sensor,player_id,computed_time,image_id"
         };
         var item = [];
         docClient.scan(params).eachPage((err, data, done) => {
