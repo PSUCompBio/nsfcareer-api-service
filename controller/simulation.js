@@ -603,6 +603,18 @@ function generateINP(user_id, obj = null) {
                                         return uploadMorphedVTKZip(user_id, obj.file_name);
                                     })
                                     .then(d => {
+                                        return uploadSkullFile(user_id);
+                                    })
+                                    .then(d => {
+                                        return uploadBrainFile(user_id);
+                                    })
+                                    .then(d => {
+                                        return uploadAvatarModelFile(user_id);
+                                    })
+                                    .then(d => {
+                                        return uploadAvatarModelPlyFile(user_id);
+                                    })
+                                    .then(d => {
                                         resolve(true);
                                     })
                                     .catch((err) => {
@@ -616,6 +628,102 @@ function generateINP(user_id, obj = null) {
         })
 
     })
+}
+
+function uploadSkullFile(user_id) {
+    return new Promise((resolve, reject) => {
+        fs.readFile(`../users_data/${user_id}/morphed_vtk/skull.ply`, function (err, headBuffer) {
+            if (err) {
+                reject(err);
+            }
+            else {
+                params.Key = user_id + "/profile/avatar/skull.ply";
+                params.Body = headBuffer;
+                // Call S3 Upload
+                s3.upload(params, (err, data) => {
+                    if (err) {
+                        reject(err);
+                    }
+                    else {
+                        resolve(data);
+                    }
+                });
+
+            }
+        })
+    });
+}
+
+function uploadBrainFile(user_id) {
+    return new Promise((resolve, reject) => {
+        fs.readFile(`../users_data/${user_id}/morphed_vtk/brain.ply`, function (err, headBuffer) {
+            if (err) {
+                reject(err);
+            }
+            else {
+                params.Key = user_id + "/profile/avatar/brain.ply";
+                params.Body = headBuffer;
+                // Call S3 Upload
+                s3.upload(params, (err, data) => {
+                    if (err) {
+                        reject(err);
+                    }
+                    else {
+                        resolve(data);
+                    }
+                });
+
+            }
+        })
+    });
+}
+
+function uploadAvatarModelFile(user_id) {
+    return new Promise((resolve, reject) => {
+        fs.readFile(`./avatars/${user_id}/head/model.jpg`, function (err, headBuffer) {
+            if (err) {
+                reject(err);
+            }
+            else {
+                params.Key = user_id + "/profile/avatar/model.jpg";
+                params.Body = headBuffer;
+                // Call S3 Upload
+                s3.upload(params, (err, data) => {
+                    if (err) {
+                        reject(err);
+                    }
+                    else {
+                        resolve(data);
+                    }
+                });
+
+            }
+        })
+    });
+}
+
+function uploadAvatarModelPlyFile(user_id) {
+    return new Promise((resolve, reject) => {
+        fs.readFile(`./avatars/${user_id}/head/model.ply`, function (err, headBuffer) {
+            if (err) {
+                reject(err);
+            }
+            else {
+                params.Key = user_id + "/profile/avatar/model.ply";
+                params.Body = headBuffer;
+                // Call S3 Upload
+                s3.upload(params, (err, data) => {
+                    if (err) {
+                        reject(err);
+                    }
+                    else {
+                        resolve(data);
+                    }
+                });
+
+            }
+        })
+    });
 }
 
 function getUploadedModelFileList(user_name, cb) {
@@ -707,6 +815,11 @@ function generateMorphedVTK(obj) {
             })
             .then(mesh_output2 => {
                 console.log("MESROTATE VTK2 POST<<<<<--------------\n", mesh_output2);
+                let extract_surface_cmd = `pvpython extract_surface.py --input ./../users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_brain_rotated.vtk --outputskull ./../users_data/${obj.user_cognito_id}/morphed_vtk/skull.ply --outputbrain ./../users_data/${obj.user_cognito_id}/morphed_vtk/brain.ply`;
+                return executeShellCommands(extract_surface_cmd);
+            })
+            .then(extract_surface_output => {
+                console.log("extract surface <<<<<--------------\n", extract_surface_output);
                 let cg_cmd = `python3 ./../rbf-brain/RBF_CG.py --p ./../users_data/${obj.user_cognito_id}/parameters/${obj.file_name}.prm --m ./../rbf-brain/cg.vtk --output ./../users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_cg.txt`;
                 return executeShellCommands(cg_cmd);
             })
