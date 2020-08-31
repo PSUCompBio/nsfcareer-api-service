@@ -632,6 +632,13 @@ function generateINP(user_id, obj = null) {
 
 function uploadSkullFile(user_id) {
     return new Promise((resolve, reject) => {
+        var uploadParams = {
+            Bucket: config.usersbucket,
+            Key: '', // pass key
+            Body: null, // pass file body
+        };
+
+        const params = uploadParams;
         fs.readFile(`../users_data/${user_id}/morphed_vtk/skull.ply`, function (err, headBuffer) {
             if (err) {
                 reject(err);
@@ -656,6 +663,13 @@ function uploadSkullFile(user_id) {
 
 function uploadBrainFile(user_id) {
     return new Promise((resolve, reject) => {
+        var uploadParams = {
+            Bucket: config.usersbucket,
+            Key: '', // pass key
+            Body: null, // pass file body
+        };
+
+        const params = uploadParams;
         fs.readFile(`../users_data/${user_id}/morphed_vtk/brain.ply`, function (err, headBuffer) {
             if (err) {
                 reject(err);
@@ -679,6 +693,13 @@ function uploadBrainFile(user_id) {
 }
 
 function uploadAvatarModelFile(user_id) {
+    var uploadParams = {
+        Bucket: config.usersbucket,
+        Key: '', // pass key
+        Body: null, // pass file body
+    };
+
+    const params = uploadParams;
     return new Promise((resolve, reject) => {
         fs.readFile(`./avatars/${user_id}/head/model.jpg`, function (err, headBuffer) {
             if (err) {
@@ -704,6 +725,13 @@ function uploadAvatarModelFile(user_id) {
 
 function uploadAvatarModelPlyFile(user_id) {
     return new Promise((resolve, reject) => {
+        var uploadParams = {
+            Bucket: config.usersbucket,
+            Key: '', // pass key
+            Body: null, // pass file body
+        };
+
+        const params = uploadParams;
         fs.readFile(`./avatars/${user_id}/head/model.ply`, function (err, headBuffer) {
             if (err) {
                 reject(err);
