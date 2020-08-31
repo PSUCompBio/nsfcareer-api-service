@@ -815,7 +815,7 @@ function generateMorphedVTK(obj) {
             })
             .then(mesh_output2 => {
                 console.log("MESROTATE VTK2 POST<<<<<--------------\n", mesh_output2);
-                let extract_surface_cmd = `pvpython extract_surface.py --input ./../users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_brain_rotated.vtk --outputskull ./../users_data/${obj.user_cognito_id}/morphed_vtk/skull.ply --outputbrain ./../users_data/${obj.user_cognito_id}/morphed_vtk/brain.ply`;
+                let extract_surface_cmd = `pvpython ./../rbf-brain/extract_surface.py --input ./../users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_brain_rotated.vtk --outputskull ./../users_data/${obj.user_cognito_id}/morphed_vtk/skull.ply --outputbrain ./../users_data/${obj.user_cognito_id}/morphed_vtk/brain.ply`;
                 return executeShellCommands(extract_surface_cmd);
             })
             .then(extract_surface_output => {
