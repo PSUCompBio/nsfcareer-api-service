@@ -77,35 +77,35 @@ if (cluster.isMaster) {
     // ======================================
     //       CONFIGURING AWS SDK & EXPESS
     // ======================================
-    // var config = {
-    //     "awsAccessKeyId": process.env.AWS_ACCESS_KEY_ID,
-    //     "awsSecretAccessKey": process.env.AWS_ACCESS_SECRET_KEY,
-    //     "avatar3dClientId": process.env.AVATAR_3D_CLIENT_ID,
-    //     "avatar3dclientSecret": process.env.AVATAR_3D_CLIENT_SECRET,
-    //     "region" : process.env.REGION,
-    //     "usersbucket": process.env.USERS_BUCKET,
-    //     "apiVersion" : process.env.API_VERSION,
-    //     "jwt_secret" : process.env.JWT_SECRET,
-    //     "email_id" : process.env.EMAIL_ID,
-    //     "mail_list" : process.env.MAIL_LIST,
-    //     "ComputeInstanceEndpoint" : process.env.COMPUTE_INSTANCE_ENDPOINT,
-    //     "userPoolId": process.env.USER_POOL_ID,
-    //     "ClientId" : process.env.CLIENT_ID,
-    //     "react_website_url" : process.env.REACT_WEBSITE_URL,
-    //     "simulation_result_host_url" : process.env.SIMULATION_RESULT_HOST_URL,
-    //     "jobQueueBeta" : process.env.JOB_QUEUE_BETA,
-    //     "jobDefinitionBeta" : process.env.JOB_DEFINITION_BETA,
-    //     "jobQueueProduction" : process.env.JOB_QUEUE_PRODUCTION,
-    //     "jobDefinitionProduction" : process.env.JOB_DEFINITION_PRODUCTION,
-    //     "simulation_bucket" : process.env.SIMULATION_BUCKET,
-    //     "queue_x" : process.env.QUEUE_X,
-    //     "queue_y" : process.env.QUEUE_Y,
-    //     "queue_beta" : process.env.QUEUE_BETA
-    // };
+    var config = {
+        "awsAccessKeyId": process.env.AWS_ACCESS_KEY_ID,
+        "awsSecretAccessKey": process.env.AWS_ACCESS_SECRET_KEY,
+        "avatar3dClientId": process.env.AVATAR_3D_CLIENT_ID,
+        "avatar3dclientSecret": process.env.AVATAR_3D_CLIENT_SECRET,
+        "region" : process.env.REGION,
+        "usersbucket": process.env.USERS_BUCKET,
+        "apiVersion" : process.env.API_VERSION,
+        "jwt_secret" : process.env.JWT_SECRET,
+        "email_id" : process.env.EMAIL_ID,
+        "mail_list" : process.env.MAIL_LIST,
+        "ComputeInstanceEndpoint" : process.env.COMPUTE_INSTANCE_ENDPOINT,
+        "userPoolId": process.env.USER_POOL_ID,
+        "ClientId" : process.env.CLIENT_ID,
+        "react_website_url" : process.env.REACT_WEBSITE_URL,
+        "simulation_result_host_url" : process.env.SIMULATION_RESULT_HOST_URL,
+        "jobQueueBeta" : process.env.JOB_QUEUE_BETA,
+        "jobDefinitionBeta" : process.env.JOB_DEFINITION_BETA,
+        "jobQueueProduction" : process.env.JOB_QUEUE_PRODUCTION,
+        "jobDefinitionProduction" : process.env.JOB_DEFINITION_PRODUCTION,
+        "simulation_bucket" : process.env.SIMULATION_BUCKET,
+        "queue_x" : process.env.QUEUE_X,
+        "queue_y" : process.env.QUEUE_Y,
+        "queue_beta" : process.env.QUEUE_BETA
+    };
 
     const subject_signature = fs.readFileSync("data/base64")
 
-    var config = require('./config/configuration_keys.json');
+    // var config = require('./config/configuration_keys.json');
     var config_env = config;
 
     //AWS.config.loadFromPath('./config/configuration_keys.json');
@@ -468,6 +468,35 @@ if (cluster.isMaster) {
                         // Adding image id in array data
                         for (var i = 0; i < new_items_array.length; i++) {
                             var _temp = new_items_array[i];
+
+                            if (level === 300) {
+                                if (sensor.toLowerCase() === 'sensor_company_x' || sensor.toLowerCase() === 'swa') {
+                                    req.body.sensor_brand = 'SWA';
+                                } else if (sensor.toLowerCase() === 'sisu') {
+                                    req.body.sensor_brand = 'SISU';
+                                } else if (sensor.toLowerCase() === 'stanford') {
+                                    req.body.sensor_brand = 'Stanford';
+                                } else if (sensor.toLowerCase() === 'panther') {
+                                    req.body.sensor_brand = 'Panther';
+                                } else if (sensor.toLowerCase() === 'hitiq') {
+                                    req.body.sensor_brand = 'HitIQ';
+                                } else if (sensor.toLowerCase() === 'gforcetracker') {
+                                    req.body.sensor_brand = 'GForceTracker';
+                                } else if (sensor.toLowerCase() === 'fitguard') {
+                                    req.body.sensor_brand = 'FitGuard';
+                                } else if (sensor.toLowerCase() === 'blackbox') { 
+                                    req.body.sensor_brand = 'Blackbox Biometrics';
+                                } else if (sensor.toLowerCase() === 'biocore') { 
+                                    req.body.sensor_brand = 'BioCore';
+                                } else if (sensor.toLowerCase() === 'athlete') { 
+                                    req.body.sensor_brand = 'Athlete Intelligence';
+                                } else if (sensor.toLowerCase() === 'medeng') { 
+                                    req.body.sensor_brand = 'Med-Eng';
+                                } else {
+                                    req.body.sensor_brand = 'Prevent Biometrics';
+                                }
+                            }
+
                             _temp["user_cognito_id"] = req.body.user_cognito_id;
                             _temp["sensor"] = req.body.sensor_brand;
                             _temp["image_id"] = shortid.generate();
@@ -939,7 +968,15 @@ if (cluster.isMaster) {
 
         getPlayersListFromTeamsDB(req.body)
             .then(data => {
-                let player_list = data[0].player_list ? data[0].player_list : [];
+                let player_list = [];
+                let requested_player_list = [];
+                data.forEach(function (u) {
+                    player_list = player_list.concat(u.player_list);
+                    requested_player_list = requested_player_list.concat(u.requested_player_list);
+                }) 
+                console.log('player_list', player_list);
+                console.log('requested_player_list', requested_player_list);
+                // let player_list = data[0].player_list ? data[0].player_list : [];
                 if (player_list.length == 0) {
                     res.send({
                         message: "success",
@@ -977,12 +1014,33 @@ if (cluster.isMaster) {
                                                 k++;
                                                 p_data[index]['simulation_data'][0]['simulation_status'] = simulation.status;
                                                 p_data[index]['simulation_data'][0]['computed_time'] = simulation.computed_time;
-                                                console.log(k, p_data.length)
+                                                
                                                 if (k == p_data.length) {
-                                                    res.send({
-                                                        message: "success",
-                                                        data: p_data
-                                                    })
+                                                    let requested_players = []
+                                                    if (requested_player_list.length > 0) {
+                                                        let p_cnt = 0;
+                                                        requested_player_list.forEach(function (p_record) {
+                                                            getUserDetails(p_record)
+                                                                .then (user_detail => {
+                                                                    p_cnt++; 
+                                                                    requested_players.push(user_detail.Item);
+
+                                                                    if (p_cnt === requested_player_list.length) {
+                                                                        res.send({
+                                                                            message: "success",
+                                                                            data: p_data,
+                                                                            requested_players: requested_players
+                                                                        })
+                                                                    }
+                                                                })
+                                                        })         
+                                                    } else {
+                                                        res.send({
+                                                            message: "success",
+                                                            data: p_data,
+                                                            requested_players: requested_players
+                                                        })
+                                                    }
                                                 }
                                             })
                                     })
@@ -993,7 +1051,8 @@ if (cluster.isMaster) {
                                 if (counter == player_list.length) {
                                     res.send({
                                         message: "failure",
-                                        data: p_data
+                                        data: p_data,
+                                        requested_players: []
                                     })
                                 }
                             })
@@ -1764,7 +1823,7 @@ if (cluster.isMaster) {
     })
 
     // Configuring port for APP
-    const port = process.env.PORT || 5000;
+    const port = process.env.PORT || 3000;
     const server = app.listen(port, function () {
         console.log('Magic happens on ' + port);
     });
