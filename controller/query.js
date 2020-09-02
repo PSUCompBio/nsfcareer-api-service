@@ -1019,7 +1019,7 @@ function getAllOrganizationsOfSensorBrand(obj) {
             ExpressionAttributeValues: {
                ":sensor": obj.brand
             },
-            ProjectionExpression: "organization, sensor"
+            ProjectionExpression: "organization, sensor, organization_id"
         };
         var item = [];
         docClient.scan(params).eachPage((err, data, done) => {
@@ -1073,7 +1073,7 @@ function getAllTeamsOfOrganizationsOfSensorBrand(obj) {
                    ":sensor": obj.brand,
                    ":organization": obj.organization
                 },
-                ProjectionExpression: "sensor, organization, team_name"
+                ProjectionExpression: "sensor, organization, team_name, organization_id"
             };
         } else {
             params = {
@@ -1082,7 +1082,7 @@ function getAllTeamsOfOrganizationsOfSensorBrand(obj) {
                 ExpressionAttributeValues: {
                    ":organization": obj.organization
                 },
-                ProjectionExpression: "sensor, organization, team_name"
+                ProjectionExpression: "sensor, organization, team_name, organization_id"
             };
         }
         
