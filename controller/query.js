@@ -26,6 +26,30 @@ function getUserDetails(user_name, cb) {
     });
 }
 
+function getUserDetailBySensorId(sensor_id_number) {
+    return new Promise((resolve, reject) => {
+        const params = {
+            TableName: "users",
+            FilterExpression: "sensor_id_number = :sensor_id_number",
+            ExpressionAttributeValues: {
+                ":sensor_id_number": sensor_id_number
+            }
+        };
+        var item = [];
+        docClient.scan(params).eachPage((err, data, done) => {
+            if (err) {
+                reject(err);
+            }
+            if (data == null) {
+                resolve(concatArrays(item));
+            } else {
+                item.push(data.Items);
+            }
+            done();
+        });
+    });
+}
+
 function updateSimulationFileStatusInDB(obj) {
     return new Promise((resolve, reject) => {
         var userParams = {
@@ -652,6 +676,75 @@ function addPlayerToTeamOfOrganization(sensor, user_cognito_id, org, team, playe
     });
 }
 
+function removeA(arr) {
+    var what, a = arguments, L = a.length, ax;
+    while (L > 1 && arr.length) {
+        what = a[--L];
+        while ((ax= arr.indexOf(what)) !== -1) {
+            arr.splice(ax, 1);
+        }
+    }
+    return arr;
+}
+
+function removeRequestedPlayerFromOrganizationTeam(org, team, player_id) {
+    return new Promise((resolve, reject) => {
+        const params = {
+            TableName: "organizations",
+            FilterExpression: "organization = :organization and team_name = :team",
+            ExpressionAttributeValues: {
+                ":organization": org,
+                ":team": team,
+            }
+        };
+        var item = [];
+        docClient.scan(params).eachPage((err, data, done) => {
+            if (err) {
+                reject(err);
+            }
+           
+            if (data == null) {
+                const scanData = concatArrays(item);
+                if (scanData.length > 0) {
+                    // If Player does not exists in Team
+                    if (scanData[0].requested_player_list.indexOf(player_id) <= -1) {
+                        resolve(null);
+                    } else {
+                        let updatedList = scanData[0].requested_player_list;
+                        updatedList = removeA(updatedList, player_id);
+                        const dbUpdate = {
+                            TableName: "organizations",
+                            Key: {
+                                organization_id: scanData[0].organization_id
+                            },
+                            UpdateExpression: "set #list = :newItem ",
+                            ExpressionAttributeNames: {
+                                "#list": "requested_player_list",
+                            },
+                            ExpressionAttributeValues: {
+                                ":newItem": updatedList,
+                            },
+                            ReturnValues: "UPDATED_NEW",
+                        };
+
+                        docClient.update(dbUpdate, function (err, data) {
+                            if (err) {
+                                reject(err);
+                            } else {
+                                resolve(data);
+                            }
+                        });
+                    }
+                } else {
+                }
+            } else {
+                item.push(data.Items);
+            }
+            done();
+        }); 
+    });
+}
+
 function checkIfSelfiePresent(player_id) {
     return new Promise((resolve, reject) => {
         //Fetch user details from dynamodb
@@ -1202,6 +1295,7 @@ function getSensorAdmins(sensor) {
 
 module.exports = {
     getUserDetails,
+    getUserDetailBySensorId,
     updateSimulationFileStatusInDB,
     addTeam,
     deleteTeam,
@@ -1231,5 +1325,6 @@ module.exports = {
     getOrganizationTeamData,
     getPlayerSimulationFile,
     getSensorAdmins,
+    removeRequestedPlayerFromOrganizationTeam,
     getPlayerSimulationStatus
 };

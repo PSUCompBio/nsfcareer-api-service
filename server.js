@@ -173,6 +173,7 @@ if (cluster.isMaster) {
 
     const {
         getUserDetails,
+        getUserDetailBySensorId,
         updateSimulationFileStatusInDB,
         addTeam,
         deleteTeam,
@@ -192,6 +193,7 @@ if (cluster.isMaster) {
         getAllTeamsOfOrganizationsOfSensorBrand,
         getOrganizationTeamData,
         getPlayerSimulationFile,
+        removeRequestedPlayerFromOrganizationTeam,
         getPlayerSimulationStatus
     } = require('./controller/query');
 
@@ -465,131 +467,158 @@ if (cluster.isMaster) {
                         // Adding default organization Unknown to the impact data
                         const new_items_array = _.map(items, o => _.extend({ organization: "Unknown" }, o));
 
-                        // Adding image id in array data
-                        for (var i = 0; i < new_items_array.length; i++) {
-                            var _temp = new_items_array[i];
+                        ( async () => {
+                            // Adding image id in array data
+                            for (var i = 0; i < new_items_array.length; i++) {
+                                var _temp = new_items_array[i];
 
-                            if (level === 300) {
-                                if (sensor.toLowerCase() === 'sensor_company_x' || sensor.toLowerCase() === 'swa') {
-                                    req.body.sensor_brand = 'SWA';
-                                } else if (sensor.toLowerCase() === 'sisu') {
-                                    req.body.sensor_brand = 'SISU';
-                                } else if (sensor.toLowerCase() === 'stanford') {
-                                    req.body.sensor_brand = 'Stanford';
-                                } else if (sensor.toLowerCase() === 'panther') {
-                                    req.body.sensor_brand = 'Panther';
-                                } else if (sensor.toLowerCase() === 'hitiq') {
-                                    req.body.sensor_brand = 'HitIQ';
-                                } else if (sensor.toLowerCase() === 'gforcetracker') {
-                                    req.body.sensor_brand = 'GForceTracker';
-                                } else if (sensor.toLowerCase() === 'fitguard') {
-                                    req.body.sensor_brand = 'FitGuard';
-                                } else if (sensor.toLowerCase() === 'blackbox') { 
-                                    req.body.sensor_brand = 'Blackbox Biometrics';
-                                } else if (sensor.toLowerCase() === 'biocore') { 
-                                    req.body.sensor_brand = 'BioCore';
-                                } else if (sensor.toLowerCase() === 'athlete') { 
-                                    req.body.sensor_brand = 'Athlete Intelligence';
-                                } else if (sensor.toLowerCase() === 'medeng') { 
-                                    req.body.sensor_brand = 'Med-Eng';
-                                } else {
-                                    req.body.sensor_brand = 'Prevent Biometrics';
+                                if (level === 300) {
+                                    if (sensor.toLowerCase() === 'sensor_company_x' || sensor.toLowerCase() === 'swa') {
+                                        req.body.sensor_brand = 'SWA';
+                                    } else if (sensor.toLowerCase() === 'sisu') {
+                                        req.body.sensor_brand = 'SISU';
+                                    } else if (sensor.toLowerCase() === 'stanford') {
+                                        req.body.sensor_brand = 'Stanford';
+                                    } else if (sensor.toLowerCase() === 'panther') {
+                                        req.body.sensor_brand = 'Panther';
+                                    } else if (sensor.toLowerCase() === 'hitiq') {
+                                        req.body.sensor_brand = 'HitIQ';
+                                    } else if (sensor.toLowerCase() === 'gforcetracker') {
+                                        req.body.sensor_brand = 'GForceTracker';
+                                    } else if (sensor.toLowerCase() === 'fitguard') {
+                                        req.body.sensor_brand = 'FitGuard';
+                                    } else if (sensor.toLowerCase() === 'blackbox') { 
+                                        req.body.sensor_brand = 'Blackbox Biometrics';
+                                    } else if (sensor.toLowerCase() === 'biocore') { 
+                                        req.body.sensor_brand = 'BioCore';
+                                    } else if (sensor.toLowerCase() === 'athlete') { 
+                                        req.body.sensor_brand = 'Athlete Intelligence';
+                                    } else if (sensor.toLowerCase() === 'medeng') { 
+                                        req.body.sensor_brand = 'Med-Eng';
+                                    } else {
+                                        req.body.sensor_brand = 'Prevent Biometrics';
+                                    }
                                 }
+
+                                _temp["user_cognito_id"] = req.body.user_cognito_id;
+                                _temp["sensor"] = req.body.sensor_brand;
+                                _temp["image_id"] = shortid.generate();
+                                _temp['player'] = {};
+                                _temp['player']['first-name'] = "Unknown";
+                                _temp['player']['last-name'] = "Unknown";
+                                _temp['player']['sport'] = "Unknown";
+                                _temp['player']['position'] = "Unknown";
+                                _temp['player']['team'] = "Unknown";
+                                _temp["team"] = "Unknown";
+
+                                if (req.body.organization) {
+                                    _temp['organization'] = req.body.organization
+                                }
+
+                                if (req.body.team) {
+                                    _temp['player']['team'] = req.body.team
+                                    _temp['team'] = req.body.team
+                                }
+
+                                await getUserDetailBySensorId(_temp.player_id.split("$")[0])
+                                    .then (user_detail => {
+                                        // console.log(user_detail);
+                                        if (user_detail.length > 0) {
+                                            _temp['player']['first-name'] = user_detail[0]['first_name'];
+                                            _temp['player']['last-name'] = user_detail[0]['last_name'];
+                                            new_items_array[i] = _temp;
+                                            removeRequestedPlayerFromOrganizationTeam(req.body.organization, req.body.team, user_detail[0]['user_cognito_id'])
+                                                .then(data => {
+                                                    // console.log(data);
+                                                })
+                                        }
+                                    })
+                                    .catch(err => {
+                                        new_items_array[i] = _temp;
+                                    })
                             }
 
-                            _temp["user_cognito_id"] = req.body.user_cognito_id;
-                            _temp["sensor"] = req.body.sensor_brand;
-                            _temp["image_id"] = shortid.generate();
-                            _temp['player'] = {};
-                            _temp['player']['first-name'] = "Unknown";
-                            _temp['player']['last-name'] = "Unknown";
-                            _temp['player']['sport'] = "Unknown";
-                            _temp['player']['position'] = "Unknown";
-                            _temp['player']['team'] = "Unknown";
-                            _temp["team"] = "Unknown";
-                            new_items_array[i] = _temp;
+                            console.log('New items array is ', new_items_array);
 
-                        }
-                        console.log('New items array is ', new_items_array);
+                            // Stores sensor data in db 
+                            // TableName: "sensor_data"
+                            // team, player_id
 
-                        // Stores sensor data in db 
-                        // TableName: "sensor_data"
-                        // team, player_id
+                            storeSensorData(new_items_array)
+                                .then(flag => {
 
-                        storeSensorData(new_items_array)
-                            .then(flag => {
+                                    var players = new_items_array.map(function (player) {
+                                        return {
+                                            player_id: player.player_id.split("$")[0],
+                                            team: player.player.team,
+                                            sensor: player.sensor,
+                                            organization: player.organization,
+                                        }
+                                    });
 
-                                var players = new_items_array.map(function (player) {
-                                    return {
-                                        player_id: player.player_id.split("$")[0],
-                                        team: player.player.team,
-                                        sensor: player.sensor,
-                                        organization: player.organization,
-                                    }
-                                });
+                                    // Fetching unique players
+                                    const result = _.uniqBy(players, 'player_id')
 
-                                // Fetching unique players
-                                const result = _.uniqBy(players, 'player_id')
+                                    var simulation_result_urls = [];
 
-                                var simulation_result_urls = [];
+                                    if (result.length == 0) {
+                                        res.send({
+                                            message: "success"
+                                        })
+                                    } else {
+                                        // Run simulation here and send data
+                                        // {
+                                        //     "player_id" : "STRING",
+                                        //     "team" : "STRING",
+                                        //     "organization" : "STRING"
+                                        // }
+                                        var counter = 0;
 
-                                if (result.length == 0) {
-                                    res.send({
-                                        message: "success"
-                                    })
-                                } else {
-                                    // Run simulation here and send data
-                                    // {
-                                    //     "player_id" : "STRING",
-                                    //     "team" : "STRING",
-                                    //     "organization" : "STRING"
-                                    // }
-                                    var counter = 0;
+                                        for (var i = 0; i < result.length; i++) {
+                                            var temp = result[i];
 
-                                    for (var i = 0; i < result.length; i++) {
-                                        var temp = result[i];
-
-                                        // Adds team details in db if doesn't already exist
-                                        addPlayerToTeamOfOrganization(req.body.sensor_brand, req.body.user_cognito_id, temp.organization, temp.team, temp.player_id)
-                                            .then(d => {
-                                                counter++;
-                                                if (counter == result.length) {
-                                                    // Upload player selfie if not present and generate meshes
-                                                    // Generate simulation for player
-                                                    uploadPlayerSelfieIfNotPresent(req.body.selfie, temp.player_id + '-' + temp.sensor, req.body.filename)
-                                                        .then((selfieDetails) => {
-                                                            return generateSimulationForPlayers(new_items_array, reader, apiMode, sensor);
-                                                        })
-                                                        .then(urls => {
-                                                            simulation_result_urls.push(urls)
-                                                            res.send({
-                                                                message: "success",
-                                                                image_url: _.spread(_.union)(simulation_result_urls)
+                                            // Adds team details in db if doesn't already exist
+                                            addPlayerToTeamOfOrganization(req.body.sensor_brand, req.body.user_cognito_id, temp.organization, temp.team, temp.player_id)
+                                                .then(d => {
+                                                    counter++;
+                                                    if (counter == result.length) {
+                                                        // Upload player selfie if not present and generate meshes
+                                                        // Generate simulation for player
+                                                        uploadPlayerSelfieIfNotPresent(req.body.selfie, temp.player_id + '-' + temp.sensor, req.body.filename)
+                                                            .then((selfieDetails) => {
+                                                                return generateSimulationForPlayers(new_items_array, reader, apiMode, sensor);
                                                             })
-                                                        })
-                                                        .catch(err => {
-                                                            console.log(err);
-                                                            counter = result.length;
-                                                            i = result.length;
-                                                            res.send({
-                                                                message: "failure",
-                                                                error: err
+                                                            .then(urls => {
+                                                                simulation_result_urls.push(urls)
+                                                                res.send({
+                                                                    message: "success",
+                                                                    image_url: _.spread(_.union)(simulation_result_urls)
+                                                                })
                                                             })
-                                                        })
-                                                }
-                                            })
-                                            .catch(err => {
-                                                console.log(err);
-                                                counter = result.length;
-                                                i = result.length;
-                                                res.send({
-                                                    message: "failure",
-                                                    error: err
+                                                            .catch(err => {
+                                                                console.log(err);
+                                                                counter = result.length;
+                                                                i = result.length;
+                                                                res.send({
+                                                                    message: "failure",
+                                                                    error: err
+                                                                })
+                                                            })
+                                                    }
                                                 })
-                                            })
+                                                .catch(err => {
+                                                    console.log(err);
+                                                    counter = result.length;
+                                                    i = result.length;
+                                                    res.send({
+                                                        message: "failure",
+                                                        error: err
+                                                    })
+                                                })
+                                        }
                                     }
-                                }
-                            })
+                                })
+                        })();
                     })
                     .catch(err => {
                         res.send({
@@ -1751,9 +1780,16 @@ if (cluster.isMaster) {
         getAllTeamsOfOrganizationsOfSensorBrand(req.body)
             .then(list => {
                 // console.log(list);
+                // let uniqueList = [];
+                // var teamList = list.filter(function (team_name) {
+                //     return (!("teamList" in team_name));
+                // });
                 let uniqueList = [];
                 var teamList = list.filter(function (team_name) {
-                    return (!("teamList" in team_name));
+                    if (uniqueList.indexOf(team_name.team_name) === -1) {
+                        uniqueList.push(team_name.team_name);
+                        return team_name;
+                    }
                 });
                 
                 let counter = 0;
@@ -1766,7 +1802,7 @@ if (cluster.isMaster) {
                     teamList.forEach(function (team, index) {
                         let data = team;
                         let i = index;
-                        getOrganizationTeamData({ sensor: data.sensor ? data.sensor : false, organization: data.organization, team: data.team_name })
+                        getOrganizationTeamData({ sensor: data.sensor && req.body.brand ? data.sensor : false, organization: data.organization, team: data.team_name })
                             .then(simulation_records => {
                                 
                                 team["simulation_count"] = Number(simulation_records.length).toString();
