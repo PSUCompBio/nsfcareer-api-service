@@ -26,12 +26,13 @@ function getUserDetails(user_name, cb) {
     });
 }
 
-function getUserDetailBySensorId(sensor_id_number) {
+function getUserDetailBySensorId(sensor, sensor_id_number) {
     return new Promise((resolve, reject) => {
         const params = {
             TableName: "users",
-            FilterExpression: "sensor_id_number = :sensor_id_number",
+            FilterExpression: "sensor = :sensor and sensor_id_number = :sensor_id_number",
             ExpressionAttributeValues: {
+                ":sensor": sensor,
                 ":sensor_id_number": sensor_id_number
             }
         };
@@ -707,33 +708,37 @@ function removeRequestedPlayerFromOrganizationTeam(org, team, player_id) {
                 const scanData = concatArrays(item);
                 if (scanData.length > 0) {
                     // If Player does not exists in Team
-                    if (scanData[0].requested_player_list.indexOf(player_id) <= -1) {
+                    if (scanData[0].requested_player_list && scanData[0].requested_player_list.indexOf(player_id) <= -1) {
                         resolve(null);
                     } else {
-                        let updatedList = scanData[0].requested_player_list;
-                        updatedList = removeA(updatedList, player_id);
-                        const dbUpdate = {
-                            TableName: "organizations",
-                            Key: {
-                                organization_id: scanData[0].organization_id
-                            },
-                            UpdateExpression: "set #list = :newItem ",
-                            ExpressionAttributeNames: {
-                                "#list": "requested_player_list",
-                            },
-                            ExpressionAttributeValues: {
-                                ":newItem": updatedList,
-                            },
-                            ReturnValues: "UPDATED_NEW",
-                        };
+                        if (scanData[0].requested_player_list) {
+                            let updatedList = scanData[0].requested_player_list;
+                            updatedList = removeA(updatedList, player_id);
+                            const dbUpdate = {
+                                TableName: "organizations",
+                                Key: {
+                                    organization_id: scanData[0].organization_id
+                                },
+                                UpdateExpression: "set #list = :newItem ",
+                                ExpressionAttributeNames: {
+                                    "#list": "requested_player_list",
+                                },
+                                ExpressionAttributeValues: {
+                                    ":newItem": updatedList,
+                                },
+                                ReturnValues: "UPDATED_NEW",
+                            };
 
-                        docClient.update(dbUpdate, function (err, data) {
-                            if (err) {
-                                reject(err);
-                            } else {
-                                resolve(data);
-                            }
-                        });
+                            docClient.update(dbUpdate, function (err, data) {
+                                if (err) {
+                                    reject(err);
+                                } else {
+                                    resolve(data);
+                                }
+                            });
+                        } else {
+                            resolve(null);
+                        }
                     }
                 } else {
                 }
