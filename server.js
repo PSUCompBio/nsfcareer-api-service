@@ -1650,8 +1650,10 @@ if (cluster.isMaster) {
                                 if (simulation_records.length > 0) {
                                     getPlayerSimulationStatus(simulation_records[0].image_id)
                                         .then(simulation => {
-                                            brand["simulation_status"] = simulation.status;
-                                            brand["computed_time"] = simulation.computed_time;
+                                            console.log('simulaimagimage_ide_idtion', simulation_records[0].image_id );
+                                            console.log('simulation', simulation );
+                                            brand["simulation_status"] = simulation ? simulation.status : '';
+                                            brand["computed_time"] = simulation ? simulation.computed_time : '';
                                             brand["simulation_timestamp"] = simulation_records[0].player_id.split('$')[1];
                                             counter++;
                                             if (counter == brandList.length) {
