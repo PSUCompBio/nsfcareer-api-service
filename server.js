@@ -1001,7 +1001,13 @@ if (cluster.isMaster) {
                 let requested_player_list = [];
                 data.forEach(function (u) {
                     if (u.player_list) {
-                        player_list = player_list.concat(u.player_list);
+                        if (req.body.brand && u.sensor === req.body.brand) {
+                            player_list = player_list.concat(u.player_list);
+                        }
+                        if (!req.body.brand) {
+                            player_list = player_list.concat(u.player_list);
+                        }
+                        
                     }
                     if (u.requested_player_list) {
                         requested_player_list = requested_player_list.concat(u.requested_player_list);
@@ -1044,37 +1050,42 @@ if (cluster.isMaster) {
                                     p_data.forEach(function (record, index) {
                                         getPlayerSimulationFile(record.simulation_data[0])
                                             .then(simulation => {
-                                                k++;
-                                                p_data[index]['simulation_data'][0]['simulation_status'] = simulation.status;
-                                                p_data[index]['simulation_data'][0]['computed_time'] = simulation.computed_time;
-                                                
-                                                if (k == p_data.length) {
-                                                    let requested_players = []
-                                                    if (requested_player_list.length > 0) {
-                                                        let p_cnt = 0;
-                                                        requested_player_list.forEach(function (p_record) {
-                                                            getUserDetails(p_record)
-                                                                .then (user_detail => {
-                                                                    p_cnt++; 
-                                                                    requested_players.push(user_detail.Item);
+                                                p_data[index]['simulation_data'][0]['simulation_status'] = simulation ? simulation.status : '';
+                                                p_data[index]['simulation_data'][0]['computed_time'] = simulation ? simulation.computed_time : '';
 
-                                                                    if (p_cnt === requested_player_list.length) {
-                                                                        res.send({
-                                                                            message: "success",
-                                                                            data: p_data,
-                                                                            requested_players: requested_players
+                                                getUserDetailBySensorId(record.simulation_data[0]['sensor'], record.simulation_data[0].player_id.split('$')[0])
+                                                    .then (u_detail => {
+                                                        p_data[index]['simulation_data'][0]['user_data'] = u_detail.length > 0 ? u_detail[0] : '';
+                                                        k++;
+                                                        if (k == p_data.length) {
+                                                            let requested_players = []
+                                                            if (requested_player_list.length > 0) {
+                                                                let p_cnt = 0;
+                                                                requested_player_list.forEach(function (p_record) {
+                                                                    getUserDetails(p_record)
+                                                                        .then (user_detail => {
+                                                                            p_cnt++; 
+                                                                            requested_players.push(user_detail.Item);
+        
+                                                                            if (p_cnt === requested_player_list.length) {
+                                                                                res.send({
+                                                                                    message: "success",
+                                                                                    data: p_data,
+                                                                                    requested_players: requested_players
+                                                                                })
+                                                                            }
                                                                         })
-                                                                    }
+                                                                })         
+                                                            } else {
+                                                                res.send({
+                                                                    message: "success",
+                                                                    data: p_data,
+                                                                    requested_players: requested_players
                                                                 })
-                                                        })         
-                                                    } else {
-                                                        res.send({
-                                                            message: "success",
-                                                            data: p_data,
-                                                            requested_players: requested_players
-                                                        })
-                                                    }
-                                                }
+                                                            }
+                                                        }
+
+                                                    })
                                             })
                                     })
                                 }

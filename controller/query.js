@@ -469,19 +469,19 @@ function getPlayersListFromTeamsDB(obj) {
     return new Promise((resolve, reject) => {
         let params;
 
-        if (obj.brand) {
+        // if (obj.brand) {
             
-            params = {
-                TableName: "organizations",
-                FilterExpression: "sensor = :sensor and organization = :organization and team_name = :team_name",
-                ExpressionAttributeValues: {
-                ":sensor": obj.brand,
-                ":organization": obj.organization,
-                ":team_name": obj.team_name
-                },
-            };
-        } else {
-            console.log(obj);
+        //     params = {
+        //         TableName: "organizations",
+        //         FilterExpression: "sensor = :sensor and organization = :organization and team_name = :team_name",
+        //         ExpressionAttributeValues: {
+        //         ":sensor": obj.brand,
+        //         ":organization": obj.organization,
+        //         ":team_name": obj.team_name
+        //         },
+        //     };
+        // } else {
+            //console.log(obj);
             params = {
                 TableName: "organizations",
                 FilterExpression: "organization = :organization and team_name = :team_name",
@@ -490,7 +490,7 @@ function getPlayersListFromTeamsDB(obj) {
                 ":team_name": obj.team_name
                 },
             };
-        }
+        //}
         var item = [];
         docClient.scan(params).eachPage((err, data, done) => {
             if (err) {
