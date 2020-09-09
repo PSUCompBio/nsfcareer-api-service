@@ -84,6 +84,7 @@ if (cluster.isMaster) {
         "avatar3dclientSecret": process.env.AVATAR_3D_CLIENT_SECRET,
         "region" : process.env.REGION,
         "usersbucket": process.env.USERS_BUCKET,
+        "usersbucketbeta": process.env.USERS_BUCKET_BETA,
         "apiVersion" : process.env.API_VERSION,
         "jwt_secret" : process.env.JWT_SECRET,
         "email_id" : process.env.EMAIL_ID,
@@ -270,6 +271,7 @@ if (cluster.isMaster) {
                 }
 
                 let _temp_sensor_data = {};
+                _temp_sensor_data["level"] = level;
                 _temp_sensor_data["sensor"] = req.body.sensor_brand;
                 _temp_sensor_data["impact-date"] = _temp["impact-date"];
                 _temp_sensor_data["impact-time"] = _temp["impact-time"];
@@ -407,7 +409,7 @@ if (cluster.isMaster) {
                             var temp = result[i];
 
                             // Adds team details in db if doesn't already exist
-                            addPlayerToTeamOfOrganization(req.body.sensor_brand, req.body.user_cognito_id, temp.organization, temp.team, temp.player_id)
+                            addPlayerToTeamOfOrganization(level === 300 ? null : req.body.sensor_brand, req.body.user_cognito_id, temp.organization, temp.team, temp.player_id)
                                 .then(d => {
                                     counter++;
                                     if (counter == result.length) {
@@ -500,6 +502,7 @@ if (cluster.isMaster) {
                                     }
                                 }
 
+                                _temp["level"] = level;
                                 _temp["user_cognito_id"] = req.body.user_cognito_id;
                                 _temp["sensor"] = req.body.sensor_brand;
                                 _temp["image_id"] = shortid.generate();
@@ -578,7 +581,7 @@ if (cluster.isMaster) {
                                             var temp = result[i];
 
                                             // Adds team details in db if doesn't already exist
-                                            addPlayerToTeamOfOrganization(req.body.sensor_brand, req.body.user_cognito_id, temp.organization, temp.team, temp.player_id)
+                                            addPlayerToTeamOfOrganization(level === 300 ? null : req.body.sensor_brand, req.body.user_cognito_id, temp.organization, temp.team, temp.player_id)
                                                 .then(d => {
                                                     counter++;
                                                     if (counter == result.length) {
@@ -1017,10 +1020,31 @@ if (cluster.isMaster) {
                 console.log('requested_player_list', requested_player_list);
                 // let player_list = data[0].player_list ? data[0].player_list : [];
                 if (player_list.length == 0) {
-                    res.send({
-                        message: "success",
-                        data: []
-                    })
+                    let requested_players = []
+                    if (requested_player_list.length > 0) {
+                        let p_cnt = 0;
+                        requested_player_list.forEach(function (p_record) {
+                            getUserDetails(p_record)
+                                .then (user_detail => {
+                                    p_cnt++; 
+                                    requested_players.push(user_detail.Item);
+
+                                    if (p_cnt === requested_player_list.length) {
+                                        res.send({
+                                            message: "success",
+                                            data: [],
+                                            requested_players: requested_players
+                                        })
+                                    }
+                                })
+                        })         
+                    } else {
+                        res.send({
+                            message: "success",
+                            data: [],
+                            requested_players: []
+                        })
+                    }
                 }
                 else {
                     var counter = 0;
@@ -1152,11 +1176,11 @@ if (cluster.isMaster) {
             if (imageData.log_path && imageData.log_path != 'null') {
                 let key = imageData.log_path;
                 key = key.replace(/'/g, "");
-                return getFileFromS3(key);
+                return getFileFromS3(key, imageData.bucket_name);
             } else {
                 if (imageData.root_path && imageData.root_path != 'null') {
                     let log_path = imageData.root_path + 'logs/femtech_' + imageData.image_id + '.log';
-                    return getFileFromS3(log_path);
+                    return getFileFromS3(log_path, imageData.bucket_name);
                 }
             }
         }) .then(log_s3 => {
@@ -1193,11 +1217,11 @@ if (cluster.isMaster) {
                         if (imageData.ouput_file_path && imageData.ouput_file_path != 'null') {
                             let file_path = image_data.ouput_file_path;
                             file_path = file_path.replace(/'/g, "");
-                            return getFileFromS3(file_path);
+                            return getFileFromS3(file_path, imageData.bucket_name);
                         } else {
                             if (imageData.root_path && imageData.root_path != 'null') {
                                 let summary_path = imageData.root_path + imageData.image_id + '_ouput.json';
-                                return getFileFromS3(summary_path);
+                                return getFileFromS3(summary_path, imageData.bucket_name);
                             }
                         }
                     }).then(output_file => {
@@ -1206,7 +1230,7 @@ if (cluster.isMaster) {
                             outputFile = JSON.parse(outputFile.Body.toString('utf-8'));
                         console.log('outputFile',outputFile)
                         // if (imageData.path && imageData.path != 'null')
-                        //     return getFileFromS3(imageData.path);
+                        //     return getFileFromS3(imageData.path, imageData.bucket_name);
                         res.send({
                             message: "success",
                             data: {
@@ -1257,18 +1281,18 @@ if (cluster.isMaster) {
                         if (acc_index === 0 && imageData.player_name && imageData.player_name != 'null') {
                             console.log(imageData.player_name + '/simulation/summary.json');
                             let file_path = imageData.player_name + '/simulation/summary.json';
-                            return getFileFromS3(file_path);
+                            return getFileFromS3(file_path, imageData.bucket_name);
                         }
                     })
                    .then(output_file => {
                         if (output_file)
                             outputFile = output_file;
                         if (imageData.path && imageData.path != 'null') {
-                            return getFileFromS3(imageData.path);
+                            return getFileFromS3(imageData.path, imageData.bucket_name);
                         } else {
                             if (imageData.root_path && imageData.root_path != 'null') {
                                 let image_path = imageData.root_path + imageData.image_id + '.png';
-                                return getFileFromS3(image_path);
+                                return getFileFromS3(image_path, imageData.bucket_name);
                             }
                         }
                     })
@@ -1283,13 +1307,13 @@ if (cluster.isMaster) {
                         if (imageData.ouput_file_path && imageData.ouput_file_path != 'null') {
                             let file_path = imageData.ouput_file_path;
                             file_path = file_path.replace(/'/g, "");
-                            return getFileFromS3(file_path);
+                            return getFileFromS3(file_path, imageData.bucket_name);
                         } else {
                             if (imageData.root_path && imageData.root_path != 'null') {
                                 let summary_path = imageData.root_path + imageData.image_id + '_output.json';
                                 summary_path = summary_path.replace(/'/g, "");
                                 console.log('summary_path',summary_path)
-                                return getFileFromS3(summary_path);
+                                return getFileFromS3(summary_path, imageData.bucket_name);
                             }
                         }
                     }).then(json_output_file => {
@@ -2391,11 +2415,11 @@ if (cluster.isMaster) {
         return new Buffer(bitmap).toString('base64');
     }
 
-    function getFileFromS3(url) {
+    function getFileFromS3(url, bucket_name) {
         // console.log('url', url)
         return new Promise((resolve, reject) => {
             var params = {
-                Bucket: config_env.usersbucket,
+                Bucket: bucket_name ? bucket_name : config_env.usersbucket,
                 Key: url
             };
             s3.getObject(params, function (err, data) {

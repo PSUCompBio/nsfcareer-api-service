@@ -30,6 +30,7 @@ var config = {
     "avatar3dclientSecret": process.env.AVATAR_3D_CLIENT_SECRET,
     "region" : process.env.REGION,
     "usersbucket": process.env.USERS_BUCKET,
+    "usersbucketbeta": process.env.USERS_BUCKET_BETA,
     "apiVersion" : process.env.API_VERSION,
     "jwt_secret" : process.env.JWT_SECRET,
     "email_id" : process.env.EMAIL_ID,
@@ -1136,7 +1137,8 @@ function generateSimulationForPlayers(player_data_array, reader, apiMode, sensor
                     let player_id = _temp_player.player_id.split("$")[0] + '-' + _temp_player.sensor;
                     player_id = player_id.replace(/ /g, "-");
 
-                    updateSimulationImageToDDB(_temp_player.image_id, config.usersbucket, "null", "pending", image_token, token_secret)
+                    let user_bucket = apiMode === 'production' ? config.usersbucket : config.usersbucketbeta;
+                    updateSimulationImageToDDB(_temp_player.image_id, user_bucket, "null", "pending", image_token, token_secret)
                         .then(value => {
                             return fetchCGValues(player_id);
                         })
@@ -1287,7 +1289,8 @@ function generateSimulationForPlayersFromJson(player_data_array, apiMode) {
                     let player_id = _temp_player.player_id.split("$")[0] + '-' + _temp_player.sensor;
                     player_id = player_id.replace(/ /g, "-");
 
-                    updateSimulationImageToDDB(_temp_player.image_id, config.usersbucket, "null", "pending", image_token, token_secret)
+                    let user_bucket = apiMode === 'production' ? config.usersbucket : config.usersbucketbeta;
+                    updateSimulationImageToDDB(_temp_player.image_id, user_bucket, "null", "pending", image_token, token_secret)
                         .then(value => {
                             return fetchCGValues(player_id);
                         })

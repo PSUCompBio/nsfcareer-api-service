@@ -28,14 +28,26 @@ function getUserDetails(user_name, cb) {
 
 function getUserDetailBySensorId(sensor, sensor_id_number) {
     return new Promise((resolve, reject) => {
-        const params = {
-            TableName: "users",
-            FilterExpression: "sensor = :sensor and sensor_id_number = :sensor_id_number",
-            ExpressionAttributeValues: {
-                ":sensor": sensor,
-                ":sensor_id_number": sensor_id_number
-            }
-        };
+        let params;
+        if (sensor) {
+            params = {
+                TableName: "users",
+                FilterExpression: "sensor = :sensor and sensor_id_number = :sensor_id_number",
+                ExpressionAttributeValues: {
+                    ":sensor": sensor,
+                    ":sensor_id_number": sensor_id_number
+                }
+            };
+        } else {
+            params = {
+                TableName: "users",
+                FilterExpression: "sensor_id_number = :sensor_id_number",
+                ExpressionAttributeValues: {
+                    ":sensor_id_number": sensor_id_number
+                }
+            };
+        }
+        
         var item = [];
         docClient.scan(params).eachPage((err, data, done) => {
             if (err) {
@@ -513,6 +525,9 @@ function storeSensorData(sensor_data_array) {
             resolve(true);
         }
         for (var i = 0; i < sensor_data_array.length; i++) {
+            if (sensor_data_array[i].level === 300) {
+                delete sensor_data_array[i].sensor
+            }
             let param = {
                 TableName: "sensor_data",
                 Item: sensor_data_array[i],
@@ -601,15 +616,28 @@ function addPlayerToTeamInDDB(org, team, player_id) {
 
 function addPlayerToTeamOfOrganization(sensor, user_cognito_id, org, team, player_id) {
     return new Promise((resolve, reject) => {
-        const params = {
-            TableName: "organizations",
-            FilterExpression: "organization = :organization and sensor = :sensor and team_name = :team",
-            ExpressionAttributeValues: {
-                ":sensor": sensor,
-                ":organization": org,
-                ":team": team,
-            }
-        };
+        let params;
+        if (sensor) {
+            params = {
+                TableName: "organizations",
+                FilterExpression: "organization = :organization and sensor = :sensor and team_name = :team",
+                ExpressionAttributeValues: {
+                    ":sensor": sensor,
+                    ":organization": org,
+                    ":team": team,
+                }
+            };
+        } else {
+            params = {
+                TableName: "organizations",
+                FilterExpression: "organization = :organization and team_name = :team",
+                ExpressionAttributeValues: {
+                    ":organization": org,
+                    ":team": team,
+                }
+            };
+        }
+        
         var item = [];
         docClient.scan(params).eachPage((err, data, done) => {
             if (err) {
@@ -620,32 +648,54 @@ function addPlayerToTeamOfOrganization(sensor, user_cognito_id, org, team, playe
                 const scanData = concatArrays(item);
                 if (scanData.length > 0) {
                     // If Player does not exists in Team
-                    if (scanData[0].player_list.indexOf(player_id) <= -1) {
-                        const dbUpdate = {
+                    if (scanData[0].player_list) {
+                        if (scanData[0].player_list.indexOf(player_id) <= -1) {
+                            const dbUpdate = {
+                                TableName: "organizations",
+                                Key: {
+                                    organization_id: scanData[0].organization_id
+                                },
+                                UpdateExpression: "set #list = list_append(#list, :newItem)",
+                                ExpressionAttributeNames: {
+                                    "#list": "player_list",
+                                },
+                                ExpressionAttributeValues: {
+                                    ":newItem": [player_id],
+                                },
+                                ReturnValues: "UPDATED_NEW",
+                            };
+    
+                            docClient.update(dbUpdate, function (err, data) {
+                                if (err) {
+                                    reject(err);
+                                } else {
+                                    resolve(data);
+                                }
+                            });
+                        } else {
+                            console.log("PLAYER ALREADY EXISTS IN TEAM");
+                            resolve("PLAYER ALREADY EXISTS IN TEAM");
+                        }
+                    } else {
+                        const dbInsert = {
                             TableName: "organizations",
-                            Key: {
-                                organization_id: scanData[0].organization_id
+                            Item: {
+                                organization_id: scanData[0].organization_id,
+                                sensor: sensor,
+                                user_cognito_id: user_cognito_id,
+                                organization: org,
+                                team_name: team,
+                                player_list: [player_id]
                             },
-                            UpdateExpression: "set #list = list_append(#list, :newItem)",
-                            ExpressionAttributeNames: {
-                                "#list": "player_list",
-                            },
-                            ExpressionAttributeValues: {
-                                ":newItem": [player_id],
-                            },
-                            ReturnValues: "UPDATED_NEW",
                         };
-
-                        docClient.update(dbUpdate, function (err, data) {
+                        docClient.put(dbInsert, function (err, data) {
                             if (err) {
+                                console.log(err);
                                 reject(err);
                             } else {
                                 resolve(data);
                             }
                         });
-                    } else {
-                        console.log("PLAYER ALREADY EXISTS IN TEAM");
-                        resolve("PLAYER ALREADY EXISTS IN TEAM");
                     }
                 } else {
                     const dbInsert = {
