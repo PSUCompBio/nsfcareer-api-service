@@ -1268,6 +1268,22 @@ if (cluster.isMaster) {
                 let csdm_max = {};
                 let masXsr_15_max = {};
                 let cnt = 1;
+
+                if (data.length === 0){
+                    brainRegions['principal-max-strain'] = {};
+                    brainRegions['principal-min-strain'] = {};
+                    brainRegions['axonal-strain-max'] = {};
+                    brainRegions['csdm-max'] = {};
+                    brainRegions['masXsr-15-max'] = {};
+                    
+                    res.send({
+                        message: "success",
+                        data: acceleration_data_list,
+                        // frontal_Lobe: frontal_Lobe,
+                        brainRegions: brainRegions
+                    })
+                }
+
                 data.forEach(function (acc_data, acc_index) {
                     let accData = acc_data;
                     let imageData = '';
@@ -1426,7 +1442,6 @@ if (cluster.isMaster) {
 
                         cnt++;
                     })
-                    
                 })
                
             })

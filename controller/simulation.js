@@ -1137,7 +1137,7 @@ function generateSimulationForPlayers(player_data_array, reader, apiMode, sensor
                     let player_id = _temp_player.player_id.split("$")[0] + '-' + _temp_player.sensor;
                     player_id = player_id.replace(/ /g, "-");
 
-                    let user_bucket = apiMode === 'production' ? config.usersbucket : config.usersbucketbeta;
+                    let user_bucket = apiMode === 'beta' ? config.usersbucketbeta : config.usersbucket;
                     updateSimulationImageToDDB(_temp_player.image_id, user_bucket, "null", "pending", image_token, token_secret)
                         .then(value => {
                             return fetchCGValues(player_id);
@@ -1289,7 +1289,7 @@ function generateSimulationForPlayersFromJson(player_data_array, apiMode) {
                     let player_id = _temp_player.player_id.split("$")[0] + '-' + _temp_player.sensor;
                     player_id = player_id.replace(/ /g, "-");
 
-                    let user_bucket = apiMode === 'production' ? config.usersbucket : config.usersbucketbeta;
+                    let user_bucket = apiMode === 'beta' ? config.usersbucketbeta : config.usersbucket;
                     updateSimulationImageToDDB(_temp_player.image_id, user_bucket, "null", "pending", image_token, token_secret)
                         .then(value => {
                             return fetchCGValues(player_id);
@@ -1464,9 +1464,9 @@ function submitJobsToBatch(simulation_data, job_name, file_path, apiMode) {
     return new Promise((resolve, reject) => {
         const array_size = simulation_data.length;
         let simulation_params = {
-            jobDefinition: apiMode === 'production' ? config.jobDefinitionProduction : config.jobDefinitionBeta, /* required */
+            jobDefinition: apiMode === 'beta' ? config.jobDefinitionBeta : config.jobDefinitionProduction, /* required */
             jobName: job_name, /* required */
-            jobQueue: apiMode === 'production' ?  config.jobQueueProduction : config.jobQueueBeta, /* required */
+            jobQueue: apiMode === 'beta' ?  config.jobQueueBeta : config.jobQueueProduction, /* required */
             parameters: {
                 'simulation_data': `s3://${config.simulation_bucket}/${file_path}`,
             },
