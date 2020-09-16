@@ -9,6 +9,8 @@ const AWS = require('aws-sdk'),
     archiver = require('archiver'),
     moment = require('moment');
 
+    shortid.characters('0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_$');
+
 const {
     storeSensorData,
     addPlayerToTeamOfOrganization,
@@ -23,34 +25,34 @@ const {
 // ======================================
 //       CONFIGURING AWS SDK & EXPESS
 // ======================================
-// var config = {
-//     "awsAccessKeyId": process.env.AWS_ACCESS_KEY_ID,
-//     "awsSecretAccessKey": process.env.AWS_ACCESS_SECRET_KEY,
-//     "avatar3dClientId": process.env.AVATAR_3D_CLIENT_ID,
-//     "avatar3dclientSecret": process.env.AVATAR_3D_CLIENT_SECRET,
-//     "region" : process.env.REGION,
-//     "usersbucket": process.env.USERS_BUCKET,
-//     "usersbucketbeta": process.env.USERS_BUCKET_BETA,
-//     "apiVersion" : process.env.API_VERSION,
-//     "jwt_secret" : process.env.JWT_SECRET,
-//     "email_id" : process.env.EMAIL_ID,
-//     "mail_list" : process.env.MAIL_LIST,
-//     "ComputeInstanceEndpoint" : process.env.COMPUTE_INSTANCE_ENDPOINT,
-//     "userPoolId": process.env.USER_POOL_ID,
-//     "ClientId" : process.env.CLIENT_ID,
-//     "react_website_url" : process.env.REACT_WEBSITE_URL,
-//     "simulation_result_host_url" : process.env.SIMULATION_RESULT_HOST_URL,
-//     "jobQueueBeta" : process.env.JOB_QUEUE_BETA,
-//     "jobDefinitionBeta" : process.env.JOB_DEFINITION_BETA,
-//     "jobQueueProduction" : process.env.JOB_QUEUE_PRODUCTION,
-//     "jobDefinitionProduction" : process.env.JOB_DEFINITION_PRODUCTION,
-//     "simulation_bucket" : process.env.SIMULATION_BUCKET,
-//     "queue_x" : process.env.QUEUE_X,
-//     "queue_y" : process.env.QUEUE_Y,
-//     "queue_beta" : process.env.QUEUE_BETA
-// };
+var config = {
+    "awsAccessKeyId": process.env.AWS_ACCESS_KEY_ID,
+    "awsSecretAccessKey": process.env.AWS_ACCESS_SECRET_KEY,
+    "avatar3dClientId": process.env.AVATAR_3D_CLIENT_ID,
+    "avatar3dclientSecret": process.env.AVATAR_3D_CLIENT_SECRET,
+    "region" : process.env.REGION,
+    "usersbucket": process.env.USERS_BUCKET,
+    "usersbucketbeta": process.env.USERS_BUCKET_BETA,
+    "apiVersion" : process.env.API_VERSION,
+    "jwt_secret" : process.env.JWT_SECRET,
+    "email_id" : process.env.EMAIL_ID,
+    "mail_list" : process.env.MAIL_LIST,
+    "ComputeInstanceEndpoint" : process.env.COMPUTE_INSTANCE_ENDPOINT,
+    "userPoolId": process.env.USER_POOL_ID,
+    "ClientId" : process.env.CLIENT_ID,
+    "react_website_url" : process.env.REACT_WEBSITE_URL,
+    "simulation_result_host_url" : process.env.SIMULATION_RESULT_HOST_URL,
+    "jobQueueBeta" : process.env.JOB_QUEUE_BETA,
+    "jobDefinitionBeta" : process.env.JOB_DEFINITION_BETA,
+    "jobQueueProduction" : process.env.JOB_QUEUE_PRODUCTION,
+    "jobDefinitionProduction" : process.env.JOB_DEFINITION_PRODUCTION,
+    "simulation_bucket" : process.env.SIMULATION_BUCKET,
+    "queue_x" : process.env.QUEUE_X,
+    "queue_y" : process.env.QUEUE_Y,
+    "queue_beta" : process.env.QUEUE_BETA
+};
 
-var config = require('../config/configuration_keys.json'); 
+// var config = require('../config/configuration_keys.json'); 
 var config_env = config;
 const BUCKET_NAME = config_env.usersbucket;
 
@@ -183,9 +185,9 @@ function groupSensorDataForY(arr, filename) {
         'simulation_status': 'pending'
 
     }
-    let max_time = parseFloat(arr[0]["t"]["sec"]) * 1000;
+    let max_time = parseFloat(arr[0]["t"]["ms"]);
     for (let i = 0; i < arr.length; i++) {
-        let curr_time = parseFloat(arr[i]["t"]["sec"]) * 1000;
+        let curr_time = parseFloat(arr[i]["t"]["ms"]);
         if (curr_time > max_time)
             max_time = curr_time;
 
@@ -1176,6 +1178,10 @@ function generateSimulationForPlayers(player_data_array, reader, apiMode, sensor
                                 playerData.simulation["angular-sensor-position"] = (cg_coordinates.length == 0) ? [0.025, -0.281, -0.089757] : cg_coordinates.map(function (x) { return parseFloat(x) });
                             }
 
+                            if (sensor === 'prevent' ) {
+                                delete playerData.simulation["angular-sensor-position"];
+                            }
+
                             playerData["player"]["name"] = _temp_player.player_id.replace(/ /g, "-");
                             // playerData["uid"] = _temp_player.player_id.split("$")[0].replace(/ /g, "-") + '_' + _temp_player.image_id;
                             playerData["uid"] = _temp_player.image_id;
@@ -1360,6 +1366,10 @@ function generateSimulationForPlayersFromJson(player_data_array, apiMode) {
                             if (cg_coordinates) {
                                 playerData.simulation["head-cg"] = (cg_coordinates.length == 0) ? [0, -0.3308, -0.037] : cg_coordinates.map(function (x) { return parseFloat(x) });
                                 playerData.simulation["angular-sensor-position"] = (cg_coordinates.length == 0) ? [0.025, -0.281, -0.089757] : cg_coordinates.map(function (x) { return parseFloat(x) });
+                            }
+
+                            if (_temp_player["sensor"] && _temp_player["sensor"] === 'Prevent Biometrics') {
+                                delete playerData.simulation["angular-sensor-position"];
                             }
 
                             if (_temp_player['angular-to-linear-frame']) {
