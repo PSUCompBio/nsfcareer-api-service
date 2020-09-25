@@ -79,36 +79,36 @@ if (cluster.isMaster) {
     // ======================================
     //       CONFIGURING AWS SDK & EXPESS
     // ======================================
-    // var config = {
-    //     "awsAccessKeyId": process.env.AWS_ACCESS_KEY_ID,
-    //     "awsSecretAccessKey": process.env.AWS_ACCESS_SECRET_KEY,
-    //     "avatar3dClientId": process.env.AVATAR_3D_CLIENT_ID,
-    //     "avatar3dclientSecret": process.env.AVATAR_3D_CLIENT_SECRET,
-    //     "region" : process.env.REGION,
-    //     "usersbucket": process.env.USERS_BUCKET,
-    //     "usersbucketbeta": process.env.USERS_BUCKET_BETA,
-    //     "apiVersion" : process.env.API_VERSION,
-    //     "jwt_secret" : process.env.JWT_SECRET,
-    //     "email_id" : process.env.EMAIL_ID,
-    //     "mail_list" : process.env.MAIL_LIST,
-    //     "ComputeInstanceEndpoint" : process.env.COMPUTE_INSTANCE_ENDPOINT,
-    //     "userPoolId": process.env.USER_POOL_ID,
-    //     "ClientId" : process.env.CLIENT_ID,
-    //     "react_website_url" : process.env.REACT_WEBSITE_URL,
-    //     "simulation_result_host_url" : process.env.SIMULATION_RESULT_HOST_URL,
-    //     "jobQueueBeta" : process.env.JOB_QUEUE_BETA,
-    //     "jobDefinitionBeta" : process.env.JOB_DEFINITION_BETA,
-    //     "jobQueueProduction" : process.env.JOB_QUEUE_PRODUCTION,
-    //     "jobDefinitionProduction" : process.env.JOB_DEFINITION_PRODUCTION,
-    //     "simulation_bucket" : process.env.SIMULATION_BUCKET,
-    //     "queue_x" : process.env.QUEUE_X,
-    //     "queue_y" : process.env.QUEUE_Y,
-    //     "queue_beta" : process.env.QUEUE_BETA
-    // };
+    var config = {
+        "awsAccessKeyId": process.env.AWS_ACCESS_KEY_ID,
+        "awsSecretAccessKey": process.env.AWS_ACCESS_SECRET_KEY,
+        "avatar3dClientId": process.env.AVATAR_3D_CLIENT_ID,
+        "avatar3dclientSecret": process.env.AVATAR_3D_CLIENT_SECRET,
+        "region" : process.env.REGION,
+        "usersbucket": process.env.USERS_BUCKET,
+        "usersbucketbeta": process.env.USERS_BUCKET_BETA,
+        "apiVersion" : process.env.API_VERSION,
+        "jwt_secret" : process.env.JWT_SECRET,
+        "email_id" : process.env.EMAIL_ID,
+        "mail_list" : process.env.MAIL_LIST,
+        "ComputeInstanceEndpoint" : process.env.COMPUTE_INSTANCE_ENDPOINT,
+        "userPoolId": process.env.USER_POOL_ID,
+        "ClientId" : process.env.CLIENT_ID,
+        "react_website_url" : process.env.REACT_WEBSITE_URL,
+        "simulation_result_host_url" : process.env.SIMULATION_RESULT_HOST_URL,
+        "jobQueueBeta" : process.env.JOB_QUEUE_BETA,
+        "jobDefinitionBeta" : process.env.JOB_DEFINITION_BETA,
+        "jobQueueProduction" : process.env.JOB_QUEUE_PRODUCTION,
+        "jobDefinitionProduction" : process.env.JOB_DEFINITION_PRODUCTION,
+        "simulation_bucket" : process.env.SIMULATION_BUCKET,
+        "queue_x" : process.env.QUEUE_X,
+        "queue_y" : process.env.QUEUE_Y,
+        "queue_beta" : process.env.QUEUE_BETA
+    };
 
     const subject_signature = fs.readFileSync("data/base64")
 
-    var config = require('./config/configuration_keys.json');
+    // var config = require('./config/configuration_keys.json');
     var config_env = config;
 
     //AWS.config.loadFromPath('./config/configuration_keys.json');
@@ -208,6 +208,7 @@ if (cluster.isMaster) {
     app.post(`${apiPrefix}generateSimulationForSensorData`, setConnectionTimeout('10m'), function (req, res) {
         // console.log('user_cognito_id', req.body.user_cognito_id);
         let apiMode = req.body.mode;
+        let mesh = req.body.mesh;
         let sensor = req.body.sensor !== undefined ? req.body.sensor : null;
         let level = req.body.level !== undefined ? req.body.level : null;
         let reader = 0;
@@ -419,7 +420,7 @@ if (cluster.isMaster) {
                                         // Generate simulation for player
                                         uploadPlayerSelfieIfNotPresent(req.body.selfie, temp.player_id + '-' + temp.sensor, req.body.filename)
                                             .then((selfieDetails) => {
-                                                return generateSimulationForPlayersFromJson(sensor_data_array, apiMode);
+                                                return generateSimulationForPlayersFromJson(sensor_data_array, apiMode, mesh);
                                             })
                                             .then(urls => {
                                                 simulation_result_urls.push(urls)
@@ -591,7 +592,7 @@ if (cluster.isMaster) {
                                                         // Generate simulation for player
                                                         uploadPlayerSelfieIfNotPresent(req.body.selfie, temp.player_id + '-' + temp.sensor, req.body.filename)
                                                             .then((selfieDetails) => {
-                                                                return generateSimulationForPlayers(new_items_array, reader, apiMode, sensor);
+                                                                return generateSimulationForPlayers(new_items_array, reader, apiMode, sensor, mesh);
                                                             })
                                                             .then(urls => {
                                                                 simulation_result_urls.push(urls)
@@ -1305,35 +1306,35 @@ if (cluster.isMaster) {
                    .then(output_file => {
                         if (output_file)
                             outputFile = output_file;
-                        if (imageData.path && imageData.path != 'null') {
-                            return getFileFromS3(imageData.path, imageData.bucket_name);
-                        } else {
-                            if (imageData.root_path && imageData.root_path != 'null') {
-                                let image_path = imageData.root_path + imageData.image_id + '.png';
-                                return getFileFromS3(image_path, imageData.bucket_name);
-                            }
-                        }
+                        // if (imageData.path && imageData.path != 'null') {
+                        //     return getFileFromS3(imageData.path, imageData.bucket_name);
+                        // } else {
+                        //     if (imageData.root_path && imageData.root_path != 'null') {
+                        //         let image_path = imageData.root_path + imageData.image_id + '.png';
+                        //         return getFileFromS3(image_path, imageData.bucket_name);
+                        //     }
+                        // }
                     })
                     .then(image_s3 => {
-                        if (image_s3) {
-                            return getImageFromS3Buffer(image_s3);
-                        }
+                        // if (image_s3) {
+                        //     return getImageFromS3Buffer(image_s3);
+                        // }
                     })
                     .then(image => {
                         simulationImage = image;
 
-                        if (imageData.ouput_file_path && imageData.ouput_file_path != 'null') {
-                            let file_path = imageData.ouput_file_path;
-                            file_path = file_path.replace(/'/g, "");
-                            return getFileFromS3(file_path, imageData.bucket_name);
-                        } else {
-                            if (imageData.root_path && imageData.root_path != 'null') {
-                                let summary_path = imageData.root_path + imageData.image_id + '_output.json';
-                                summary_path = summary_path.replace(/'/g, "");
-                                console.log('summary_path',summary_path)
-                                return getFileFromS3(summary_path, imageData.bucket_name);
-                            }
-                        }
+                        // if (imageData.ouput_file_path && imageData.ouput_file_path != 'null') {
+                        //     let file_path = imageData.ouput_file_path;
+                        //     file_path = file_path.replace(/'/g, "");
+                        //     return getFileFromS3(file_path, imageData.bucket_name);
+                        // } else {
+                        //     if (imageData.root_path && imageData.root_path != 'null') {
+                        //         let summary_path = imageData.root_path + imageData.image_id + '_output.json';
+                        //         summary_path = summary_path.replace(/'/g, "");
+                        //         console.log('summary_path',summary_path)
+                        //         return getFileFromS3(summary_path, imageData.bucket_name);
+                        //     }
+                        // }
                     }).then(json_output_file => {
                         if (json_output_file){
                             jsonOutputFile = JSON.parse(json_output_file.Body.toString('utf-8'));
@@ -1917,7 +1918,7 @@ if (cluster.isMaster) {
     })
 
     // Configuring port for APP
-    const port = process.env.PORT || 5000;
+    const port = process.env.PORT || 3000;
     const server = app.listen(port, function () {
         console.log('Magic happens on ' + port);
     });
