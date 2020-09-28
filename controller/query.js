@@ -327,6 +327,77 @@ function getCumulativeAccelerationData(obj) {
     });
 }
 
+function getCumulativeAccelerationRecords(obj) {
+    // return new Promise((resolve, reject) => {
+    //     let params = {
+    //         TableName: "sensor_data",
+    //         KeyConditionExpression:
+    //             "team = :team and begins_with(player_id,:player_id)",
+    //         ExpressionAttributeValues: {
+    //             ":player_id": obj.player_id,
+    //             ":team": obj.team,
+    //         },
+    //     };
+    //     var item = [];
+    //     docClient.query(params).eachPage((err, data, done) => {
+    //         if (err) {
+    //             reject(err);
+    //         }
+    //         if (data == null) {
+    //             resolve(concatArrays(item));
+    //         } else {
+    //             item.push(data.Items);
+    //         }
+    //         done();
+    //     });
+    // });
+
+    return new Promise((resolve, reject) => {
+        let params;
+
+        if (obj.brand) {
+            params = {
+                TableName: "sensor_data",
+                KeyConditionExpression:  "team = :team and player_id= :player_id",
+                FilterExpression: "sensor = :sensor and organization = :organization",
+                ExpressionAttributeValues: {
+                   ":sensor": obj.brand,
+                   ":organization": obj.organization,
+                   ":team": obj.team,
+                   ":player_id": obj.player_id,
+                },
+                ScanIndexForward: false
+            };
+        } else {
+            params = {
+                TableName: "sensor_data",
+                KeyConditionExpression:  "team = :team and player_id= :player_id",
+                FilterExpression: "organization = :organization",
+                ExpressionAttributeValues: {
+                   ":organization": obj.organization,
+                   ":team": obj.team,
+                   ":player_id": obj.player_id,
+                },
+                ScanIndexForward: false
+            };
+        }
+        
+        var item = [];
+        docClient.query(params).eachPage((err, data, done) => {
+            if (err) {
+                reject(err);
+            }
+            if (data == null) {
+                resolve(concatArrays(item));
+            } else {
+                item.push(data.Items);
+            }
+            done();
+        });
+    });
+}
+
+
 function getTeamDataWithPlayerRecords(obj) {
     // return new Promise((resolve, reject) => {
     //     let params = {
@@ -1381,5 +1452,6 @@ module.exports = {
     getPlayerSimulationFile,
     getSensorAdmins,
     removeRequestedPlayerFromOrganizationTeam,
-    getPlayerSimulationStatus
+    getPlayerSimulationStatus,
+    getCumulativeAccelerationRecords
 };
