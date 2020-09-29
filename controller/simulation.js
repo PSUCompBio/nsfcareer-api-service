@@ -25,34 +25,34 @@ const {
 // ======================================
 //       CONFIGURING AWS SDK & EXPESS
 // ======================================
-// var config = {
-//     "awsAccessKeyId": process.env.AWS_ACCESS_KEY_ID,
-//     "awsSecretAccessKey": process.env.AWS_ACCESS_SECRET_KEY,
-//     "avatar3dClientId": process.env.AVATAR_3D_CLIENT_ID,
-//     "avatar3dclientSecret": process.env.AVATAR_3D_CLIENT_SECRET,
-//     "region" : process.env.REGION,
-//     "usersbucket": process.env.USERS_BUCKET,
-//     "usersbucketbeta": process.env.USERS_BUCKET_BETA,
-//     "apiVersion" : process.env.API_VERSION,
-//     "jwt_secret" : process.env.JWT_SECRET,
-//     "email_id" : process.env.EMAIL_ID,
-//     "mail_list" : process.env.MAIL_LIST,
-//     "ComputeInstanceEndpoint" : process.env.COMPUTE_INSTANCE_ENDPOINT,
-//     "userPoolId": process.env.USER_POOL_ID,
-//     "ClientId" : process.env.CLIENT_ID,
-//     "react_website_url" : process.env.REACT_WEBSITE_URL,
-//     "simulation_result_host_url" : process.env.SIMULATION_RESULT_HOST_URL,
-//     "jobQueueBeta" : process.env.JOB_QUEUE_BETA,
-//     "jobDefinitionBeta" : process.env.JOB_DEFINITION_BETA,
-//     "jobQueueProduction" : process.env.JOB_QUEUE_PRODUCTION,
-//     "jobDefinitionProduction" : process.env.JOB_DEFINITION_PRODUCTION,
-//     "simulation_bucket" : process.env.SIMULATION_BUCKET,
-//     "queue_x" : process.env.QUEUE_X,
-//     "queue_y" : process.env.QUEUE_Y,
-//     "queue_beta" : process.env.QUEUE_BETA
-// };
+var config = {
+    "awsAccessKeyId": process.env.AWS_ACCESS_KEY_ID,
+    "awsSecretAccessKey": process.env.AWS_ACCESS_SECRET_KEY,
+    "avatar3dClientId": process.env.AVATAR_3D_CLIENT_ID,
+    "avatar3dclientSecret": process.env.AVATAR_3D_CLIENT_SECRET,
+    "region" : process.env.REGION,
+    "usersbucket": process.env.USERS_BUCKET,
+    "usersbucketbeta": process.env.USERS_BUCKET_BETA,
+    "apiVersion" : process.env.API_VERSION,
+    "jwt_secret" : process.env.JWT_SECRET,
+    "email_id" : process.env.EMAIL_ID,
+    "mail_list" : process.env.MAIL_LIST,
+    "ComputeInstanceEndpoint" : process.env.COMPUTE_INSTANCE_ENDPOINT,
+    "userPoolId": process.env.USER_POOL_ID,
+    "ClientId" : process.env.CLIENT_ID,
+    "react_website_url" : process.env.REACT_WEBSITE_URL,
+    "simulation_result_host_url" : process.env.SIMULATION_RESULT_HOST_URL,
+    "jobQueueBeta" : process.env.JOB_QUEUE_BETA,
+    "jobDefinitionBeta" : process.env.JOB_DEFINITION_BETA,
+    "jobQueueProduction" : process.env.JOB_QUEUE_PRODUCTION,
+    "jobDefinitionProduction" : process.env.JOB_DEFINITION_PRODUCTION,
+    "simulation_bucket" : process.env.SIMULATION_BUCKET,
+    "queue_x" : process.env.QUEUE_X,
+    "queue_y" : process.env.QUEUE_Y,
+    "queue_beta" : process.env.QUEUE_BETA
+};
 
-var config = require('../config/configuration_keys.json'); 
+// var config = require('../config/configuration_keys.json'); 
 var config_env = config;
 const BUCKET_NAME = config_env.usersbucket;
 
@@ -1207,17 +1207,27 @@ function generateSimulationForPlayers(player_data_array, reader, apiMode, sensor
                                 } else {
                                     playerData["simulation"]["maximum-time"] = parseFloat(_temp_player['linear-acceleration']['xt'][_temp_player['linear-acceleration']['xt'].length - 1]);
                                 }
-                                playerData["simulation"]["mesh-transformation"] = _temp_player['mesh-transformation'];
+
+                                if (sensor === 'prevent' || sensor === 'Prevent') {
+                                    playerData["simulation"]["mesh-transformation"] = ["-y", "z", "-x"];
+                                } else if (sensor === 'sensor_company_x' || sensor === 'swa' || sensor === 'SWA') {
+                                    playerData["simulation"]["mesh-transformation"] = ["-z", "x", "-y"];
+                                    playerData["simulation"]["angular-to-linear-frame"] = ["-y", "-x", "z"];
+                                } else if (sensor === 'sisu' || sensor === 'SISU') {
+                                    playerData["simulation"]["mesh-transformation"] = ["-z", "-x", "y"];
+                                } else if (sensor === 'stanford' || sensor === 'Stanford') {
+                                    playerData["simulation"]["mesh-transformation"] = ["y", "-z", "-x"];
+                                } else {
+                                    playerData["simulation"]["mesh-transformation"] = ["-y", "z", "-x"];
+                                }
+
+                                // playerData["simulation"]["mesh-transformation"] = _temp_player['mesh-transformation'];
                             } else {
 
                                 playerData["player"]["position"] = _temp_player.position.toLowerCase();
                                 playerData["simulation"]["linear-acceleration"][0] = _temp_player.linear_acceleration_pla;
                                 playerData["simulation"]["angular-acceleration"] = _temp_player.angular_acceleration_paa;
                                 //playerData["simulation"]["impact-point"] = _temp_player.impact_location_on_head.toLowerCase().replace(/ /g, "-");
-                            }
-
-                            if (sensor === 'sensor_company_x' || sensor === 'SWA' ) {
-                                playerData["simulation"]["angular-to-linear-frame"] = ["-y", "-x", "z"];
                             }
 
                             let temp_simulation_data = {
