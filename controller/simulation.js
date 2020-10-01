@@ -25,34 +25,34 @@ const {
 // ======================================
 //       CONFIGURING AWS SDK & EXPESS
 // ======================================
-// var config = {
-//     "awsAccessKeyId": process.env.AWS_ACCESS_KEY_ID,
-//     "awsSecretAccessKey": process.env.AWS_ACCESS_SECRET_KEY,
-//     "avatar3dClientId": process.env.AVATAR_3D_CLIENT_ID,
-//     "avatar3dclientSecret": process.env.AVATAR_3D_CLIENT_SECRET,
-//     "region" : process.env.REGION,
-//     "usersbucket": process.env.USERS_BUCKET,
-//     "usersbucketbeta": process.env.USERS_BUCKET_BETA,
-//     "apiVersion" : process.env.API_VERSION,
-//     "jwt_secret" : process.env.JWT_SECRET,
-//     "email_id" : process.env.EMAIL_ID,
-//     "mail_list" : process.env.MAIL_LIST,
-//     "ComputeInstanceEndpoint" : process.env.COMPUTE_INSTANCE_ENDPOINT,
-//     "userPoolId": process.env.USER_POOL_ID,
-//     "ClientId" : process.env.CLIENT_ID,
-//     "react_website_url" : process.env.REACT_WEBSITE_URL,
-//     "simulation_result_host_url" : process.env.SIMULATION_RESULT_HOST_URL,
-//     "jobQueueBeta" : process.env.JOB_QUEUE_BETA,
-//     "jobDefinitionBeta" : process.env.JOB_DEFINITION_BETA,
-//     "jobQueueProduction" : process.env.JOB_QUEUE_PRODUCTION,
-//     "jobDefinitionProduction" : process.env.JOB_DEFINITION_PRODUCTION,
-//     "simulation_bucket" : process.env.SIMULATION_BUCKET,
-//     "queue_x" : process.env.QUEUE_X,
-//     "queue_y" : process.env.QUEUE_Y,
-//     "queue_beta" : process.env.QUEUE_BETA
-// };
+var config = {
+    "awsAccessKeyId": process.env.AWS_ACCESS_KEY_ID,
+    "awsSecretAccessKey": process.env.AWS_ACCESS_SECRET_KEY,
+    "avatar3dClientId": process.env.AVATAR_3D_CLIENT_ID,
+    "avatar3dclientSecret": process.env.AVATAR_3D_CLIENT_SECRET,
+    "region" : process.env.REGION,
+    "usersbucket": process.env.USERS_BUCKET,
+    "usersbucketbeta": process.env.USERS_BUCKET_BETA,
+    "apiVersion" : process.env.API_VERSION,
+    "jwt_secret" : process.env.JWT_SECRET,
+    "email_id" : process.env.EMAIL_ID,
+    "mail_list" : process.env.MAIL_LIST,
+    "ComputeInstanceEndpoint" : process.env.COMPUTE_INSTANCE_ENDPOINT,
+    "userPoolId": process.env.USER_POOL_ID,
+    "ClientId" : process.env.CLIENT_ID,
+    "react_website_url" : process.env.REACT_WEBSITE_URL,
+    "simulation_result_host_url" : process.env.SIMULATION_RESULT_HOST_URL,
+    "jobQueueBeta" : process.env.JOB_QUEUE_BETA,
+    "jobDefinitionBeta" : process.env.JOB_DEFINITION_BETA,
+    "jobQueueProduction" : process.env.JOB_QUEUE_PRODUCTION,
+    "jobDefinitionProduction" : process.env.JOB_DEFINITION_PRODUCTION,
+    "simulation_bucket" : process.env.SIMULATION_BUCKET,
+    "queue_x" : process.env.QUEUE_X,
+    "queue_y" : process.env.QUEUE_Y,
+    "queue_beta" : process.env.QUEUE_BETA
+};
 
-var config = require('../config/configuration_keys.json'); 
+// var config = require('../config/configuration_keys.json'); 
 var config_env = config;
 const BUCKET_NAME = config_env.usersbucket;
 
@@ -1325,13 +1325,14 @@ function generateSimulationForPlayersFromJson(player_data_array, apiMode, mesh) 
                                     "first-name": "",
                                     "sport": "",
                                     "team": "",
-                                    "position": ""
+                                    "position": "",
+                                    "organization": "",
+                                    "impact-id": "",
                                 },
                                 "sensor": "",
                                 "impact-date": "",
                                 "impact-time": "",
                                 "player_id": "",
-                                "organization": "",
                                 "simulation": {
                                     "mesh": mesh === 'fine' ? "fine_brain.inp" : "coarse_brain.inp",
                                     "time": "",
@@ -1352,13 +1353,15 @@ function generateSimulationForPlayersFromJson(player_data_array, apiMode, mesh) 
                             playerData["impact-date"] = _temp_player['impact-date'].split(":").join("-");
                             playerData["impact-time"] = _temp_player['impact-time'];
                             playerData["player_id"] = player_id
-                            playerData["organization"] = _temp_player.organization;
+                            // playerData["organization"] = _temp_player.organization;
 
                             playerData["player"]["first-name"] = _temp_player.player['first-name'];
                             playerData["player"]["last-name"] = _temp_player.player['last-name'];
                             playerData["player"]["sport"] = _temp_player.player.sport;
                             playerData["player"]["team"] = _temp_player.player.team;
                             playerData["player"]["position"] = _temp_player.player.position;
+                            playerData["player"]["organization"] = _temp_player.player.organization ? _temp_player.player.organization : 'Unknown';
+                            playerData["player"]["impact-id"] = _temp_player.player['impact-id'] ? _temp_player.player['impact-id'] : ''
                             
                             playerData["simulation"]["time"] = _temp_player.simulation.time;
                             playerData["simulation"]["time-units"] = _temp_player.simulation['time-units'];
