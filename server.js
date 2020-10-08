@@ -79,36 +79,36 @@ if (cluster.isMaster) {
     // ======================================
     //       CONFIGURING AWS SDK & EXPESS
     // ======================================
-    // var config = {
-    //     "awsAccessKeyId": process.env.AWS_ACCESS_KEY_ID,
-    //     "awsSecretAccessKey": process.env.AWS_ACCESS_SECRET_KEY,
-    //     "avatar3dClientId": process.env.AVATAR_3D_CLIENT_ID,
-    //     "avatar3dclientSecret": process.env.AVATAR_3D_CLIENT_SECRET,
-    //     "region" : process.env.REGION,
-    //     "usersbucket": process.env.USERS_BUCKET,
-    //     "usersbucketbeta": process.env.USERS_BUCKET_BETA,
-    //     "apiVersion" : process.env.API_VERSION,
-    //     "jwt_secret" : process.env.JWT_SECRET,
-    //     "email_id" : process.env.EMAIL_ID,
-    //     "mail_list" : process.env.MAIL_LIST,
-    //     "ComputeInstanceEndpoint" : process.env.COMPUTE_INSTANCE_ENDPOINT,
-    //     "userPoolId": process.env.USER_POOL_ID,
-    //     "ClientId" : process.env.CLIENT_ID,
-    //     "react_website_url" : process.env.REACT_WEBSITE_URL,
-    //     "simulation_result_host_url" : process.env.SIMULATION_RESULT_HOST_URL,
-    //     "jobQueueBeta" : process.env.JOB_QUEUE_BETA,
-    //     "jobDefinitionBeta" : process.env.JOB_DEFINITION_BETA,
-    //     "jobQueueProduction" : process.env.JOB_QUEUE_PRODUCTION,
-    //     "jobDefinitionProduction" : process.env.JOB_DEFINITION_PRODUCTION,
-    //     "simulation_bucket" : process.env.SIMULATION_BUCKET,
-    //     "queue_x" : process.env.QUEUE_X,
-    //     "queue_y" : process.env.QUEUE_Y,
-    //     "queue_beta" : process.env.QUEUE_BETA
-    // };
+    var config = {
+        "awsAccessKeyId": process.env.AWS_ACCESS_KEY_ID,
+        "awsSecretAccessKey": process.env.AWS_ACCESS_SECRET_KEY,
+        "avatar3dClientId": process.env.AVATAR_3D_CLIENT_ID,
+        "avatar3dclientSecret": process.env.AVATAR_3D_CLIENT_SECRET,
+        "region" : process.env.REGION,
+        "usersbucket": process.env.USERS_BUCKET,
+        "usersbucketbeta": process.env.USERS_BUCKET_BETA,
+        "apiVersion" : process.env.API_VERSION,
+        "jwt_secret" : process.env.JWT_SECRET,
+        "email_id" : process.env.EMAIL_ID,
+        "mail_list" : process.env.MAIL_LIST,
+        "ComputeInstanceEndpoint" : process.env.COMPUTE_INSTANCE_ENDPOINT,
+        "userPoolId": process.env.USER_POOL_ID,
+        "ClientId" : process.env.CLIENT_ID,
+        "react_website_url" : process.env.REACT_WEBSITE_URL,
+        "simulation_result_host_url" : process.env.SIMULATION_RESULT_HOST_URL,
+        "jobQueueBeta" : process.env.JOB_QUEUE_BETA,
+        "jobDefinitionBeta" : process.env.JOB_DEFINITION_BETA,
+        "jobQueueProduction" : process.env.JOB_QUEUE_PRODUCTION,
+        "jobDefinitionProduction" : process.env.JOB_DEFINITION_PRODUCTION,
+        "simulation_bucket" : process.env.SIMULATION_BUCKET,
+        "queue_x" : process.env.QUEUE_X,
+        "queue_y" : process.env.QUEUE_Y,
+        "queue_beta" : process.env.QUEUE_BETA
+    };
 
     const subject_signature = fs.readFileSync("data/base64")
 
-    var config = require('./config/configuration_keys.json');
+    // var config = require('./config/configuration_keys.json');
     var config_env = config;
 
     //AWS.config.loadFromPath('./config/configuration_keys.json');
@@ -269,6 +269,8 @@ if (cluster.isMaster) {
                         req.body.sensor_brand = 'Athlete Intelligence';
                     } else if (_temp["sensor"].toLowerCase() === 'medeng') { 
                         req.body.sensor_brand = 'Med-Eng';
+                    } else if (_temp["sensor"].toLowerCase() === 'hybrid3') { 
+                        req.body.sensor_brand = 'Hybrid3';
                     } else {
                         req.body.sensor_brand = 'Prevent Biometrics';
                     }
@@ -369,6 +371,9 @@ if (cluster.isMaster) {
                     _temp_sensor_data['mesh-transformation'] = ["-z", "-x", "y"];
                 } else if (req.body.sensor_brand === 'Stanford') {
                     _temp_sensor_data['mesh-transformation'] = ["y", "-z", "-x"];
+                }  else if (req.body.sensor_brand === 'Hybrid3') {
+                   // _temp_sensor_data['mesh-transformation'] = ["z", "-x", "-y"];
+                    _temp_sensor_data['mesh-transformation'] = ["-y", "z", "-x"];
                 } else {
                     _temp_sensor_data['mesh-transformation'] = ["-y", "z", "-x"];
                 }
@@ -503,6 +508,8 @@ if (cluster.isMaster) {
                                         req.body.sensor_brand = 'Athlete Intelligence';
                                     } else if (sensor.toLowerCase() === 'medeng') { 
                                         req.body.sensor_brand = 'Med-Eng';
+                                    } else if (sensor.toLowerCase() === 'hybrid3') { 
+                                        req.body.sensor_brand = 'Hybrid3';
                                     } else {
                                         req.body.sensor_brand = 'Prevent Biometrics';
                                     }
@@ -1743,6 +1750,7 @@ if (cluster.isMaster) {
                         if (output_file) outputFile = output_file;
                         acceleration_data_list.push({
                             sensor_data: accData,
+                            date_time: accData.player_id.split('$')[1]
                         })
 
                         if (acc_index === 0 && outputFile) {
@@ -1838,6 +1846,7 @@ if (cluster.isMaster) {
                
             })
             .catch(err => {
+                let brainRegions = {};
                 var acceleration_data_list = [];
                 acceleration_data_list.push({
                     sensor_data: ''
@@ -2294,7 +2303,7 @@ if (cluster.isMaster) {
     })
 
     // Configuring port for APP
-    const port = process.env.PORT || 5000;
+    const port = process.env.PORT || 3000;
     const server = app.listen(port, function () {
         console.log('Magic happens on ' + port);
     });
