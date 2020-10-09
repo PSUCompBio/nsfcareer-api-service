@@ -1831,10 +1831,16 @@ if (cluster.isMaster) {
 
                         cnt++;
                     }).catch(err => {
+                        let brainRegions = {};
+                        brainRegions['principal-max-strain'] = {};
+                        brainRegions['principal-min-strain'] = {};
+                        brainRegions['axonal-strain-max'] = {};
+                        brainRegions['csdm-max'] = {};
+                        brainRegions['masXsr-15-max'] = {};
                         var acceleration_data_list = [];
-                        acceleration_data_list.push({
-                            sensor_data: ''
-                        })
+                        // acceleration_data_list.push({
+                        //     sensor_data: ''
+                        // })
                         res.send({
                             message: "failure",
                             data: acceleration_data_list,
@@ -1847,10 +1853,15 @@ if (cluster.isMaster) {
             })
             .catch(err => {
                 let brainRegions = {};
+                brainRegions['principal-max-strain'] = {};
+                brainRegions['principal-min-strain'] = {};
+                brainRegions['axonal-strain-max'] = {};
+                brainRegions['csdm-max'] = {};
+                brainRegions['masXsr-15-max'] = {};
                 var acceleration_data_list = [];
-                acceleration_data_list.push({
-                    sensor_data: ''
-                })
+                // acceleration_data_list.push({
+                //     sensor_data: ''
+                // })
                 res.send({
                     message: "failure",
                     data: acceleration_data_list,
