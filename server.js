@@ -1827,7 +1827,9 @@ if (cluster.isMaster) {
                    .then(output_file => {
                         if (output_file) outputFile = output_file;
                         acceleration_data_list.push({
-                            sensor_data: accData,
+                            sensor_data: accData,   
+                            status: imageData ? imageData.status : '',
+                            computed_time : imageData ? imageData.computed_time : '',
                             date_time: accData.player_id.split('$')[1]
                         })
 
