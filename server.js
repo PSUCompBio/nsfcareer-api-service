@@ -79,36 +79,36 @@ if (cluster.isMaster) {
     // ======================================
     //       CONFIGURING AWS SDK & EXPESS
     // ======================================
-    var config = {
-        "awsAccessKeyId": process.env.AWS_ACCESS_KEY_ID,
-        "awsSecretAccessKey": process.env.AWS_ACCESS_SECRET_KEY,
-        "avatar3dClientId": process.env.AVATAR_3D_CLIENT_ID,
-        "avatar3dclientSecret": process.env.AVATAR_3D_CLIENT_SECRET,
-        "region" : process.env.REGION,
-        "usersbucket": process.env.USERS_BUCKET,
-        "usersbucketbeta": process.env.USERS_BUCKET_BETA,
-        "apiVersion" : process.env.API_VERSION,
-        "jwt_secret" : process.env.JWT_SECRET,
-        "email_id" : process.env.EMAIL_ID,
-        "mail_list" : process.env.MAIL_LIST,
-        "ComputeInstanceEndpoint" : process.env.COMPUTE_INSTANCE_ENDPOINT,
-        "userPoolId": process.env.USER_POOL_ID,
-        "ClientId" : process.env.CLIENT_ID,
-        "react_website_url" : process.env.REACT_WEBSITE_URL,
-        "simulation_result_host_url" : process.env.SIMULATION_RESULT_HOST_URL,
-        "jobQueueBeta" : process.env.JOB_QUEUE_BETA,
-        "jobDefinitionBeta" : process.env.JOB_DEFINITION_BETA,
-        "jobQueueProduction" : process.env.JOB_QUEUE_PRODUCTION,
-        "jobDefinitionProduction" : process.env.JOB_DEFINITION_PRODUCTION,
-        "simulation_bucket" : process.env.SIMULATION_BUCKET,
-        "queue_x" : process.env.QUEUE_X,
-        "queue_y" : process.env.QUEUE_Y,
-        "queue_beta" : process.env.QUEUE_BETA
-    };
+    // var config = {
+    //     "awsAccessKeyId": process.env.AWS_ACCESS_KEY_ID,
+    //     "awsSecretAccessKey": process.env.AWS_ACCESS_SECRET_KEY,
+    //     "avatar3dClientId": process.env.AVATAR_3D_CLIENT_ID,
+    //     "avatar3dclientSecret": process.env.AVATAR_3D_CLIENT_SECRET,
+    //     "region" : process.env.REGION,
+    //     "usersbucket": process.env.USERS_BUCKET,
+    //     "usersbucketbeta": process.env.USERS_BUCKET_BETA,
+    //     "apiVersion" : process.env.API_VERSION,
+    //     "jwt_secret" : process.env.JWT_SECRET,
+    //     "email_id" : process.env.EMAIL_ID,
+    //     "mail_list" : process.env.MAIL_LIST,
+    //     "ComputeInstanceEndpoint" : process.env.COMPUTE_INSTANCE_ENDPOINT,
+    //     "userPoolId": process.env.USER_POOL_ID,
+    //     "ClientId" : process.env.CLIENT_ID,
+    //     "react_website_url" : process.env.REACT_WEBSITE_URL,
+    //     "simulation_result_host_url" : process.env.SIMULATION_RESULT_HOST_URL,
+    //     "jobQueueBeta" : process.env.JOB_QUEUE_BETA,
+    //     "jobDefinitionBeta" : process.env.JOB_DEFINITION_BETA,
+    //     "jobQueueProduction" : process.env.JOB_QUEUE_PRODUCTION,
+    //     "jobDefinitionProduction" : process.env.JOB_DEFINITION_PRODUCTION,
+    //     "simulation_bucket" : process.env.SIMULATION_BUCKET,
+    //     "queue_x" : process.env.QUEUE_X,
+    //     "queue_y" : process.env.QUEUE_Y,
+    //     "queue_beta" : process.env.QUEUE_BETA
+    // };
 
     const subject_signature = fs.readFileSync("data/base64")
 
-    // var config = require('./config/configuration_keys.json');
+    var config = require('./config/configuration_keys.json');
     var config_env = config;
 
     //AWS.config.loadFromPath('./config/configuration_keys.json');
@@ -177,6 +177,7 @@ if (cluster.isMaster) {
     const {
         getUserDetails,
         getUserDetailBySensorId,
+        getUserByPlayerId,
         updateSimulationFileStatusInDB,
         addTeam,
         deleteTeam,
@@ -198,7 +199,8 @@ if (cluster.isMaster) {
         getPlayerSimulationFile,
         removeRequestedPlayerFromOrganizationTeam,
         getPlayerSimulationStatus,
-        getCumulativeAccelerationRecords
+        getCumulativeAccelerationRecords,
+        addPlayer,
     } = require('./controller/query');
 
     // Clearing the cookies
@@ -394,6 +396,7 @@ if (cluster.isMaster) {
                             player_id: player.player_id.split("$")[0],
                             team: player.player.team,
                             sensor: player.sensor,
+                            player: player.player,
                             organization: player.player.organization ? player.player.organization : player.organization,
                         }
                     });
@@ -426,16 +429,53 @@ if (cluster.isMaster) {
                                     if (counter == result.length) {
                                         // Upload player selfie if not present and generate meshes
                                         // Generate simulation for player
-                                        uploadPlayerSelfieIfNotPresent(req.body.selfie, temp.player_id + '-' + temp.sensor, req.body.filename)
-                                            .then((selfieDetails) => {
-                                                return generateSimulationForPlayersFromJson(sensor_data_array, apiMode, mesh);
-                                            })
-                                            .then(urls => {
-                                                simulation_result_urls.push(urls)
-                                                res.send({
-                                                    message: "success",
-                                                    image_url: _.spread(_.union)(simulation_result_urls)
-                                                })
+
+                                        // Generate 10 digits unique number
+                                        let account_id = Math.floor(Math.random() * 9000000000) + 1000000000;
+                                        let player_id = temp.player_id + '-' + temp.sensor;
+                                        getUserByPlayerId(player_id)
+                                            .then (user_detail => {
+                                                // console.log(user_detail);
+                                                if (user_detail.length > 0) {
+                                                    account_id = user_detail[0]['account_id'];
+                                                    player_id = user_detail[0]['player_id'];
+                                                } else {
+                                                    let obj = {};
+                                                    obj['user_cognito_id'] = player_id;
+                                                    obj['account_id'] = account_id;
+                                                    obj['player_id'] = player_id;
+                                                    obj['first_name'] = temp.player['first-name'];
+                                                    obj['last_name'] = temp.player['last-name'];
+                                                    obj['sport'] = temp.player['sport'] ? temp.player['sport'] : '';
+                                                    obj['team'] = temp.player['team'] ? temp.player['team'] : '';
+                                                    obj['position'] = temp.player['position'] ? temp.player['position'] : '';
+                                                    
+                                                    addPlayer(obj)
+                                                        .then( playerData => {
+                                                            console.log('Player added in user table');
+                                                        })
+                                                }
+
+                                                uploadPlayerSelfieIfNotPresent(req.body.selfie, player_id, req.body.filename, account_id)
+                                                    .then((selfieDetails) => {
+                                                        return generateSimulationForPlayersFromJson(sensor_data_array, apiMode, mesh, account_id);
+                                                    })
+                                                    .then(urls => {
+                                                        simulation_result_urls.push(urls)
+                                                        res.send({
+                                                            message: "success",
+                                                            image_url: _.spread(_.union)(simulation_result_urls)
+                                                        })
+                                                    })
+                                                    .catch(err => {
+                                                        console.log(err);
+                                                        counter = result.length;
+                                                        i = result.length;
+                                                        res.send({
+                                                            message: "failure",
+                                                            error: err
+                                                        })
+                                                    })
                                             })
                                             .catch(err => {
                                                 console.log(err);
@@ -568,6 +608,7 @@ if (cluster.isMaster) {
                                             player_id: player.player_id.split("$")[0],
                                             team: player.player.team,
                                             sensor: player.sensor,
+                                            player: player.player,
                                             organization: player.organization,
                                         }
                                     });
@@ -600,16 +641,52 @@ if (cluster.isMaster) {
                                                     if (counter == result.length) {
                                                         // Upload player selfie if not present and generate meshes
                                                         // Generate simulation for player
-                                                        uploadPlayerSelfieIfNotPresent(req.body.selfie, temp.player_id + '-' + temp.sensor, req.body.filename)
-                                                            .then((selfieDetails) => {
-                                                                return generateSimulationForPlayers(new_items_array, reader, apiMode, sensor, mesh);
-                                                            })
-                                                            .then(urls => {
-                                                                simulation_result_urls.push(urls)
-                                                                res.send({
-                                                                    message: "success",
-                                                                    image_url: _.spread(_.union)(simulation_result_urls)
-                                                                })
+
+                                                        // Generate 10 digits unique number
+                                                        let account_id = Math.floor(Math.random() * 9000000000) + 1000000000;
+                                                        let player_id = temp.player_id + '-' + temp.sensor;
+                                                        getUserByPlayerId(player_id)
+                                                            .then (user_detail => {
+                                                                // console.log(user_detail);
+                                                                if (user_detail.length > 0) {
+                                                                    account_id = user_detail[0]['account_id'];
+                                                                    player_id = user_detail[0]['player_id'];
+                                                                } else {
+                                                                    let obj = {};
+                                                                    obj['user_cognito_id'] = player_id;
+                                                                    obj['account_id'] = account_id;
+                                                                    obj['player_id'] = player_id;
+                                                                    obj['first_name'] = temp.player['first-name'];
+                                                                    obj['last_name'] = temp.player['last-name'];
+                                                                    obj['sport'] = temp.player['sport'] ? temp.player['sport'] : '';
+                                                                    obj['team'] = temp.player['team'] ? temp.player['team'] : '';
+                                                                    obj['position'] = temp.player['position'] ? temp.player['position'] : '';                               
+                                                                    
+                                                                    addPlayer(obj)
+                                                                        .then( playerData => {
+                                                                            console.log('Player added in user table');
+                                                                        })
+                                                                }
+                                                                uploadPlayerSelfieIfNotPresent(req.body.selfie, player_id, req.body.filename, account_id)
+                                                                    .then((selfieDetails) => {
+                                                                        return generateSimulationForPlayers(new_items_array, reader, apiMode, sensor, mesh, account_id);
+                                                                    })
+                                                                    .then(urls => {
+                                                                        simulation_result_urls.push(urls)
+                                                                        res.send({
+                                                                            message: "success",
+                                                                            image_url: _.spread(_.union)(simulation_result_urls)
+                                                                        })
+                                                                    })
+                                                                    .catch(err => {
+                                                                        console.log(err);
+                                                                        counter = result.length;
+                                                                        i = result.length;
+                                                                        res.send({
+                                                                            message: "failure",
+                                                                            error: err
+                                                                        })
+                                                                    })
                                                             })
                                                             .catch(err => {
                                                                 console.log(err);
@@ -620,6 +697,7 @@ if (cluster.isMaster) {
                                                                     error: err
                                                                 })
                                                             })
+                                                        
                                                     }
                                                 })
                                                 .catch(err => {
@@ -1380,7 +1458,7 @@ if (cluster.isMaster) {
                             outputFile = JSON.parse(outputFile.Body.toString('utf-8'));
                             if (outputFile.Insults) {
                                 outputFile.Insults.forEach(function (summary_data, index) {
-                                    if (summary_data['principal-max-strain']) {
+                                    if (summary_data['principal-max-strain'] && summary_data['principal-max-strain'].location) {
                                         let coordinate = {};
                                         coordinate.x = summary_data['principal-max-strain'].location[0];
                                         coordinate.y = summary_data['principal-max-strain'].location[1];
@@ -1389,7 +1467,7 @@ if (cluster.isMaster) {
                                         principal_max_strain[region] = principal_max_strain[region] || [];
                                         principal_max_strain[region].push(coordinate);
                                     }
-                                    if (summary_data['principal-min-strain']) {
+                                    if (summary_data['principal-min-strain'] && summary_data['principal-min-strain'].location) {
                                         let coordinate = {};
                                         coordinate.x = summary_data['principal-min-strain'].location[0];
                                         coordinate.y = summary_data['principal-min-strain'].location[1];
@@ -1398,7 +1476,7 @@ if (cluster.isMaster) {
                                         principal_min_strain[region] = principal_min_strain[region] || [];
                                         principal_min_strain[region].push(coordinate);
                                     }
-                                    if (summary_data['axonal-strain-max']) {
+                                    if (summary_data['axonal-strain-max'] && summary_data['axonal-strain-max'].location) {
                                         let coordinate = {};
                                         coordinate.x = summary_data['axonal-strain-max'].location[0];
                                         coordinate.y = summary_data['axonal-strain-max'].location[1];
@@ -1407,7 +1485,7 @@ if (cluster.isMaster) {
                                         axonal_strain_max[region] = axonal_strain_max[region] || [];
                                         axonal_strain_max[region].push(coordinate);
                                     }
-                                    if (summary_data['csdm-max']) {
+                                    if (summary_data['csdm-max'] && summary_data['csdm-max'].location) {
                                         let coordinate = {};
                                         coordinate.x = summary_data['csdm-max'].location[0];
                                         coordinate.y = summary_data['csdm-max'].location[1];
@@ -1416,7 +1494,7 @@ if (cluster.isMaster) {
                                         csdm_max[region] = csdm_max[region] || [];
                                         csdm_max[region].push(coordinate);
                                     }
-                                    if (summary_data['masXsr-15-max']) {
+                                    if (summary_data['masXsr-15-max'] && summary_data['masXsr-15-max'].location) {
                                         let coordinate = {};
                                         coordinate.x = summary_data['masXsr-15-max'].location[0];
                                         coordinate.y = summary_data['masXsr-15-max'].location[1];
@@ -1597,7 +1675,7 @@ if (cluster.isMaster) {
                             outputFile = JSON.parse(outputFile.Body.toString('utf-8'));
                             if (outputFile.Insults) {
                                 outputFile.Insults.forEach(function (summary_data, index) {
-                                    if (summary_data['principal-max-strain']) {
+                                    if (summary_data['principal-max-strain'] && summary_data['principal-max-strain'].location) {
                                         let coordinate = {};
                                         coordinate.x = summary_data['principal-max-strain'].location[0];
                                         coordinate.y = summary_data['principal-max-strain'].location[1];
@@ -1606,7 +1684,7 @@ if (cluster.isMaster) {
                                         principal_max_strain[region] = principal_max_strain[region] || [];
                                         principal_max_strain[region].push(coordinate);
                                     }
-                                    if (summary_data['principal-min-strain']) {
+                                    if (summary_data['principal-min-strain']  && summary_data['principal-min-strain'].location) {
                                         let coordinate = {};
                                         coordinate.x = summary_data['principal-min-strain'].location[0];
                                         coordinate.y = summary_data['principal-min-strain'].location[1];
@@ -1615,7 +1693,7 @@ if (cluster.isMaster) {
                                         principal_min_strain[region] = principal_min_strain[region] || [];
                                         principal_min_strain[region].push(coordinate);
                                     }
-                                    if (summary_data['axonal-strain-max']) {
+                                    if (summary_data['axonal-strain-max'] && summary_data['axonal-strain-max'].location) {
                                         let coordinate = {};
                                         coordinate.x = summary_data['axonal-strain-max'].location[0];
                                         coordinate.y = summary_data['axonal-strain-max'].location[1];
@@ -1624,7 +1702,7 @@ if (cluster.isMaster) {
                                         axonal_strain_max[region] = axonal_strain_max[region] || [];
                                         axonal_strain_max[region].push(coordinate);
                                     }
-                                    if (summary_data['csdm-max']) {
+                                    if (summary_data['csdm-max'] && summary_data['csdm-max'].location) {
                                         let coordinate = {};
                                         coordinate.x = summary_data['csdm-max'].location[0];
                                         coordinate.y = summary_data['csdm-max'].location[1];
@@ -1633,7 +1711,7 @@ if (cluster.isMaster) {
                                         csdm_max[region] = csdm_max[region] || [];
                                         csdm_max[region].push(coordinate);
                                     }
-                                    if (summary_data['masXsr-15-max']) {
+                                    if (summary_data['masXsr-15-max'] && summary_data['masXsr-15-max'].location) {
                                         let coordinate = {};
                                         coordinate.x = summary_data['masXsr-15-max'].location[0];
                                         coordinate.y = summary_data['masXsr-15-max'].location[1];
@@ -1757,7 +1835,7 @@ if (cluster.isMaster) {
                             outputFile = JSON.parse(outputFile.Body.toString('utf-8'));
                             if (outputFile.Insults) {
                                 outputFile.Insults.forEach(function (summary_data, index) {
-                                    if (summary_data['principal-max-strain']) {
+                                    if (summary_data['principal-max-strain'] && summary_data['principal-max-strain'].location) {
                                         let coordinate = {};
                                         coordinate.x = summary_data['principal-max-strain'].location[0];
                                         coordinate.y = summary_data['principal-max-strain'].location[1];
@@ -1766,7 +1844,7 @@ if (cluster.isMaster) {
                                         principal_max_strain[region] = principal_max_strain[region] || [];
                                         principal_max_strain[region].push(coordinate);
                                     }
-                                    if (summary_data['principal-min-strain']) {
+                                    if (summary_data['principal-min-strain'] && summary_data['principal-min-strain'].location) {
                                         let coordinate = {};
                                         coordinate.x = summary_data['principal-min-strain'].location[0];
                                         coordinate.y = summary_data['principal-min-strain'].location[1];
@@ -1775,7 +1853,7 @@ if (cluster.isMaster) {
                                         principal_min_strain[region] = principal_min_strain[region] || [];
                                         principal_min_strain[region].push(coordinate);
                                     }
-                                    if (summary_data['axonal-strain-max']) {
+                                    if (summary_data['axonal-strain-max'] && summary_data['axonal-strain-max'].location) {
                                         let coordinate = {};
                                         coordinate.x = summary_data['axonal-strain-max'].location[0];
                                         coordinate.y = summary_data['axonal-strain-max'].location[1];
@@ -1784,7 +1862,7 @@ if (cluster.isMaster) {
                                         axonal_strain_max[region] = axonal_strain_max[region] || [];
                                         axonal_strain_max[region].push(coordinate);
                                     }
-                                    if (summary_data['csdm-max']) {
+                                    if (summary_data['csdm-max'] && summary_data['csdm-max'].location) {
                                         let coordinate = {};
                                         coordinate.x = summary_data['csdm-max'].location[0];
                                         coordinate.y = summary_data['csdm-max'].location[1];
@@ -1793,7 +1871,7 @@ if (cluster.isMaster) {
                                         csdm_max[region] = csdm_max[region] || [];
                                         csdm_max[region].push(coordinate);
                                     }
-                                    if (summary_data['masXsr-15-max']) {
+                                    if (summary_data['masXsr-15-max'] && summary_data['masXsr-15-max'].location) {
                                         let coordinate = {};
                                         coordinate.x = summary_data['masXsr-15-max'].location[0];
                                         coordinate.y = summary_data['masXsr-15-max'].location[1];
@@ -1830,7 +1908,8 @@ if (cluster.isMaster) {
                         }
 
                         cnt++;
-                    }).catch(err => {
+                    })
+                    .catch(err => {
                         let brainRegions = {};
                         brainRegions['principal-max-strain'] = {};
                         brainRegions['principal-min-strain'] = {};
@@ -2314,7 +2393,7 @@ if (cluster.isMaster) {
     })
 
     // Configuring port for APP
-    const port = process.env.PORT || 3000;
+    const port = process.env.PORT || 5000;
     const server = app.listen(port, function () {
         console.log('Magic happens on ' + port);
     });

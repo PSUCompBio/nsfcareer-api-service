@@ -25,34 +25,34 @@ const {
 // ======================================
 //       CONFIGURING AWS SDK & EXPESS
 // ======================================
-var config = {
-    "awsAccessKeyId": process.env.AWS_ACCESS_KEY_ID,
-    "awsSecretAccessKey": process.env.AWS_ACCESS_SECRET_KEY,
-    "avatar3dClientId": process.env.AVATAR_3D_CLIENT_ID,
-    "avatar3dclientSecret": process.env.AVATAR_3D_CLIENT_SECRET,
-    "region" : process.env.REGION,
-    "usersbucket": process.env.USERS_BUCKET,
-    "usersbucketbeta": process.env.USERS_BUCKET_BETA,
-    "apiVersion" : process.env.API_VERSION,
-    "jwt_secret" : process.env.JWT_SECRET,
-    "email_id" : process.env.EMAIL_ID,
-    "mail_list" : process.env.MAIL_LIST,
-    "ComputeInstanceEndpoint" : process.env.COMPUTE_INSTANCE_ENDPOINT,
-    "userPoolId": process.env.USER_POOL_ID,
-    "ClientId" : process.env.CLIENT_ID,
-    "react_website_url" : process.env.REACT_WEBSITE_URL,
-    "simulation_result_host_url" : process.env.SIMULATION_RESULT_HOST_URL,
-    "jobQueueBeta" : process.env.JOB_QUEUE_BETA,
-    "jobDefinitionBeta" : process.env.JOB_DEFINITION_BETA,
-    "jobQueueProduction" : process.env.JOB_QUEUE_PRODUCTION,
-    "jobDefinitionProduction" : process.env.JOB_DEFINITION_PRODUCTION,
-    "simulation_bucket" : process.env.SIMULATION_BUCKET,
-    "queue_x" : process.env.QUEUE_X,
-    "queue_y" : process.env.QUEUE_Y,
-    "queue_beta" : process.env.QUEUE_BETA
-};
+// var config = {
+//     "awsAccessKeyId": process.env.AWS_ACCESS_KEY_ID,
+//     "awsSecretAccessKey": process.env.AWS_ACCESS_SECRET_KEY,
+//     "avatar3dClientId": process.env.AVATAR_3D_CLIENT_ID,
+//     "avatar3dclientSecret": process.env.AVATAR_3D_CLIENT_SECRET,
+//     "region" : process.env.REGION,
+//     "usersbucket": process.env.USERS_BUCKET,
+//     "usersbucketbeta": process.env.USERS_BUCKET_BETA,
+//     "apiVersion" : process.env.API_VERSION,
+//     "jwt_secret" : process.env.JWT_SECRET,
+//     "email_id" : process.env.EMAIL_ID,
+//     "mail_list" : process.env.MAIL_LIST,
+//     "ComputeInstanceEndpoint" : process.env.COMPUTE_INSTANCE_ENDPOINT,
+//     "userPoolId": process.env.USER_POOL_ID,
+//     "ClientId" : process.env.CLIENT_ID,
+//     "react_website_url" : process.env.REACT_WEBSITE_URL,
+//     "simulation_result_host_url" : process.env.SIMULATION_RESULT_HOST_URL,
+//     "jobQueueBeta" : process.env.JOB_QUEUE_BETA,
+//     "jobDefinitionBeta" : process.env.JOB_DEFINITION_BETA,
+//     "jobQueueProduction" : process.env.JOB_QUEUE_PRODUCTION,
+//     "jobDefinitionProduction" : process.env.JOB_DEFINITION_PRODUCTION,
+//     "simulation_bucket" : process.env.SIMULATION_BUCKET,
+//     "queue_x" : process.env.QUEUE_X,
+//     "queue_y" : process.env.QUEUE_Y,
+//     "queue_beta" : process.env.QUEUE_BETA
+// };
 
-// var config = require('../config/configuration_keys.json'); 
+var config = require('../config/configuration_keys.json'); 
 var config_env = config;
 const BUCKET_NAME = config_env.usersbucket;
 
@@ -339,7 +339,7 @@ function groupSensorData(arr) {
     return result;
 }
 
-function uploadPlayerSelfieIfNotPresent(selfie, player_id, filename) {
+function uploadPlayerSelfieIfNotPresent(selfie, player_id, filename, account_id) {
     return new Promise((resolve, reject) => {
         // If no selfie details present then resolve
         if (!selfie) {
@@ -353,13 +353,13 @@ function uploadPlayerSelfieIfNotPresent(selfie, player_id, filename) {
                         resolve(data)
                     } else {
                         // upload selfie and generate meshes
-                        uploadPlayerImage(selfie, player_id, filename)
+                        uploadPlayerImage(selfie, account_id, filename)
                             .then((imageDetails) => {
                                 return getSignedUrl(imageDetails.Key)
                             })
                             .then((url) => {
                                 // Get signed url for the image
-                                return computeImageData({ body: { image_url: url, user_cognito_id: player_id.replace(/ /g, "-") } });
+                                return computeImageData({ body: { image_url: url, user_cognito_id: account_id } });
                             })
                             .then((details) => {
                                 resolve(details);
@@ -387,7 +387,8 @@ function uploadPlayerImage(selfie, player_id, filename) {
         };
 
         const params = uploadParams;
-        player_id = player_id.replace(/ /g, "-");
+        // player_id = player_id.replace(/ /g, "-");
+        console.log('player_id ', player_id)
         var file_extension = filename.split(".");
         file_extension = file_extension[file_extension.length - 1];
 
@@ -1240,7 +1241,8 @@ function generateSimulationForPlayers(player_data_array, reader, apiMode, sensor
                                 "image_token": image_token,
                                 "token_secret": token_secret,
                                 "date": _temp_player.date.split("/").join("-"),
-                                "player_id": player_id
+                                "player_id": player_id,
+                                "account_id": account_id
                             }
 
                             if ("impact" in _temp_player) {
@@ -1289,7 +1291,7 @@ function generateSimulationForPlayers(player_data_array, reader, apiMode, sensor
     })
 }
 
-function generateSimulationForPlayersFromJson(player_data_array, apiMode, mesh) {
+function generateSimulationForPlayersFromJson(player_data_array, apiMode, mesh, account_id) {
     return new Promise((resolve, reject) => {
         var counter = 0;
         var simulation_result_urls = [];
@@ -1403,7 +1405,8 @@ function generateSimulationForPlayersFromJson(player_data_array, apiMode, mesh) 
                                 "image_token": image_token,
                                 "token_secret": token_secret,
                                 "date": _temp_player['impact-date'].split(":").join("-"),
-                                "player_id": player_id
+                                "player_id": player_id,
+                                "account_id": account_id
                             }
 
                             if ("impact" in _temp_player) {

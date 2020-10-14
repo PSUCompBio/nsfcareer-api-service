@@ -104,6 +104,23 @@ function addTeam(obj) {
     });
 }
 
+function addPlayer(obj) {
+    return new Promise((resolve, reject) => {
+        var dbInsert = {
+            TableName: "users",
+            Item: obj,
+        };
+        docClient.put(dbInsert, function (err, data) {
+            if (err) {
+                console.log(err);
+                reject(err);
+            } else {
+                resolve(data);
+            }
+        });
+    });
+}
+
 function deleteTeam(obj) {
     console.log("IN delete functionality");
     return new Promise((resolve, reject) => {
@@ -1124,6 +1141,31 @@ function fetchCGValues(player_id) {
     })
 }
 
+function getUserByPlayerId(player_id) {
+    return new Promise((resolve, reject) => {
+        let params = {
+            TableName: "users",
+            FilterExpression: "player_id = :player_id",
+            ExpressionAttributeValues: {
+                ":player_id": player_id
+            }
+        };
+        
+        var item = [];
+        docClient.scan(params).eachPage((err, data, done) => {
+            if (err) {
+                reject(err);
+            }
+            if (data == null) {
+                resolve(concatArrays(item));
+            } else {
+                item.push(data.Items);
+            }
+            done();
+        });
+    });
+}
+
 function uploadCGValuesAndSetINPStatus(user_cognito_id, file_name) {
     return new Promise((resolve, reject) => {
         fs.readFile(`./../users_data/${user_cognito_id}/morphed_vtk/${file_name}_cg.txt`, "utf8", function (err, data) {
@@ -1453,5 +1495,7 @@ module.exports = {
     getSensorAdmins,
     removeRequestedPlayerFromOrganizationTeam,
     getPlayerSimulationStatus,
-    getCumulativeAccelerationRecords
+    getCumulativeAccelerationRecords,
+    getUserByPlayerId,
+    addPlayer,
 };
