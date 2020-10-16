@@ -63,6 +63,32 @@ function getUserDetailBySensorId(sensor, sensor_id_number) {
     });
 }
 
+function getUserDetailByPlayerId(sensor_id_number) {
+    return new Promise((resolve, reject) => {
+        let params;
+       
+        params = {
+            TableName: "users",
+            FilterExpression: "player_id = :player_id",
+            ExpressionAttributeValues: {
+                ":player_id": sensor_id_number
+            }
+        };
+        
+        var item = [];
+        docClient.scan(params).eachPage((err, data, done) => {
+            if (err) {
+                reject(err);
+            }
+            if (data == null) {
+                resolve(concatArrays(item));
+            } else {
+                item.push(data.Items);
+            }
+            done();
+        });
+    });
+}
 function updateSimulationFileStatusInDB(obj) {
     return new Promise((resolve, reject) => {
         var userParams = {
@@ -1498,4 +1524,5 @@ module.exports = {
     getCumulativeAccelerationRecords,
     getUserByPlayerId,
     addPlayer,
+    getUserDetailByPlayerId
 };

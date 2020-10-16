@@ -201,6 +201,7 @@ if (cluster.isMaster) {
         getPlayerSimulationStatus,
         getCumulativeAccelerationRecords,
         addPlayer,
+        getUserDetailByPlayerId
     } = require('./controller/query');
 
     // Clearing the cookies
@@ -1124,14 +1125,15 @@ if (cluster.isMaster) {
                         requested_player_list = requested_player_list.concat(u.requested_player_list);
                     }
                 }) 
-                console.log('player_list', player_list);
-                console.log('requested_player_list', requested_player_list);
+                // console.log('player_list', player_list);
+                // console.log('requested_player_list', requested_player_list);
                 // let player_list = data[0].player_list ? data[0].player_list : [];
                 if (player_list.length == 0) {
                     let requested_players = []
                     if (requested_player_list.length > 0) {
                         let p_cnt = 0;
                         requested_player_list.forEach(function (p_record) {
+                            console.log('p_record',p_record)
                             getUserDetails(p_record)
                                 .then (user_detail => {
                                     p_cnt++; 
@@ -1185,7 +1187,7 @@ if (cluster.isMaster) {
                                                 p_data[index]['simulation_data'][0]['simulation_status'] = simulation ? simulation.status : '';
                                                 p_data[index]['simulation_data'][0]['computed_time'] = simulation ? simulation.computed_time : '';
 
-                                                getUserDetailBySensorId(record.simulation_data[0]['sensor'], record.simulation_data[0].player_id.split('$')[0])
+                                                getUserDetailByPlayerId(record.simulation_data[0].player_id.split('$')[0]+'-'+record.simulation_data[0]['sensor'])
                                                     .then (u_detail => {
                                                         p_data[index]['simulation_data'][0]['user_data'] = u_detail.length > 0 ? u_detail[0] : '';
                                                         k++;
@@ -1194,8 +1196,10 @@ if (cluster.isMaster) {
                                                             if (requested_player_list.length > 0) {
                                                                 let p_cnt = 0;
                                                                 requested_player_list.forEach(function (p_record) {
+                                                                    console.log('p_record--------------------\n',p_record)
                                                                     getUserDetails(p_record)
                                                                         .then (user_detail => {
+
                                                                             p_cnt++; 
                                                                             requested_players.push(user_detail.Item);
         
