@@ -270,8 +270,8 @@ function groupSensorData(arr) {
                 'time': data_point['Time'],
                 'session_id': data_point['Session ID'],
                 'player_id': data_point['Player ID'] + '$' + Date.now(),
-                'sensor_id': data_point['Sensor ID'],
-                'impact_id': data_point['Impact ID'],
+                'sensor-id': data_point['Sensor ID'],
+                'impact-id': data_point['Impact ID'],
                 'linear-acceleration': {
                     'xt': [parseFloat(data_point['Sample Num'])],
                     'xv': [parseFloat(data_point['Linear Acc x g'])],
