@@ -209,6 +209,47 @@ if (cluster.isMaster) {
         res.send("TesT SERVICE HERE");
     })
 
+    app.get(`/deleteTestData`, (req, res) => {
+        const obj = {};
+        obj.brand = 'Prevent Biometrics';
+        obj.organization = 'Army Research Laboratory';
+        obj.team = '2020 POMPOC Study';
+
+        getTeamData(obj)
+            .then (data => {
+                console.log(data.length);
+                data.forEach((player) => {
+                    let params = {
+                        TableName: "sensor_data",
+                        Key: {
+                            team: player.team,
+                            player_id: player.player_id,
+                        },
+                    };
+                    docClient.delete(params, function (err, data) {
+                        if (err) {
+                            console.log(err);
+                        } else {
+                            console.log('Deleted from sensor_data');
+                            let params1 = {
+                                TableName: "simulation_images",
+                                Key: {
+                                    image_id: player.image_id,
+                                },
+                            };
+                            docClient.delete(params1, function (err, data) {
+                                if (err) {
+                                    console.log(err);
+                                } else {
+                                    console.log('Deleted from simulation_images');
+                                }
+                            });
+                        }
+                    });
+                })
+            });
+    })
+
     app.post(`${apiPrefix}generateSimulationForSensorData`, setConnectionTimeout('10m'), function (req, res) {
         // console.log('user_cognito_id', req.body.user_cognito_id);
         let apiMode = req.body.mode;
@@ -400,6 +441,15 @@ if (cluster.isMaster) {
 
             storeSensorData(sensor_data_array)
                 .then(flag => {
+
+                    if (level === 300) {
+                        for (var i = 0; i < new_items_array.length; i++) {
+                            let _temp1 = new_items_array[i];
+                            _temp1.sensor = req.body.sensor_brand
+                            new_items_array[i] = _temp1;
+                        }
+                    }
+
                     var players = sensor_data_array.map(function (player) {
                         return {
                             player_id: player.player_id.split("$")[0],
@@ -442,18 +492,40 @@ if (cluster.isMaster) {
                                         // Generate 10 digits unique number
                                         let account_id = Math.floor(Math.random() * 9000000000) + 1000000000;
                                         let player_id = temp.player_id + '-' + temp.sensor;
-                                        getUserByPlayerId(player_id)
+                                        // getUserByPlayerId(player_id)
+                                        getUserDetailBySensorId(temp.sensor, temp.player_id)
                                             .then (user_detail => {
                                                 // console.log(user_detail);
                                                 if (user_detail.length > 0) {
-                                                    account_id = user_detail[0]['account_id'];
-                                                    player_id = user_detail[0]['player_id'];
+                                                    if (user_detail[0]['account_id']) {
+                                                        account_id = user_detail[0]['account_id'];
+                                                        player_id = user_detail[0]['player_id'];
+                                                    } else {
+                                                        var userParams = {
+                                                            TableName: "users",
+                                                            Key: {
+                                                                "user_cognito_id": user_detail[0]['user_cognito_id'],
+                                                            },
+                                                            UpdateExpression: "set account_id = :account_id, player_id = :player_id",
+                                                            ExpressionAttributeValues: {
+                                                                ":account_id": account_id,
+                                                                ":player_id": player_id
+                                                            },
+                                                            ReturnValues: "UPDATED_NEW"
+                                                        };
+                                                        docClient.update(userParams, (err, data) => {
+                                                            if (err) {
+                                                                console.log(err);
+                                                            }
+                                                        })
+                                                    }
                                                 } else {
                                                     let obj = {};
                                                     obj['user_cognito_id'] = player_id;
                                                     obj['account_id'] = account_id;
                                                     obj['sensor_id_number'] = temp.player['sensor-id'] ? temp.player['sensor-id'] : '';
                                                     obj['player_id'] = player_id;
+                                                    obj['sensor'] = temp.sensor;
                                                     obj['first_name'] = temp.player['first-name'];
                                                     obj['last_name'] = temp.player['last-name'];
                                                     obj['sport'] = temp.player['sport'] ? temp.player['sport'] : '';
@@ -620,6 +692,14 @@ if (cluster.isMaster) {
                             storeSensorData(new_items_array)
                                 .then(flag => {
 
+                                    if (level === 300) {
+                                        for (var i = 0; i < new_items_array.length; i++) {
+                                            let _temp1 = new_items_array[i];
+                                            _temp1.sensor = req.body.sensor_brand
+                                            new_items_array[i] = _temp1;
+                                        }
+                                    }
+
                                     var players = new_items_array.map(function (player) {
                                         return {
                                             player_id: player.player_id.split("$")[0],
@@ -662,17 +742,39 @@ if (cluster.isMaster) {
                                                         // Generate 10 digits unique number
                                                         let account_id = Math.floor(Math.random() * 9000000000) + 1000000000;
                                                         let player_id = temp.player_id + '-' + temp.sensor;
-                                                        getUserByPlayerId(player_id)
+                                                        // getUserByPlayerId(player_id)
+                                                        getUserDetailBySensorId(temp.sensor, temp.player_id)
                                                             .then (user_detail => {
                                                                 // console.log(user_detail);
                                                                 if (user_detail.length > 0) {
-                                                                    account_id = user_detail[0]['account_id'];
-                                                                    player_id = user_detail[0]['player_id'];
+                                                                    if (user_detail[0]['account_id']) {
+                                                                        account_id = user_detail[0]['account_id'];
+                                                                        player_id = user_detail[0]['player_id'];
+                                                                    } else {
+                                                                        var userParams = {
+                                                                            TableName: "users",
+                                                                            Key: {
+                                                                                "user_cognito_id": user_detail[0]['user_cognito_id'],
+                                                                            },
+                                                                            UpdateExpression: "set account_id = :account_id, player_id = :player_id",
+                                                                            ExpressionAttributeValues: {
+                                                                                ":account_id": account_id,
+                                                                                ":player_id": player_id
+                                                                            },
+                                                                            ReturnValues: "UPDATED_NEW"
+                                                                        };
+                                                                        docClient.update(userParams, (err, data) => {
+                                                                            if (err) {
+                                                                                console.log(err);
+                                                                            }
+                                                                        })
+                                                                    }
                                                                 } else {
                                                                     let obj = {};
                                                                     obj['user_cognito_id'] = player_id;
                                                                     obj['account_id'] = account_id;
                                                                     obj['sensor_id_number'] = temp.player['sensor-id'] ? temp.player['sensor-id'] : '';
+                                                                    obj['sensor'] = temp.sensor;
                                                                     obj['player_id'] = player_id;
                                                                     obj['first_name'] = temp.player['first-name'];
                                                                     obj['last_name'] = temp.player['last-name'];
