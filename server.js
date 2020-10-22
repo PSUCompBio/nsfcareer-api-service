@@ -79,36 +79,36 @@ if (cluster.isMaster) {
     // ======================================
     //       CONFIGURING AWS SDK & EXPESS
     // ======================================
-    var config = {
-        "awsAccessKeyId": process.env.AWS_ACCESS_KEY_ID,
-        "awsSecretAccessKey": process.env.AWS_ACCESS_SECRET_KEY,
-        "avatar3dClientId": process.env.AVATAR_3D_CLIENT_ID,
-        "avatar3dclientSecret": process.env.AVATAR_3D_CLIENT_SECRET,
-        "region" : process.env.REGION,
-        "usersbucket": process.env.USERS_BUCKET,
-        "usersbucketbeta": process.env.USERS_BUCKET_BETA,
-        "apiVersion" : process.env.API_VERSION,
-        "jwt_secret" : process.env.JWT_SECRET,
-        "email_id" : process.env.EMAIL_ID,
-        "mail_list" : process.env.MAIL_LIST,
-        "ComputeInstanceEndpoint" : process.env.COMPUTE_INSTANCE_ENDPOINT,
-        "userPoolId": process.env.USER_POOL_ID,
-        "ClientId" : process.env.CLIENT_ID,
-        "react_website_url" : process.env.REACT_WEBSITE_URL,
-        "simulation_result_host_url" : process.env.SIMULATION_RESULT_HOST_URL,
-        "jobQueueBeta" : process.env.JOB_QUEUE_BETA,
-        "jobDefinitionBeta" : process.env.JOB_DEFINITION_BETA,
-        "jobQueueProduction" : process.env.JOB_QUEUE_PRODUCTION,
-        "jobDefinitionProduction" : process.env.JOB_DEFINITION_PRODUCTION,
-        "simulation_bucket" : process.env.SIMULATION_BUCKET,
-        "queue_x" : process.env.QUEUE_X,
-        "queue_y" : process.env.QUEUE_Y,
-        "queue_beta" : process.env.QUEUE_BETA
-    };
+    // var config = {
+    //     "awsAccessKeyId": process.env.AWS_ACCESS_KEY_ID,
+    //     "awsSecretAccessKey": process.env.AWS_ACCESS_SECRET_KEY,
+    //     "avatar3dClientId": process.env.AVATAR_3D_CLIENT_ID,
+    //     "avatar3dclientSecret": process.env.AVATAR_3D_CLIENT_SECRET,
+    //     "region" : process.env.REGION,
+    //     "usersbucket": process.env.USERS_BUCKET,
+    //     "usersbucketbeta": process.env.USERS_BUCKET_BETA,
+    //     "apiVersion" : process.env.API_VERSION,
+    //     "jwt_secret" : process.env.JWT_SECRET,
+    //     "email_id" : process.env.EMAIL_ID,
+    //     "mail_list" : process.env.MAIL_LIST,
+    //     "ComputeInstanceEndpoint" : process.env.COMPUTE_INSTANCE_ENDPOINT,
+    //     "userPoolId": process.env.USER_POOL_ID,
+    //     "ClientId" : process.env.CLIENT_ID,
+    //     "react_website_url" : process.env.REACT_WEBSITE_URL,
+    //     "simulation_result_host_url" : process.env.SIMULATION_RESULT_HOST_URL,
+    //     "jobQueueBeta" : process.env.JOB_QUEUE_BETA,
+    //     "jobDefinitionBeta" : process.env.JOB_DEFINITION_BETA,
+    //     "jobQueueProduction" : process.env.JOB_QUEUE_PRODUCTION,
+    //     "jobDefinitionProduction" : process.env.JOB_DEFINITION_PRODUCTION,
+    //     "simulation_bucket" : process.env.SIMULATION_BUCKET,
+    //     "queue_x" : process.env.QUEUE_X,
+    //     "queue_y" : process.env.QUEUE_Y,
+    //     "queue_beta" : process.env.QUEUE_BETA
+    // };
 
     const subject_signature = fs.readFileSync("data/base64")
 
-    // var config = require('./config/configuration_keys.json');
+    var config = require('./config/configuration_keys.json');
     var config_env = config;
 
     //AWS.config.loadFromPath('./config/configuration_keys.json');
@@ -1507,12 +1507,12 @@ if (cluster.isMaster) {
                     getPlayerSimulationFile(acc_data)
                     .then(image_data => {
                         imageData = image_data;
-                        console.log(acc_index, imageData.player_name);
+                        // console.log(acc_index, imageData.player_name);
                         if (acc_index === 0 && imageData.player_name && imageData.player_name != 'null') {
-                            console.log(imageData.player_name + '/simulation/summary.json');
+                            console.log('summary json url ----------------------------\n', imageData.player_name + '/simulation/summary.json');
                             let file_path = imageData.player_name + '/simulation/summary.json';
                             return getFileFromS3(file_path, imageData.bucket_name);
-                        }
+                            }
                     })
                    .then(output_file => {
                         if (output_file)
@@ -1930,7 +1930,8 @@ if (cluster.isMaster) {
                         brainRegions: brainRegions
                     })
                 }
-
+                let index_file = 0;
+                let file_count = 0;
                 data.forEach(function (acc_data, acc_index) {
                     let accData = acc_data;
                     let imageData = '';
@@ -1940,11 +1941,15 @@ if (cluster.isMaster) {
                     getPlayerSimulationFile(acc_data)
                     .then(image_data => {
                         imageData = image_data;
-                        console.log(acc_index, imageData.player_name);
-                        if (acc_index === 0 && imageData.player_name && imageData.player_name != 'null') {
-                            console.log(imageData.player_name + '/simulation/summary.json');
-                            let file_path = imageData.player_name + '/simulation/summary.json';
-                            return getFileFromS3(file_path, imageData.bucket_name);
+                        console.log('summary json url ----------------------------\n', imageData.player_name + '/simulation/summary.json');
+                        if (imageData.player_name && imageData.player_name != 'null') {
+                            if(file_count < 1){
+                                file_count++;
+                                 index_file = acc_index;
+                                console.log(imageData.player_name + '/simulation/summary.json');
+                                let file_path = imageData.player_name + '/simulation/summary.json';
+                                return getFileFromS3(file_path, imageData.bucket_name);
+                            }
                         }
                     })
                    .then(output_file => {
@@ -1956,7 +1961,7 @@ if (cluster.isMaster) {
                             date_time: accData.player_id.split('$')[1]
                         })
 
-                        if (acc_index === 0 && outputFile) {
+                        if (acc_index === index_file && outputFile) {
                             outputFile = JSON.parse(outputFile.Body.toString('utf-8'));
                             if (outputFile.Insults) {
                                 outputFile.Insults.forEach(function (summary_data, index) {
@@ -2518,7 +2523,7 @@ if (cluster.isMaster) {
     })
 
     // Configuring port for APP
-    const port = process.env.PORT || 3000;
+    const port = process.env.PORT || 5000;
     const server = app.listen(port, function () {
         console.log('Magic happens on ' + port);
     });
