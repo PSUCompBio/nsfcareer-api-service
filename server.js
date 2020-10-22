@@ -1530,12 +1530,12 @@ if (cluster.isMaster) {
                     getPlayerSimulationFile(acc_data)
                     .then(image_data => {
                         imageData = image_data;
-                        console.log(acc_index, imageData.player_name);
+                        // console.log(acc_index, imageData.player_name);
                         if (acc_index === 0 && imageData.player_name && imageData.player_name != 'null') {
-                            console.log(imageData.player_name + '/simulation/summary.json');
+                            console.log('summary json url ----------------------------\n', imageData.player_name + '/simulation/summary.json');
                             let file_path = imageData.player_name + '/simulation/summary.json';
                             return getFileFromS3(file_path, imageData.bucket_name);
-                        }
+                            }
                     })
                    .then(output_file => {
                         if (output_file)
@@ -1953,7 +1953,8 @@ if (cluster.isMaster) {
                         brainRegions: brainRegions
                     })
                 }
-
+                let index_file = 0;
+                let file_count = 0;
                 data.forEach(function (acc_data, acc_index) {
                     let accData = acc_data;
                     let imageData = '';
@@ -1963,11 +1964,15 @@ if (cluster.isMaster) {
                     getPlayerSimulationFile(acc_data)
                     .then(image_data => {
                         imageData = image_data;
-                        console.log(acc_index, imageData.player_name);
-                        if (acc_index === 0 && imageData.player_name && imageData.player_name != 'null') {
-                            console.log(imageData.player_name + '/simulation/summary.json');
-                            let file_path = imageData.player_name + '/simulation/summary.json';
-                            return getFileFromS3(file_path, imageData.bucket_name);
+                        console.log('summary json url ----------------------------\n', imageData.player_name + '/simulation/summary.json');
+                        if (imageData.player_name && imageData.player_name != 'null') {
+                            if(file_count < 1){
+                                file_count++;
+                                 index_file = acc_index;
+                                console.log(imageData.player_name + '/simulation/summary.json');
+                                let file_path = imageData.player_name + '/simulation/summary.json';
+                                return getFileFromS3(file_path, imageData.bucket_name);
+                            }
                         }
                     })
                    .then(output_file => {
@@ -1979,7 +1984,7 @@ if (cluster.isMaster) {
                             date_time: accData.player_id.split('$')[1]
                         })
 
-                        if (acc_index === 0 && outputFile) {
+                        if (acc_index === index_file && outputFile) {
                             outputFile = JSON.parse(outputFile.Body.toString('utf-8'));
                             if (outputFile.Insults) {
                                 outputFile.Insults.forEach(function (summary_data, index) {
