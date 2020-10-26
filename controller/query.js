@@ -545,7 +545,7 @@ function getTeamData(obj) {
                    ":organization": obj.organization,
                    ":team": obj.team
                 },
-                ProjectionExpression: "image_id"
+                ProjectionExpression: "team, player_id, image_id"
             };
         } else {
             params = {
@@ -556,7 +556,7 @@ function getTeamData(obj) {
                    ":organization": obj.organization,
                    ":team": obj.team
                 },
-                ProjectionExpression: "image_id"
+                ProjectionExpression: "team, player_id, image_id"
             };
         }
         
@@ -1144,27 +1144,50 @@ function updateJobComputedTime(obj, cb) {
     });
 }
 
-function fetchCGValues(player_id) {
+function fetchCGValues(account_id) {
+    // return new Promise((resolve, reject) => {
+    //     let params = {
+    //         TableName: "users",
+    //         Key: {
+    //             "user_cognito_id": player_id
+    //         },
+    //         ProjectionExpression: "cg_coordinates"
+    //     };
+    //     docClient.get(params, function (err, data) {
+    //         if (err) {
+    //             reject(err);
+    //         } else {
+    //             if (JSON.stringify(data).length == 2) {
+    //                 resolve([]);
+    //             } else {
+    //                 resolve(data.Item.cg_coordinates);
+    //             }
+    //         }
+    //     })
+    // })
+
     return new Promise((resolve, reject) => {
         let params = {
             TableName: "users",
-            Key: {
-                "user_cognito_id": player_id
-            },
-            ProjectionExpression: "cg_coordinates"
+            FilterExpression: "account_id = :account_id",
+            ExpressionAttributeValues: {
+                ":account_id": account_id
+            }
         };
-        docClient.get(params, function (err, data) {
+        
+        var item = [];
+        docClient.scan(params).eachPage((err, data, done) => {
             if (err) {
                 reject(err);
-            } else {
-                if (JSON.stringify(data).length == 2) {
-                    resolve([]);
-                } else {
-                    resolve(data.Item.cg_coordinates);
-                }
             }
-        })
-    })
+            if (data == null) {
+                resolve(concatArrays(item));
+            } else {
+                item.push(data.Items);
+            }
+            done();
+        });
+    });
 }
 
 function getUserByPlayerId(player_id) {
