@@ -47,7 +47,8 @@ if (cluster.isMaster) {
         jwt = require('jsonwebtoken'),
         shortid = require('shortid'),
         archiver = require('archiver'),
-        moment = require('moment');
+        moment = require('moment'),
+        async = require("async");
 
         shortid.characters('0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_$');
 
@@ -204,9 +205,43 @@ if (cluster.isMaster) {
         getUserDetailByPlayerId
     } = require('./controller/query');
 
-    // Clearing the cookies
     app.get(`/`, (req, res) => {
         res.send("TesT SERVICE HERE");
+    })
+
+    // Creating copy of s3 folder 
+    app.get(`/copyS3Folder`, (req, res) => {
+        // res.send("TesT SERVICE HERE");
+        var bucketName = config_env.usersbucket;
+        var s3 = new AWS.S3({params: {Bucket: bucketName}});
+        var oldPrefix = 'd050c279-9b85-49f2-99f5-e3bafa7aaabd/';
+        var newPrefix = '4857219589/';
+
+        var done = function(err, data) {
+            if (err) console.log(err);
+            else console.log(data);
+          };
+          
+          s3.listObjects({Prefix: oldPrefix}, function(err, data) {
+            if (data.Contents.length) {
+              async.each(data.Contents, function(file, cb) {
+                var params = {
+                  Bucket: bucketName,
+                  CopySource: bucketName + '/' + file.Key,
+                  Key: file.Key.replace(oldPrefix, newPrefix)
+                };
+                s3.copyObject(params, function(copyErr, copyData){
+                  if (copyErr) {
+                    console.log(copyErr);
+                  }
+                  else {
+                    console.log('Copied: ', params.Key);
+                    cb();
+                  }
+                });
+              }, done);
+            }
+          });
     })
 
     app.get(`/deleteTestData`, (req, res) => {

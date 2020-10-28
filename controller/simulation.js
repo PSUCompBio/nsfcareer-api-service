@@ -594,14 +594,24 @@ function generateINP(user_id, obj = null) {
                             else {
                                 generateMorphedVTK(obj)
                                     .then((d) => {
-                                        var cmd = `mkdir -p ./../users_data/${user_id}/rbf/ ;  ./../MergePolyData/build/InpFromVTK  -in ./../users_data/${user_id}/morphed_vtk/${obj.file_name}.vtk -out ./../users_data/${user_id}/rbf/${obj.file_name}.inp`;
+                                        var cmd = `mkdir -p ./../users_data/${user_id}/rbf/ ;  ./../MergePolyData/build/InpFromVTK  -in ./../users_data/${user_id}/morphed_vtk/${obj.file_name}_coarse.vtk -out ./../users_data/${user_id}/rbf/${obj.file_name}_coarse.inp`;
                                         return executeShellCommands(cmd);
+                                    })
+                                    .then(d => {
+                                        var fine_cmd = `./../MergePolyData/build/InpFromVTK  -in ./../users_data/${user_id}/morphed_vtk/${obj.file_name}_fine.vtk -out ./../users_data/${user_id}/rbf/${obj.file_name}_fine.inp`;
+                                        return executeShellCommands(fine_cmd);
                                     })
                                     .then(d => {
                                         return uploadINPFile(user_id, obj.file_name);
                                     })
                                     .then(d => {
                                         return uploadVTKFile(user_id, obj.file_name);
+                                    })
+                                    .then(d => {
+                                        return uploadFineINPFile(user_id, obj.file_name);
+                                    })
+                                    .then(d => {
+                                        return uploadFineVTKFile(user_id, obj.file_name);
                                     })
                                     .then(d => {
                                         return uploadCGValuesAndSetINPStatus(user_id, obj.file_name);
@@ -843,6 +853,16 @@ function generateMorphedVTK(obj) {
             })
             .then(mesh_output => {
                 console.log("MESROTATE VTK POST<<<<<--------------\n", mesh_output);
+                let fine_mesh_cmd = `python3 ./../rbf-brain/RBF_coarse.py --p ./../users_data/${obj.user_cognito_id}/parameters/${obj.file_name}.prm --m ./../rbf-brain/fine_mesh.vtk --output ./../users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_fine.vtk`;
+                return executeShellCommands(fine_mesh_cmd);
+            })
+            .then(fine_mesh_output => {
+                console.log("FINEMESH VTK POST<<<<<--------------\n", fine_mesh_output);
+                let fine_rotated_mesh_cmd = `pvpython ./../rbf-brain/meshrotate.py --input ./../users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_fine.vtk --output ./../users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_fine_rotated.vtk`;
+                return executeShellCommands(fine_rotated_mesh_cmd);
+            })
+            .then(fine_rotated_mesh_output => {
+                console.log("FINEROTATED MESH VTK POST<<<<<--------------\n", fine_rotated_mesh_output);
                 let fiber_cmd = `python3 ./../rbf-brain/RBF_coarse.py --p ./../users_data/${obj.user_cognito_id}/parameters/${obj.file_name}.prm --m ./../rbf-brain/fiber_mesh.vtk --output ./../users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_fiber.vtk`;
                 return executeShellCommands(fiber_cmd);
             })
@@ -924,12 +944,12 @@ function uploadINPFile(user_id, timestamp) {
 
         const params = uploadParams;
 
-        fs.readFile(`./../users_data/${user_id}/rbf/${timestamp}.inp`, function (err, headBuffer) {
+        fs.readFile(`./../users_data/${user_id}/rbf/${timestamp}_coarse.inp`, function (err, headBuffer) {
             if (err) {
                 reject(err);
             }
             else {
-                params.Key = user_id + "/profile/rbf/" + timestamp + ".inp";
+                params.Key = user_id + "/profile/rbf/" + timestamp + "_coarse.inp";
                 params.Body = headBuffer;
                 // Call S3 Upload
                 s3.upload(params, (err, data) => {
@@ -958,12 +978,80 @@ function uploadVTKFile(user_id, timestamp) {
 
         const params = uploadParams;
 
-        fs.readFile(`../users_data/${user_id}/morphed_vtk/${timestamp}.vtk`, function (err, headBuffer) {
+        fs.readFile(`../users_data/${user_id}/morphed_vtk/${timestamp}_coarse.vtk`, function (err, headBuffer) {
             if (err) {
                 reject(err);
             }
             else {
-                params.Key = user_id + "/profile/rbf/vtk/" + timestamp + ".vtk";
+                params.Key = user_id + "/profile/rbf/vtk/" + timestamp + "_coarse.vtk";
+                params.Body = headBuffer;
+                // Call S3 Upload
+                s3.upload(params, (err, data) => {
+                    if (err) {
+                        reject(err);
+                    }
+                    else {
+                        resolve(data);
+                    }
+                });
+
+            }
+        })
+    });
+
+}
+
+function uploadFineINPFile(user_id, timestamp) {
+
+    return new Promise((resolve, reject) => {
+        var uploadParams = {
+            Bucket: config.usersbucket,
+            Key: '', // pass key
+            Body: null, // pass file body
+        };
+
+        const params = uploadParams;
+
+        fs.readFile(`./../users_data/${user_id}/rbf/${timestamp}_fine.inp`, function (err, headBuffer) {
+            if (err) {
+                reject(err);
+            }
+            else {
+                params.Key = user_id + "/profile/rbf/" + timestamp + "_fine.inp";
+                params.Body = headBuffer;
+                // Call S3 Upload
+                s3.upload(params, (err, data) => {
+                    if (err) {
+                        reject(err);
+                    }
+                    else {
+                        resolve(data);
+                    }
+                });
+
+            }
+        })
+    })
+
+}
+
+function uploadFineVTKFile(user_id, timestamp) {
+
+    return new Promise((resolve, reject) => {
+        var uploadParams = {
+            Bucket: config.usersbucket,
+            Key: '', // pass key
+            Body: null, // pass file body
+        };
+
+        const params = uploadParams;
+
+        fs.readFile(`../users_data/${user_id}/morphed_vtk/${timestamp}_fine.vtk`, function (err, headBuffer) {
+            if (err) {
+                reject(err);
+            }
+            else {
+                params.Key = user_id + "/profile/rbf/vtk/" + timestamp + "_fine.vtk";
                 params.Body = headBuffer;
                 // Call S3 Upload
                 s3.upload(params, (err, data) => {
