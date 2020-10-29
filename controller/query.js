@@ -442,29 +442,7 @@ function getCumulativeAccelerationRecords(obj) {
 
 
 function getTeamDataWithPlayerRecords(obj) {
-    // return new Promise((resolve, reject) => {
-    //     let params = {
-    //         TableName: "sensor_data",
-    //         KeyConditionExpression:
-    //             "team = :team and begins_with(player_id,:player_id)",
-    //         ExpressionAttributeValues: {
-    //             ":player_id": obj.player_id,
-    //             ":team": obj.team,
-    //         },
-    //     };
-    //     var item = [];
-    //     docClient.query(params).eachPage((err, data, done) => {
-    //         if (err) {
-    //             reject(err);
-    //         }
-    //         if (data == null) {
-    //             resolve(concatArrays(item));
-    //         } else {
-    //             item.push(data.Items);
-    //         }
-    //         done();
-    //     });
-    // });
+
     return new Promise((resolve, reject) => {
         let params;
 
@@ -479,6 +457,13 @@ function getTeamDataWithPlayerRecords(obj) {
                 ":team": obj.team,
                 ":player_id": obj.player_id + '$',
                 },
+                ExpressionAttributeNames : {
+                    '#time': 'time',
+                    '#date': 'date',
+                    '#Impact_date': 'impact-date',
+                    '#Impact_time': 'impact-time'
+                },
+                ProjectionExpression: " #time, #date,#Impact_date,#Impact_time, image_id,organization,player,player_id,sensor,simulation_status,team,user_cognito_id",
                 ScanIndexForward: false
             };
         } else {
@@ -491,6 +476,13 @@ function getTeamDataWithPlayerRecords(obj) {
                 ":team": obj.team,
                 ":player_id": obj.player_id + '$',
                 },
+                ExpressionAttributeNames : {
+                    '#time': 'time',
+                    '#date': 'date',
+                    '#Impact_date': 'impact-date',
+                    '#Impact_time': 'impact-time'
+                },
+                ProjectionExpression: " #time, #date,#Impact_date,#Impact_time, image_id,organization,player,player_id,sensor,simulation_status,team,user_cognito_id",
                 ScanIndexForward: false
             };
         }
