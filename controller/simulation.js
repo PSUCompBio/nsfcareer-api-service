@@ -594,7 +594,7 @@ function generateINP(user_id, obj = null) {
                             else {
                                 generateMorphedVTK(obj)
                                     .then((d) => {
-                                        var cmd = `mkdir -p ./../users_data/${user_id}/rbf/ ;  ./../MergePolyData/build/InpFromVTK  -in ./../users_data/${user_id}/morphed_vtk/${obj.file_name}_coarse.vtk -out ./../users_data/${user_id}/rbf/${obj.file_name}_coarse.inp`;
+                                        var cmd = `mkdir -p ./../users_data/${user_id}/rbf/ ;  ./../MergePolyData/build/InpFromVTK  -in ./../users_data/${user_id}/morphed_vtk/${obj.file_name}.vtk -out ./../users_data/${user_id}/rbf/${obj.file_name}_coarse.inp`;
                                         return executeShellCommands(cmd);
                                     })
                                     .then(d => {
