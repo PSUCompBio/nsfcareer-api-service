@@ -978,7 +978,7 @@ function uploadVTKFile(user_id, timestamp) {
 
         const params = uploadParams;
 
-        fs.readFile(`../users_data/${user_id}/morphed_vtk/${timestamp}_coarse.vtk`, function (err, headBuffer) {
+        fs.readFile(`../users_data/${user_id}/morphed_vtk/${timestamp}.vtk`, function (err, headBuffer) {
             if (err) {
                 reject(err);
             }
