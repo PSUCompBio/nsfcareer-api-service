@@ -482,6 +482,8 @@ if (cluster.isMaster) {
                                     .then(data => {
                                         // console.log(data);
                                     })
+                            } else {
+                                sensor_data_array.push(_temp_sensor_data);
                             }
                         })
                         .catch(err => {
@@ -733,6 +735,8 @@ if (cluster.isMaster) {
                                                 .then(data => {
                                                     // console.log(data);
                                                 })
+                                        } else {
+                                            new_items_array[i] = _temp;
                                         }
                                     })
                                     .catch(err => {
