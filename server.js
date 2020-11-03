@@ -341,7 +341,7 @@ if (cluster.isMaster) {
                     if (sensor_detail.length > 0 && !overwrite) {
                         res.send({
                             message: "failure",
-                            error: 'Duplicate event simulation skipped, use --overwrite to recompute'
+                            error: 'Duplicate event simulation skipped, use -F "overwrite=true" to recompute'
                         })
                     } else {
                         // console.log(new_items_array);
@@ -701,7 +701,7 @@ if (cluster.isMaster) {
                                 if (sensor_detail.length > 0 && !overwrite) {
                                     res.send({
                                         message: "failure",
-                                        error: 'Duplicate event simulation skipped, use --overwrite to recompute'
+                                        error: 'Duplicate event simulation skipped, use -F "overwrite=true" to recompute'
                                     })
                                 } else {
                                     ( async () => {
