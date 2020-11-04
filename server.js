@@ -80,36 +80,36 @@ if (cluster.isMaster) {
     // ======================================
     //       CONFIGURING AWS SDK & EXPESS
     // ======================================
-    // var config = {
-    //     "awsAccessKeyId": process.env.AWS_ACCESS_KEY_ID,
-    //     "awsSecretAccessKey": process.env.AWS_ACCESS_SECRET_KEY,
-    //     "avatar3dClientId": process.env.AVATAR_3D_CLIENT_ID,
-    //     "avatar3dclientSecret": process.env.AVATAR_3D_CLIENT_SECRET,
-    //     "region" : process.env.REGION,
-    //     "usersbucket": process.env.USERS_BUCKET,
-    //     "usersbucketbeta": process.env.USERS_BUCKET_BETA,
-    //     "apiVersion" : process.env.API_VERSION,
-    //     "jwt_secret" : process.env.JWT_SECRET,
-    //     "email_id" : process.env.EMAIL_ID,
-    //     "mail_list" : process.env.MAIL_LIST,
-    //     "ComputeInstanceEndpoint" : process.env.COMPUTE_INSTANCE_ENDPOINT,
-    //     "userPoolId": process.env.USER_POOL_ID,
-    //     "ClientId" : process.env.CLIENT_ID,
-    //     "react_website_url" : process.env.REACT_WEBSITE_URL,
-    //     "simulation_result_host_url" : process.env.SIMULATION_RESULT_HOST_URL,
-    //     "jobQueueBeta" : process.env.JOB_QUEUE_BETA,
-    //     "jobDefinitionBeta" : process.env.JOB_DEFINITION_BETA,
-    //     "jobQueueProduction" : process.env.JOB_QUEUE_PRODUCTION,
-    //     "jobDefinitionProduction" : process.env.JOB_DEFINITION_PRODUCTION,
-    //     "simulation_bucket" : process.env.SIMULATION_BUCKET,
-    //     "queue_x" : process.env.QUEUE_X,
-    //     "queue_y" : process.env.QUEUE_Y,
-    //     "queue_beta" : process.env.QUEUE_BETA
-    // };
+    var config = {
+        "awsAccessKeyId": process.env.AWS_ACCESS_KEY_ID,
+        "awsSecretAccessKey": process.env.AWS_ACCESS_SECRET_KEY,
+        "avatar3dClientId": process.env.AVATAR_3D_CLIENT_ID,
+        "avatar3dclientSecret": process.env.AVATAR_3D_CLIENT_SECRET,
+        "region" : process.env.REGION,
+        "usersbucket": process.env.USERS_BUCKET,
+        "usersbucketbeta": process.env.USERS_BUCKET_BETA,
+        "apiVersion" : process.env.API_VERSION,
+        "jwt_secret" : process.env.JWT_SECRET,
+        "email_id" : process.env.EMAIL_ID,
+        "mail_list" : process.env.MAIL_LIST,
+        "ComputeInstanceEndpoint" : process.env.COMPUTE_INSTANCE_ENDPOINT,
+        "userPoolId": process.env.USER_POOL_ID,
+        "ClientId" : process.env.CLIENT_ID,
+        "react_website_url" : process.env.REACT_WEBSITE_URL,
+        "simulation_result_host_url" : process.env.SIMULATION_RESULT_HOST_URL,
+        "jobQueueBeta" : process.env.JOB_QUEUE_BETA,
+        "jobDefinitionBeta" : process.env.JOB_DEFINITION_BETA,
+        "jobQueueProduction" : process.env.JOB_QUEUE_PRODUCTION,
+        "jobDefinitionProduction" : process.env.JOB_DEFINITION_PRODUCTION,
+        "simulation_bucket" : process.env.SIMULATION_BUCKET,
+        "queue_x" : process.env.QUEUE_X,
+        "queue_y" : process.env.QUEUE_Y,
+        "queue_beta" : process.env.QUEUE_BETA
+    };
 
     const subject_signature = fs.readFileSync("data/base64")
 
-    var config = require('./config/configuration_keys.json');
+    // var config = require('./config/configuration_keys.json');
     var config_env = config;
 
     //AWS.config.loadFromPath('./config/configuration_keys.json');
@@ -296,6 +296,7 @@ if (cluster.isMaster) {
         let filename = req.body.data_filename !== undefined ? req.body.data_filename : null;
         let buffer = '';
         let overwrite = req.body.overwrite !== undefined ? req.body.overwrite : false;
+        let bypass_simulation_formatting = req.body.bypass_simulation_formatting !== undefined ? req.body.bypass_simulation_formatting : false;
 
         if (sensor && (sensor.toLowerCase() === 'sensor_company_x' || sensor.toLowerCase() === 'swa')) {
             reader = 1;
@@ -398,72 +399,107 @@ if (cluster.isMaster) {
 
                                 _temp_sensor_data["simulation"]["linear-acceleration"] = {};
 
-                                if (_temp["simulation"]['time-units'] === 'seconds') {
-                                    _temp["simulation"]['time'].forEach((time, i) => {
-                                        const _temp_time = parseFloat(time) * 1000;
-                                        _temp["simulation"]['time'][i] = _temp_time;
-                                    })
-                                }
-
                                 let x_g = [];
                                 let y_g = [];
                                 let z_g = [];
 
-                                if (_temp["simulation"]['linear-acceleration']['la-units'] === 'g') {
-                                    _temp["simulation"]['linear-acceleration']['x-la'].forEach((la, x) => {
-                                        const _temp_la = parseFloat(la) * 9.80665;
-                                        _temp["simulation"]['linear-acceleration']['x-la'][x] = _temp_la;
-                                        x_g.push(parseFloat(la));
-                                    })
+                                if (bypass_simulation_formatting) {
 
-                                    _temp["simulation"]['linear-acceleration']['y-la'].forEach((la, y) => {
-                                        const _temp_la = parseFloat(la) * 9.80665;
-                                        _temp["simulation"]['linear-acceleration']['y-la'][y] = _temp_la;
-                                        y_g.push(parseFloat(la));
-                                    })
+                                    _temp["player_id"] = _temp["uid"];
 
-                                    _temp["simulation"]['linear-acceleration']['z-la'].forEach((la, z) => {
-                                        const _temp_la = parseFloat(la) * 9.80665;
-                                        _temp["simulation"]['linear-acceleration']['z-la'][z] = _temp_la;
-                                        z_g.push(parseFloat(la));
-                                    })
-                                } else {
-                                    _temp["simulation"]['linear-acceleration']['x-la'].forEach((la, x) => {
+                                    _temp["simulation"]['linear-acceleration']['xv'].forEach((la, x) => {
                                         const _temp_la = parseFloat(la) / 9.80665;
                                         x_g.push(_temp_la);
                                     })
 
-                                    _temp["simulation"]['linear-acceleration']['y-la'].forEach((la, y) => {
+                                    _temp["simulation"]['linear-acceleration']['yv'].forEach((la, y) => {
                                         const _temp_la = parseFloat(la) / 9.80665;
                                         y_g.push(_temp_la);
                                     })
 
-                                    _temp["simulation"]['linear-acceleration']['z-la'].forEach((la, z) => {
+                                    _temp["simulation"]['linear-acceleration']['zv'].forEach((la, z) => {
                                         const _temp_la = parseFloat(la) / 9.80665;
                                         z_g.push(_temp_la);
                                     })
+
+                                    _temp_sensor_data["simulation"]["la-units"] = 'm/s^2';
+                                    _temp_sensor_data["simulation"]["time"] = _temp["simulation"]['linear-acceleration']['xt'];
+                                    _temp_sensor_data["simulation"]["linear-acceleration"]['xv'] = _temp["simulation"]['linear-acceleration']['xv'];
+                                    _temp_sensor_data["simulation"]["linear-acceleration"]['xv-g'] = x_g;
+                                    _temp_sensor_data["simulation"]["linear-acceleration"]['xt'] = _temp["simulation"]['linear-acceleration']['xt'];
+                                    _temp_sensor_data["simulation"]["linear-acceleration"]['yv'] = _temp["simulation"]['linear-acceleration']['yv'];
+                                    _temp_sensor_data["simulation"]["linear-acceleration"]['yv-g'] = y_g;
+                                    _temp_sensor_data["simulation"]["linear-acceleration"]['yt'] = _temp["simulation"]['linear-acceleration']['yt'];
+                                    _temp_sensor_data["simulation"]["linear-acceleration"]['zv'] = _temp["simulation"]['linear-acceleration']['zv'];
+                                    _temp_sensor_data["simulation"]["linear-acceleration"]['zv-g'] = z_g;
+                                    _temp_sensor_data["simulation"]["linear-acceleration"]['zt'] = _temp["simulation"]['linear-acceleration']['zt'];
+
+                                    _temp_sensor_data["simulation"]["angular-acceleration"] = _temp["simulation"]["angular-acceleration"];
+
+                                } else {
+                                    if (_temp["simulation"]['time-units'] === 'seconds') {
+                                        _temp["simulation"]['time'].forEach((time, i) => {
+                                            const _temp_time = parseFloat(time) * 1000;
+                                            _temp["simulation"]['time'][i] = _temp_time;
+                                        })
+                                    }
+    
+                                    if (_temp["simulation"]['linear-acceleration']['la-units'] === 'g') {
+                                        _temp["simulation"]['linear-acceleration']['x-la'].forEach((la, x) => {
+                                            const _temp_la = parseFloat(la) * 9.80665;
+                                            _temp["simulation"]['linear-acceleration']['x-la'][x] = _temp_la;
+                                            x_g.push(parseFloat(la));
+                                        })
+    
+                                        _temp["simulation"]['linear-acceleration']['y-la'].forEach((la, y) => {
+                                            const _temp_la = parseFloat(la) * 9.80665;
+                                            _temp["simulation"]['linear-acceleration']['y-la'][y] = _temp_la;
+                                            y_g.push(parseFloat(la));
+                                        })
+    
+                                        _temp["simulation"]['linear-acceleration']['z-la'].forEach((la, z) => {
+                                            const _temp_la = parseFloat(la) * 9.80665;
+                                            _temp["simulation"]['linear-acceleration']['z-la'][z] = _temp_la;
+                                            z_g.push(parseFloat(la));
+                                        })
+                                    } else {
+                                        _temp["simulation"]['linear-acceleration']['x-la'].forEach((la, x) => {
+                                            const _temp_la = parseFloat(la) / 9.80665;
+                                            x_g.push(_temp_la);
+                                        })
+    
+                                        _temp["simulation"]['linear-acceleration']['y-la'].forEach((la, y) => {
+                                            const _temp_la = parseFloat(la) / 9.80665;
+                                            y_g.push(_temp_la);
+                                        })
+    
+                                        _temp["simulation"]['linear-acceleration']['z-la'].forEach((la, z) => {
+                                            const _temp_la = parseFloat(la) / 9.80665;
+                                            z_g.push(_temp_la);
+                                        })
+                                    }
+    
+                                    _temp_sensor_data["simulation"]["la-units"] = _temp["simulation"]['linear-acceleration']['la-units'];
+                                    _temp_sensor_data["simulation"]["linear-acceleration"]['xv'] = _temp["simulation"]['linear-acceleration']['x-la'];
+                                    _temp_sensor_data["simulation"]["linear-acceleration"]['xv-g'] = x_g;
+                                    _temp_sensor_data["simulation"]["linear-acceleration"]['xt'] = _temp["simulation"]['time'];
+                                    _temp_sensor_data["simulation"]["linear-acceleration"]['yv'] = _temp["simulation"]['linear-acceleration']['y-la'];
+                                    _temp_sensor_data["simulation"]["linear-acceleration"]['yv-g'] = y_g;
+                                    _temp_sensor_data["simulation"]["linear-acceleration"]['yt'] = _temp["simulation"]['time'];
+                                    _temp_sensor_data["simulation"]["linear-acceleration"]['zv'] = _temp["simulation"]['linear-acceleration']['z-la'];
+                                    _temp_sensor_data["simulation"]["linear-acceleration"]['zv-g'] = z_g;
+                                    _temp_sensor_data["simulation"]["linear-acceleration"]['zt'] = _temp["simulation"]['time'];
+    
+                                    _temp_sensor_data["simulation"]["angular-acceleration"]['xv'] = _temp["simulation"]['angular-acceleration']['x-aa-rad/s^2'];
+                                    _temp_sensor_data["simulation"]["angular-acceleration"]['xt'] = _temp["simulation"]['time'];
+                                    _temp_sensor_data["simulation"]["angular-acceleration"]['yv'] = _temp["simulation"]['angular-acceleration']['y-aa-rad/s^2'];
+                                    _temp_sensor_data["simulation"]["angular-acceleration"]['yt'] = _temp["simulation"]['time'];
+                                    _temp_sensor_data["simulation"]["angular-acceleration"]['zv'] = _temp["simulation"]['angular-acceleration']['z-aa-rad/s^2'];
+                                    _temp_sensor_data["simulation"]["angular-acceleration"]['zt'] = _temp["simulation"]['time'];
                                 }
 
-                                _temp_sensor_data["simulation"]["la-units"] = _temp["simulation"]['linear-acceleration']['la-units'];
-                                _temp_sensor_data["simulation"]["linear-acceleration"]['xv'] = _temp["simulation"]['linear-acceleration']['x-la'];
-                                _temp_sensor_data["simulation"]["linear-acceleration"]['xv-g'] = x_g;
-                                _temp_sensor_data["simulation"]["linear-acceleration"]['xt'] = _temp["simulation"]['time'];
-                                _temp_sensor_data["simulation"]["linear-acceleration"]['yv'] = _temp["simulation"]['linear-acceleration']['y-la'];
-                                _temp_sensor_data["simulation"]["linear-acceleration"]['yv-g'] = y_g;
-                                _temp_sensor_data["simulation"]["linear-acceleration"]['yt'] = _temp["simulation"]['time'];
-                                _temp_sensor_data["simulation"]["linear-acceleration"]['zv'] = _temp["simulation"]['linear-acceleration']['z-la'];
-                                _temp_sensor_data["simulation"]["linear-acceleration"]['zv-g'] = z_g;
-                                _temp_sensor_data["simulation"]["linear-acceleration"]['zt'] = _temp["simulation"]['time'];
-
-                                _temp_sensor_data["simulation"]["angular-acceleration"]['xv'] = _temp["simulation"]['angular-acceleration']['x-aa-rad/s^2'];
-                                _temp_sensor_data["simulation"]["angular-acceleration"]['xt'] = _temp["simulation"]['time'];
-                                _temp_sensor_data["simulation"]["angular-acceleration"]['yv'] = _temp["simulation"]['angular-acceleration']['y-aa-rad/s^2'];
-                                _temp_sensor_data["simulation"]["angular-acceleration"]['yt'] = _temp["simulation"]['time'];
-                                _temp_sensor_data["simulation"]["angular-acceleration"]['zv'] = _temp["simulation"]['angular-acceleration']['z-aa-rad/s^2'];
-                                _temp_sensor_data["simulation"]["angular-acceleration"]['zt'] = _temp["simulation"]['time'];
-
                                 _temp_sensor_data["user_cognito_id"] = req.body.user_cognito_id;
-                                _temp_sensor_data["image_id"] = shortid.generate();
+                                _temp_sensor_data["image_id"] = bypass_simulation_formatting ? _temp.uid : shortid.generate();
                                
                                 if (sensor_detail.length > 0) {
                                     _temp_sensor_data["player_id"] = sensor_detail[0].player_id;
@@ -488,6 +524,14 @@ if (cluster.isMaster) {
                                     _temp_sensor_data['mesh-transformation'] = ["-y", "z", "-x"];
                                 } else {
                                     _temp_sensor_data['mesh-transformation'] = ["-y", "z", "-x"];
+                                }
+
+                                if (bypass_simulation_formatting) {
+                                    _temp_sensor_data['uid'] = _temp["uid"];
+                                    _temp_sensor_data["simulation"]['mesh-transformation'] = _temp["simulation"]["mesh-transformation"];
+                                    _temp_sensor_data["simulation"]['mesh'] = _temp["simulation"]["mesh"];
+                                    _temp_sensor_data["simulation"]['maximum-time'] = _temp["simulation"]["maximum-time"];
+                                    _temp_sensor_data["simulation"]['head-cg'] = _temp["simulation"]["head-cg"];
                                 }
 
                                 if (_temp_sensor_data['impact-id'] && _temp_sensor_data['sensor-id']) {
@@ -2635,7 +2679,7 @@ if (cluster.isMaster) {
     })
 
     // Configuring port for APP
-    const port = process.env.PORT || 5000;
+    const port = process.env.PORT || 3000;
     const server = app.listen(port, function () {
         console.log('Magic happens on ' + port);
     });
