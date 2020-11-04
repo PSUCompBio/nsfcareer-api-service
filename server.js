@@ -202,7 +202,8 @@ if (cluster.isMaster) {
         getPlayerSimulationStatus,
         getCumulativeAccelerationRecords,
         addPlayer,
-        getUserDetailByPlayerId
+        getUserDetailByPlayerId,
+        checkSensorDataExists
     } = require('./controller/query');
 
     app.get(`/`, (req, res) => {
@@ -294,6 +295,7 @@ if (cluster.isMaster) {
         let reader = 0;
         let filename = req.body.data_filename !== undefined ? req.body.data_filename : null;
         let buffer = '';
+        let overwrite = req.body.overwrite !== undefined ? req.body.overwrite : false;
 
         if (sensor && (sensor.toLowerCase() === 'sensor_company_x' || sensor.toLowerCase() === 'swa')) {
             reader = 1;
@@ -326,448 +328,216 @@ if (cluster.isMaster) {
                     error: 'Provided JSON format is not valid. Please check it.'
                 })
             }
-            // console.log(new_items_array);
-            const sensor_data_array = [];
 
-            ( async () => {
-                // Adding image id in array data
-                for (var i = 0; i < new_items_array.length; i++) {
-                    const _temp = new_items_array[i];
-
-                    if (level === 300) {
-                        if (_temp["sensor"].toLowerCase() === 'swa') {
-                            req.body.sensor_brand = 'SWA';
-                        } else if (_temp["sensor"].toLowerCase() === 'sisu') {
-                            req.body.sensor_brand = 'SISU';
-                        } else if (_temp["sensor"].toLowerCase() === 'stanford') {
-                            req.body.sensor_brand = 'Stanford';
-                        } else if (_temp["sensor"].toLowerCase() === 'panther') {
-                            req.body.sensor_brand = 'Panther';
-                        } else if (_temp["sensor"].toLowerCase() === 'hitiq') {
-                            req.body.sensor_brand = 'HitIQ';
-                        } else if (_temp["sensor"].toLowerCase() === 'gforcetracker') {
-                            req.body.sensor_brand = 'GForceTracker';
-                        } else if (_temp["sensor"].toLowerCase() === 'fitguard') {
-                            req.body.sensor_brand = 'FitGuard';
-                        } else if (_temp["sensor"].toLowerCase() === 'blackbox') { 
-                            req.body.sensor_brand = 'Blackbox Biometrics';
-                        } else if (_temp["sensor"].toLowerCase() === 'biocore') { 
-                            req.body.sensor_brand = 'BioCore';
-                        } else if (_temp["sensor"].toLowerCase() === 'athlete') { 
-                            req.body.sensor_brand = 'Athlete Intelligence';
-                        } else if (_temp["sensor"].toLowerCase() === 'medeng') { 
-                            req.body.sensor_brand = 'Med-Eng';
-                        } else if (_temp["sensor"].toLowerCase() === 'hybrid3') { 
-                            req.body.sensor_brand = 'Hybrid3';
-                        } else {
-                            req.body.sensor_brand = 'Prevent Biometrics';
-                        }
-                    }
-
-                    let _temp_sensor_data = {};
-                    _temp_sensor_data["level"] = level;
-                    _temp_sensor_data["sensor"] = req.body.sensor_brand;
-                    _temp_sensor_data["impact-date"] = _temp["impact-date"];
-                    _temp_sensor_data["impact-time"] = _temp["impact-time"];
-                    _temp_sensor_data["organization"] = level === 400 ? (_temp["player"]["organization"] ? _temp["player"]["organization"] : _temp["organization"]) : req.body.organization;
-                    _temp_sensor_data["player"] = _temp["player"];
-
-                    _temp_sensor_data["simulation"] = {
-                        "la-units": "",
-                        "linear-acceleration": {},
-                        "angular-acceleration": {}
-                    };
-
-                    _temp_sensor_data["simulation"]["linear-acceleration"] = {};
-
-                    if (_temp["simulation"]['time-units'] === 'seconds') {
-                        _temp["simulation"]['time'].forEach((time, i) => {
-                            const _temp_time = parseFloat(time) * 1000;
-                            _temp["simulation"]['time'][i] = _temp_time;
-                        })
-                    }
-
-                    let x_g = [];
-                    let y_g = [];
-                    let z_g = [];
-
-                    if (_temp["simulation"]['linear-acceleration']['la-units'] === 'g') {
-                        _temp["simulation"]['linear-acceleration']['x-la'].forEach((la, x) => {
-                            const _temp_la = parseFloat(la) * 9.80665;
-                            _temp["simulation"]['linear-acceleration']['x-la'][x] = _temp_la;
-                            x_g.push(parseFloat(la));
-                        })
-
-                        _temp["simulation"]['linear-acceleration']['y-la'].forEach((la, y) => {
-                            const _temp_la = parseFloat(la) * 9.80665;
-                            _temp["simulation"]['linear-acceleration']['y-la'][y] = _temp_la;
-                            y_g.push(parseFloat(la));
-                        })
-
-                        _temp["simulation"]['linear-acceleration']['z-la'].forEach((la, z) => {
-                            const _temp_la = parseFloat(la) * 9.80665;
-                            _temp["simulation"]['linear-acceleration']['z-la'][z] = _temp_la;
-                            z_g.push(parseFloat(la));
-                        })
-                    } else {
-                        _temp["simulation"]['linear-acceleration']['x-la'].forEach((la, x) => {
-                            const _temp_la = parseFloat(la) / 9.80665;
-                            x_g.push(_temp_la);
-                        })
-
-                        _temp["simulation"]['linear-acceleration']['y-la'].forEach((la, y) => {
-                            const _temp_la = parseFloat(la) / 9.80665;
-                            y_g.push(_temp_la);
-                        })
-
-                        _temp["simulation"]['linear-acceleration']['z-la'].forEach((la, z) => {
-                            const _temp_la = parseFloat(la) / 9.80665;
-                            z_g.push(_temp_la);
-                        })
-                    }
-
-                    _temp_sensor_data["simulation"]["la-units"] = _temp["simulation"]['linear-acceleration']['la-units'];
-                    _temp_sensor_data["simulation"]["linear-acceleration"]['xv'] = _temp["simulation"]['linear-acceleration']['x-la'];
-                    _temp_sensor_data["simulation"]["linear-acceleration"]['xv-g'] = x_g;
-                    _temp_sensor_data["simulation"]["linear-acceleration"]['xt'] = _temp["simulation"]['time'];
-                    _temp_sensor_data["simulation"]["linear-acceleration"]['yv'] = _temp["simulation"]['linear-acceleration']['y-la'];
-                    _temp_sensor_data["simulation"]["linear-acceleration"]['yv-g'] = y_g;
-                    _temp_sensor_data["simulation"]["linear-acceleration"]['yt'] = _temp["simulation"]['time'];
-                    _temp_sensor_data["simulation"]["linear-acceleration"]['zv'] = _temp["simulation"]['linear-acceleration']['z-la'];
-                    _temp_sensor_data["simulation"]["linear-acceleration"]['zv-g'] = z_g;
-                    _temp_sensor_data["simulation"]["linear-acceleration"]['zt'] = _temp["simulation"]['time'];
-
-                    _temp_sensor_data["simulation"]["angular-acceleration"]['xv'] = _temp["simulation"]['angular-acceleration']['x-aa-rad/s^2'];
-                    _temp_sensor_data["simulation"]["angular-acceleration"]['xt'] = _temp["simulation"]['time'];
-                    _temp_sensor_data["simulation"]["angular-acceleration"]['yv'] = _temp["simulation"]['angular-acceleration']['y-aa-rad/s^2'];
-                    _temp_sensor_data["simulation"]["angular-acceleration"]['yt'] = _temp["simulation"]['time'];
-                    _temp_sensor_data["simulation"]["angular-acceleration"]['zv'] = _temp["simulation"]['angular-acceleration']['z-aa-rad/s^2'];
-                    _temp_sensor_data["simulation"]["angular-acceleration"]['zt'] = _temp["simulation"]['time'];
-
-                    _temp_sensor_data["user_cognito_id"] = req.body.user_cognito_id;
-                    _temp_sensor_data["image_id"] = shortid.generate();
-                    _temp_sensor_data["player_id"] = _temp["player_id"] + '$' + Date.now();
-                    _temp_sensor_data["simulation_status"] = 'pending';
-                    _temp_sensor_data["team"] = _temp.player.team;
-
-                    if (req.body.sensor_brand === 'Prevent') {
-                        _temp_sensor_data['mesh-transformation'] = ["-y", "z", "-x"];
-                    } else if (req.body.sensor_brand === 'Sensor Company X' || req.body.sensor_brand === 'SWA') {
-                        _temp_sensor_data['mesh-transformation'] = ["-z", "x", "-y"];
-                        _temp_sensor_data['angular-to-linear-frame'] = ["-y", "-x", "z"];
-                    } else if (req.body.sensor_brand === 'SISU') {
-                        _temp_sensor_data['mesh-transformation'] = ["-z", "-x", "y"];
-                    } else if (req.body.sensor_brand === 'Stanford') {
-                        _temp_sensor_data['mesh-transformation'] = ["y", "-z", "-x"];
-                    }  else if (req.body.sensor_brand === 'Hybrid3') {
-                    // _temp_sensor_data['mesh-transformation'] = ["z", "-x", "-y"];
-                        _temp_sensor_data['mesh-transformation'] = ["-y", "z", "-x"];
-                    } else {
-                        _temp_sensor_data['mesh-transformation'] = ["-y", "z", "-x"];
-                    }
-
-                    if (_temp_sensor_data['impact-id'] && _temp_sensor_data['sensor-id']) {
-                        delete _temp_sensor_data['impact-id'];
-                        delete _temp_sensor_data['sensor-id'];
-                    }
-
-                    await getUserDetailBySensorId(req.body.sensor_brand, _temp.player_id.split("$")[0])
-                        .then (user_detail => {
-                            // console.log(user_detail);
-                            if (user_detail.length > 0) {
-                                _temp_sensor_data['player']['first-name'] = user_detail[0]['first_name'];
-                                _temp_sensor_data['player']['last-name'] = user_detail[0]['last_name'];
-                                sensor_data_array.push(_temp_sensor_data);
-                                removeRequestedPlayerFromOrganizationTeam(_temp["player"]["organization"] ? _temp["player"]["organization"] : _temp["organization"], _temp["player"]["team"], user_detail[0]['user_cognito_id'])
-                                    .then(data => {
-                                        // console.log(data);
-                                    })
-                            } else {
-                                sensor_data_array.push(_temp_sensor_data);
-                            }
-                        })
-                        .catch(err => {
-                            sensor_data_array.push(_temp_sensor_data);
-                        })
-                }
-                console.log('new_items_array is ', (sensor_data_array));
-
-                // Stores sensor data in db 
-                // TableName: "sensor_data"
-                // team, player_id
-
-                storeSensorData(sensor_data_array)
-                    .then(flag => {
-
-                        if (level === 300) {
-                            for (var i = 0; i < sensor_data_array.length; i++) {
-                                let _temp1 = sensor_data_array[i];
-                                _temp1.sensor = req.body.sensor_brand
-                                sensor_data_array[i] = _temp1;
-                            }
-                        }
-
-                        var players = sensor_data_array.map(function (player) {
-                            return {
-                                player_id: player.player_id.split("$")[0],
-                                team: player.player.team,
-                                sensor: player.sensor,
-                                player: player.player,
-                                organization: player.player.organization ? player.player.organization : player.organization,
-                            }
-                        });
-
-                        // Fetching unique players
-                        const result = _.uniqBy(players, 'player_id')
-
-                        var simulation_result_urls = [];
-
-                        if (result.length == 0) {
-                            res.send({
-                                message: "success"
-                            })
-                        } else {
-                            // Run simulation here and send data
-                            // {
-                            //     "player_id" : "STRING",
-                            //     "team" : "STRING",
-                            //     "organization" : "STRING"
-                            // }
-                            var counter = 0;
-
-                            for (var i = 0; i < result.length; i++) {
-                                var temp = result[i];
-
-                                // Adds team details in db if doesn't already exist
-                                addPlayerToTeamOfOrganization(level === 300 ? null : req.body.sensor_brand, req.body.user_cognito_id, temp.organization, temp.team, temp.player_id)
-                                    .then(d => {
-                                        counter++;
-                                        if (counter == result.length) {
-                                            // Upload player selfie if not present and generate meshes
-                                            // Generate simulation for player
-
-                                            // Generate 10 digits unique number
-                                            let account_id = Math.floor(Math.random() * 9000000000) + 1000000000;
-                                            let player_id = temp.player_id + '-' + temp.sensor;
-                                            // getUserByPlayerId(player_id)
-                                            getUserDetailBySensorId(temp.sensor, temp.player_id)
-                                                .then (user_detail => {
-                                                    // console.log(user_detail);
-                                                    if (user_detail.length > 0) {
-                                                        if (user_detail[0]['account_id']) {
-                                                            account_id = user_detail[0]['account_id'];
-                                                        }
-                                                        if (user_detail[0]['player_id']) {
-                                                            player_id = user_detail[0]['player_id'];
-                                                        }
-                                                        var userParams = {
-                                                            TableName: "users",
-                                                            Key: {
-                                                                "user_cognito_id": user_detail[0]['user_cognito_id'],
-                                                            },
-                                                            UpdateExpression: "set account_id = :account_id, player_id = :player_id",
-                                                            ExpressionAttributeValues: {
-                                                                ":account_id": account_id,
-                                                                ":player_id": player_id
-                                                            },
-                                                            ReturnValues: "UPDATED_NEW"
-                                                        };
-                                                        docClient.update(userParams, (err, data) => {
-                                                            if (err) {
-                                                                console.log(err);
-                                                            }
-                                                        })
-                                                    } else {
-                                                        let obj = {};
-                                                        obj['user_cognito_id'] = player_id;
-                                                        obj['account_id'] = account_id;
-                                                        obj['sensor_id_number'] = temp.player['sensor-id'] ? temp.player['sensor-id'] : '';
-                                                        obj['player_id'] = player_id;
-                                                        obj['sensor'] = temp.sensor;
-                                                        obj['first_name'] = temp.player['first-name'];
-                                                        obj['last_name'] = temp.player['last-name'];
-                                                        obj['sport'] = temp.player['sport'] ? temp.player['sport'] : '';
-                                                        obj['team'] = temp.player['team'] ? temp.player['team'] : '';
-                                                        obj['position'] = temp.player['position'] ? temp.player['position'] : '';
-                                                        
-                                                        addPlayer(obj)
-                                                            .then( playerData => {
-                                                                console.log('Player added in user table');
-                                                            })
-                                                    }
-
-                                                    uploadPlayerSelfieIfNotPresent(req.body.selfie, player_id, req.body.filename, account_id)
-                                                        .then((selfieDetails) => {
-                                                            return generateSimulationForPlayersFromJson(sensor_data_array, apiMode, mesh, account_id);
-                                                        })
-                                                        .then(urls => {
-                                                            simulation_result_urls.push(urls)
-                                                            res.send({
-                                                                message: "success",
-                                                                image_url: _.spread(_.union)(simulation_result_urls)
-                                                            })
-                                                        })
-                                                        .catch(err => {
-                                                            console.log(err);
-                                                            counter = result.length;
-                                                            i = result.length;
-                                                            res.send({
-                                                                message: "failure",
-                                                                error: err
-                                                            })
-                                                        })
-                                                })
-                                                .catch(err => {
-                                                    console.log(err);
-                                                    counter = result.length;
-                                                    i = result.length;
-                                                    res.send({
-                                                        message: "failure",
-                                                        error: err
-                                                    })
-                                                })
-                                        }
-                                    })
-                                    .catch(err => {
-                                        console.log(err);
-                                        counter = result.length;
-                                        i = result.length;
-                                        res.send({
-                                            message: "failure",
-                                            error: err
-                                        })
-                                    })
-                            }
-                        }
-                    })
-                    .catch(err => {
-                        console.log(err);
-                        res.send({
-                            message: "failure",
-                            error: err
-                        })
-                    })
-            })();
-        } else {
-            if (sensor === null || sensor === '') {
+            if (new_items_array.length == 0) {
                 res.send({
                     message: "failure",
-                    error: 'Sensor parameter is required.'
+                    error: 'JSON data is required.'
                 })
             } else {
-                //Converting file data into JSON
-                convertFileDataToJson(buffer, reader, filename)
-                    .then(items => {
-                        // Adding default organization Unknown to the impact data
-                        const new_items_array = _.map(items, o => _.extend({ organization: "Unknown" }, o));
+                checkSensorDataExists({'impact-id' : new_items_array[0]["player"]["impact-id"] ? new_items_array[0]["player"]["impact-id"] : '', 'sensor-id' : new_items_array[0]["player"]["sensor-id"] ? new_items_array[0]["player"]["sensor-id"] : ''})
+                    .then(sensor_detail => {
+                    console.log('sensor_detail ', sensor_detail);
+                    if (sensor_detail.length > 0 && !overwrite) {
+                        res.send({
+                            message: "failure",
+                            error: 'Duplicate event simulation skipped, use -F "overwrite=true" to recompute'
+                        })
+                    } else {
+                        // console.log(new_items_array);
+                        const sensor_data_array = [];
 
                         ( async () => {
                             // Adding image id in array data
                             for (var i = 0; i < new_items_array.length; i++) {
-                                var _temp = new_items_array[i];
+                                const _temp = new_items_array[i];
 
                                 if (level === 300) {
-                                    if (sensor.toLowerCase() === 'sensor_company_x' || sensor.toLowerCase() === 'swa') {
+                                    if (_temp["sensor"].toLowerCase() === 'swa') {
                                         req.body.sensor_brand = 'SWA';
-                                    } else if (sensor.toLowerCase() === 'sisu') {
+                                    } else if (_temp["sensor"].toLowerCase() === 'sisu') {
                                         req.body.sensor_brand = 'SISU';
-                                    } else if (sensor.toLowerCase() === 'stanford') {
+                                    } else if (_temp["sensor"].toLowerCase() === 'stanford') {
                                         req.body.sensor_brand = 'Stanford';
-                                    } else if (sensor.toLowerCase() === 'panther') {
+                                    } else if (_temp["sensor"].toLowerCase() === 'panther') {
                                         req.body.sensor_brand = 'Panther';
-                                    } else if (sensor.toLowerCase() === 'hitiq') {
+                                    } else if (_temp["sensor"].toLowerCase() === 'hitiq') {
                                         req.body.sensor_brand = 'HitIQ';
-                                    } else if (sensor.toLowerCase() === 'gforcetracker') {
+                                    } else if (_temp["sensor"].toLowerCase() === 'gforcetracker') {
                                         req.body.sensor_brand = 'GForceTracker';
-                                    } else if (sensor.toLowerCase() === 'fitguard') {
+                                    } else if (_temp["sensor"].toLowerCase() === 'fitguard') {
                                         req.body.sensor_brand = 'FitGuard';
-                                    } else if (sensor.toLowerCase() === 'blackbox') { 
+                                    } else if (_temp["sensor"].toLowerCase() === 'blackbox') { 
                                         req.body.sensor_brand = 'Blackbox Biometrics';
-                                    } else if (sensor.toLowerCase() === 'biocore') { 
+                                    } else if (_temp["sensor"].toLowerCase() === 'biocore') { 
                                         req.body.sensor_brand = 'BioCore';
-                                    } else if (sensor.toLowerCase() === 'athlete') { 
+                                    } else if (_temp["sensor"].toLowerCase() === 'athlete') { 
                                         req.body.sensor_brand = 'Athlete Intelligence';
-                                    } else if (sensor.toLowerCase() === 'medeng') { 
+                                    } else if (_temp["sensor"].toLowerCase() === 'medeng') { 
                                         req.body.sensor_brand = 'Med-Eng';
-                                    } else if (sensor.toLowerCase() === 'hybrid3') { 
+                                    } else if (_temp["sensor"].toLowerCase() === 'hybrid3') { 
                                         req.body.sensor_brand = 'Hybrid3';
                                     } else {
                                         req.body.sensor_brand = 'Prevent Biometrics';
                                     }
                                 }
 
-                                _temp["level"] = level;
-                                _temp["user_cognito_id"] = req.body.user_cognito_id;
-                                _temp["sensor"] = req.body.sensor_brand;
-                                _temp["image_id"] = shortid.generate();
-                                _temp['player'] = {};
-                                _temp['player']['first-name'] = "Unknown";
-                                _temp['player']['last-name'] = "Unknown";
-                                _temp['player']['sport'] = "Unknown";
-                                _temp['player']['position'] = "Unknown";
-                                _temp['player']['team'] = "Unknown";
-                                _temp['player']['impact-id'] = _temp['impact-id'] ? _temp['impact-id'] : 'Unknown';
-                                _temp['player']['sensor-id'] = _temp['sensor-id'] ? _temp['sensor-id'] : 'Unknown';
-                                _temp["team"] = "Unknown";
+                                let _temp_sensor_data = {};
+                                _temp_sensor_data["level"] = level;
+                                _temp_sensor_data["sensor"] = req.body.sensor_brand;
+                                _temp_sensor_data["impact-date"] = _temp["impact-date"];
+                                _temp_sensor_data["impact-time"] = _temp["impact-time"];
+                                _temp_sensor_data["organization"] = level === 400 ? (_temp["player"]["organization"] ? _temp["player"]["organization"] : _temp["organization"]) : req.body.organization;
+                                _temp_sensor_data["player"] = _temp["player"];
 
-                                if (_temp['impact-id'] && _temp['sensor-id']) {
-                                    delete _temp['impact-id'];
-                                    delete _temp['sensor-id'];
+                                _temp_sensor_data["simulation"] = {
+                                    "la-units": "",
+                                    "linear-acceleration": {},
+                                    "angular-acceleration": {}
+                                };
+
+                                _temp_sensor_data["simulation"]["linear-acceleration"] = {};
+
+                                if (_temp["simulation"]['time-units'] === 'seconds') {
+                                    _temp["simulation"]['time'].forEach((time, i) => {
+                                        const _temp_time = parseFloat(time) * 1000;
+                                        _temp["simulation"]['time'][i] = _temp_time;
+                                    })
+                                }
+
+                                let x_g = [];
+                                let y_g = [];
+                                let z_g = [];
+
+                                if (_temp["simulation"]['linear-acceleration']['la-units'] === 'g') {
+                                    _temp["simulation"]['linear-acceleration']['x-la'].forEach((la, x) => {
+                                        const _temp_la = parseFloat(la) * 9.80665;
+                                        _temp["simulation"]['linear-acceleration']['x-la'][x] = _temp_la;
+                                        x_g.push(parseFloat(la));
+                                    })
+
+                                    _temp["simulation"]['linear-acceleration']['y-la'].forEach((la, y) => {
+                                        const _temp_la = parseFloat(la) * 9.80665;
+                                        _temp["simulation"]['linear-acceleration']['y-la'][y] = _temp_la;
+                                        y_g.push(parseFloat(la));
+                                    })
+
+                                    _temp["simulation"]['linear-acceleration']['z-la'].forEach((la, z) => {
+                                        const _temp_la = parseFloat(la) * 9.80665;
+                                        _temp["simulation"]['linear-acceleration']['z-la'][z] = _temp_la;
+                                        z_g.push(parseFloat(la));
+                                    })
+                                } else {
+                                    _temp["simulation"]['linear-acceleration']['x-la'].forEach((la, x) => {
+                                        const _temp_la = parseFloat(la) / 9.80665;
+                                        x_g.push(_temp_la);
+                                    })
+
+                                    _temp["simulation"]['linear-acceleration']['y-la'].forEach((la, y) => {
+                                        const _temp_la = parseFloat(la) / 9.80665;
+                                        y_g.push(_temp_la);
+                                    })
+
+                                    _temp["simulation"]['linear-acceleration']['z-la'].forEach((la, z) => {
+                                        const _temp_la = parseFloat(la) / 9.80665;
+                                        z_g.push(_temp_la);
+                                    })
+                                }
+
+                                _temp_sensor_data["simulation"]["la-units"] = _temp["simulation"]['linear-acceleration']['la-units'];
+                                _temp_sensor_data["simulation"]["linear-acceleration"]['xv'] = _temp["simulation"]['linear-acceleration']['x-la'];
+                                _temp_sensor_data["simulation"]["linear-acceleration"]['xv-g'] = x_g;
+                                _temp_sensor_data["simulation"]["linear-acceleration"]['xt'] = _temp["simulation"]['time'];
+                                _temp_sensor_data["simulation"]["linear-acceleration"]['yv'] = _temp["simulation"]['linear-acceleration']['y-la'];
+                                _temp_sensor_data["simulation"]["linear-acceleration"]['yv-g'] = y_g;
+                                _temp_sensor_data["simulation"]["linear-acceleration"]['yt'] = _temp["simulation"]['time'];
+                                _temp_sensor_data["simulation"]["linear-acceleration"]['zv'] = _temp["simulation"]['linear-acceleration']['z-la'];
+                                _temp_sensor_data["simulation"]["linear-acceleration"]['zv-g'] = z_g;
+                                _temp_sensor_data["simulation"]["linear-acceleration"]['zt'] = _temp["simulation"]['time'];
+
+                                _temp_sensor_data["simulation"]["angular-acceleration"]['xv'] = _temp["simulation"]['angular-acceleration']['x-aa-rad/s^2'];
+                                _temp_sensor_data["simulation"]["angular-acceleration"]['xt'] = _temp["simulation"]['time'];
+                                _temp_sensor_data["simulation"]["angular-acceleration"]['yv'] = _temp["simulation"]['angular-acceleration']['y-aa-rad/s^2'];
+                                _temp_sensor_data["simulation"]["angular-acceleration"]['yt'] = _temp["simulation"]['time'];
+                                _temp_sensor_data["simulation"]["angular-acceleration"]['zv'] = _temp["simulation"]['angular-acceleration']['z-aa-rad/s^2'];
+                                _temp_sensor_data["simulation"]["angular-acceleration"]['zt'] = _temp["simulation"]['time'];
+
+                                _temp_sensor_data["user_cognito_id"] = req.body.user_cognito_id;
+                                _temp_sensor_data["image_id"] = shortid.generate();
+                               
+                                if (sensor_detail.length > 0) {
+                                    _temp_sensor_data["player_id"] = sensor_detail[0].player_id;
+                                } else {
+                                    _temp_sensor_data["player_id"] = _temp["player_id"] + '$' + Date.now();
                                 }
                                 
-                                if (req.body.organization) {
-                                    _temp['organization'] = req.body.organization
+                                _temp_sensor_data["simulation_status"] = 'pending';
+                                _temp_sensor_data["team"] = _temp.player.team;
+
+                                if (req.body.sensor_brand === 'Prevent') {
+                                    _temp_sensor_data['mesh-transformation'] = ["-y", "z", "-x"];
+                                } else if (req.body.sensor_brand === 'Sensor Company X' || req.body.sensor_brand === 'SWA') {
+                                    _temp_sensor_data['mesh-transformation'] = ["-z", "x", "-y"];
+                                    _temp_sensor_data['angular-to-linear-frame'] = ["-y", "-x", "z"];
+                                } else if (req.body.sensor_brand === 'SISU') {
+                                    _temp_sensor_data['mesh-transformation'] = ["-z", "-x", "y"];
+                                } else if (req.body.sensor_brand === 'Stanford') {
+                                    _temp_sensor_data['mesh-transformation'] = ["y", "-z", "-x"];
+                                }  else if (req.body.sensor_brand === 'Hybrid3') {
+                                // _temp_sensor_data['mesh-transformation'] = ["z", "-x", "-y"];
+                                    _temp_sensor_data['mesh-transformation'] = ["-y", "z", "-x"];
+                                } else {
+                                    _temp_sensor_data['mesh-transformation'] = ["-y", "z", "-x"];
                                 }
 
-                                if (req.body.team) {
-                                    _temp['player']['team'] = req.body.team
-                                    _temp['team'] = req.body.team
+                                if (_temp_sensor_data['impact-id'] && _temp_sensor_data['sensor-id']) {
+                                    delete _temp_sensor_data['impact-id'];
+                                    delete _temp_sensor_data['sensor-id'];
                                 }
 
-                                await getUserDetailBySensorId(_temp["sensor"], _temp.player_id.split("$")[0])
+                                await getUserDetailBySensorId(req.body.sensor_brand, _temp.player_id.split("$")[0])
                                     .then (user_detail => {
                                         // console.log(user_detail);
                                         if (user_detail.length > 0) {
-                                            _temp['player']['first-name'] = user_detail[0]['first_name'];
-                                            _temp['player']['last-name'] = user_detail[0]['last_name'];
-                                            new_items_array[i] = _temp;
-                                            removeRequestedPlayerFromOrganizationTeam(req.body.organization, req.body.team, user_detail[0]['user_cognito_id'])
+                                            _temp_sensor_data['player']['first-name'] = user_detail[0]['first_name'];
+                                            _temp_sensor_data['player']['last-name'] = user_detail[0]['last_name'];
+                                            sensor_data_array.push(_temp_sensor_data);
+                                            removeRequestedPlayerFromOrganizationTeam(_temp["player"]["organization"] ? _temp["player"]["organization"] : _temp["organization"], _temp["player"]["team"], user_detail[0]['user_cognito_id'])
                                                 .then(data => {
                                                     // console.log(data);
                                                 })
                                         } else {
-                                            new_items_array[i] = _temp;
+                                            sensor_data_array.push(_temp_sensor_data);
                                         }
                                     })
                                     .catch(err => {
-                                        new_items_array[i] = _temp;
+                                        sensor_data_array.push(_temp_sensor_data);
                                     })
                             }
-
-                            console.log('New items array is ', new_items_array);
+                            console.log('new_items_array is ', (sensor_data_array));
 
                             // Stores sensor data in db 
                             // TableName: "sensor_data"
                             // team, player_id
 
-                            storeSensorData(new_items_array)
+                            storeSensorData(sensor_data_array)
                                 .then(flag => {
 
                                     if (level === 300) {
-                                        for (var i = 0; i < new_items_array.length; i++) {
-                                            let _temp1 = new_items_array[i];
+                                        for (var i = 0; i < sensor_data_array.length; i++) {
+                                            let _temp1 = sensor_data_array[i];
                                             _temp1.sensor = req.body.sensor_brand
-                                            new_items_array[i] = _temp1;
+                                            sensor_data_array[i] = _temp1;
                                         }
                                     }
 
-                                    var players = new_items_array.map(function (player) {
+                                    var players = sensor_data_array.map(function (player) {
                                         return {
                                             player_id: player.player_id.split("$")[0],
                                             team: player.player.team,
                                             sensor: player.sensor,
                                             player: player.player,
-                                            organization: player.organization,
+                                            organization: player.player.organization ? player.player.organization : player.organization,
                                         }
                                     });
 
@@ -810,7 +580,7 @@ if (cluster.isMaster) {
                                                                 if (user_detail.length > 0) {
                                                                     if (user_detail[0]['account_id']) {
                                                                         account_id = user_detail[0]['account_id'];
-                                                                    }    
+                                                                    }
                                                                     if (user_detail[0]['player_id']) {
                                                                         player_id = user_detail[0]['player_id'];
                                                                     }
@@ -836,22 +606,23 @@ if (cluster.isMaster) {
                                                                     obj['user_cognito_id'] = player_id;
                                                                     obj['account_id'] = account_id;
                                                                     obj['sensor_id_number'] = temp.player['sensor-id'] ? temp.player['sensor-id'] : '';
-                                                                    obj['sensor'] = temp.sensor;
                                                                     obj['player_id'] = player_id;
+                                                                    obj['sensor'] = temp.sensor;
                                                                     obj['first_name'] = temp.player['first-name'];
                                                                     obj['last_name'] = temp.player['last-name'];
                                                                     obj['sport'] = temp.player['sport'] ? temp.player['sport'] : '';
                                                                     obj['team'] = temp.player['team'] ? temp.player['team'] : '';
-                                                                    obj['position'] = temp.player['position'] ? temp.player['position'] : '';                               
+                                                                    obj['position'] = temp.player['position'] ? temp.player['position'] : '';
                                                                     
                                                                     addPlayer(obj)
                                                                         .then( playerData => {
                                                                             console.log('Player added in user table');
                                                                         })
                                                                 }
+
                                                                 uploadPlayerSelfieIfNotPresent(req.body.selfie, player_id, req.body.filename, account_id)
                                                                     .then((selfieDetails) => {
-                                                                        return generateSimulationForPlayers(new_items_array, reader, apiMode, sensor, mesh, account_id);
+                                                                        return generateSimulationForPlayersFromJson(sensor_data_array, apiMode, mesh, account_id);
                                                                     })
                                                                     .then(urls => {
                                                                         simulation_result_urls.push(urls)
@@ -879,7 +650,6 @@ if (cluster.isMaster) {
                                                                     error: err
                                                                 })
                                                             })
-                                                        
                                                     }
                                                 })
                                                 .catch(err => {
@@ -894,7 +664,287 @@ if (cluster.isMaster) {
                                         }
                                     }
                                 })
+                                .catch(err => {
+                                    console.log(err);
+                                    res.send({
+                                        message: "failure",
+                                        error: err
+                                    })
+                                })
                         })();
+                    }
+                })
+            }
+        } else {
+            if (sensor === null || sensor === '') {
+                res.send({
+                    message: "failure",
+                    error: 'Sensor parameter is required.'
+                })
+            } else {
+                //Converting file data into JSON
+                convertFileDataToJson(buffer, reader, filename)
+                    .then(items => {
+                        // Adding default organization Unknown to the impact data
+                        const new_items_array = _.map(items, o => _.extend({ organization: "Unknown" }, o));
+
+                        if (new_items_array.length == 0) {
+                            res.send({
+                                message: "failure",
+                                error: 'CSV data is required.'
+                            })
+                        } else {
+
+                            checkSensorDataExists({'impact-id' : new_items_array[0]["impact-id"] ? new_items_array[0]["impact-id"] : '', 'sensor-id' : new_items_array[0]["sensor-id"] ? new_items_array[0]["sensor-id"] : ''})
+                                .then(sensor_detail => {
+                                console.log('sensor_detail ', sensor_detail);
+                                if (sensor_detail.length > 0 && !overwrite) {
+                                    res.send({
+                                        message: "failure",
+                                        error: 'Duplicate event simulation skipped, use -F "overwrite=true" to recompute'
+                                    })
+                                } else {
+                                    ( async () => {
+                                        // Adding image id in array data
+                                        for (var i = 0; i < new_items_array.length; i++) {
+                                            var _temp = new_items_array[i];
+            
+                                            if (level === 300) {
+                                                if (sensor.toLowerCase() === 'sensor_company_x' || sensor.toLowerCase() === 'swa') {
+                                                    req.body.sensor_brand = 'SWA';
+                                                } else if (sensor.toLowerCase() === 'sisu') {
+                                                    req.body.sensor_brand = 'SISU';
+                                                } else if (sensor.toLowerCase() === 'stanford') {
+                                                    req.body.sensor_brand = 'Stanford';
+                                                } else if (sensor.toLowerCase() === 'panther') {
+                                                    req.body.sensor_brand = 'Panther';
+                                                } else if (sensor.toLowerCase() === 'hitiq') {
+                                                    req.body.sensor_brand = 'HitIQ';
+                                                } else if (sensor.toLowerCase() === 'gforcetracker') {
+                                                    req.body.sensor_brand = 'GForceTracker';
+                                                } else if (sensor.toLowerCase() === 'fitguard') {
+                                                    req.body.sensor_brand = 'FitGuard';
+                                                } else if (sensor.toLowerCase() === 'blackbox') { 
+                                                    req.body.sensor_brand = 'Blackbox Biometrics';
+                                                } else if (sensor.toLowerCase() === 'biocore') { 
+                                                    req.body.sensor_brand = 'BioCore';
+                                                } else if (sensor.toLowerCase() === 'athlete') { 
+                                                    req.body.sensor_brand = 'Athlete Intelligence';
+                                                } else if (sensor.toLowerCase() === 'medeng') { 
+                                                    req.body.sensor_brand = 'Med-Eng';
+                                                } else if (sensor.toLowerCase() === 'hybrid3') { 
+                                                    req.body.sensor_brand = 'Hybrid3';
+                                                } else {
+                                                    req.body.sensor_brand = 'Prevent Biometrics';
+                                                }
+                                            }
+
+                                            if (sensor_detail.length > 0) {
+                                                _temp["player_id"] = sensor_detail[0].player_id;
+                                            }
+            
+                                            _temp["level"] = level;
+                                            _temp["user_cognito_id"] = req.body.user_cognito_id;
+                                            _temp["sensor"] = req.body.sensor_brand;
+                                            _temp["image_id"] = shortid.generate();
+                                            _temp['player'] = {};
+                                            _temp['player']['first-name'] = "Unknown";
+                                            _temp['player']['last-name'] = "Unknown";
+                                            _temp['player']['sport'] = "Unknown";
+                                            _temp['player']['position'] = "Unknown";
+                                            _temp['player']['team'] = "Unknown";
+                                            _temp['player']['impact-id'] = _temp['impact-id'] ? _temp['impact-id'] : 'Unknown';
+                                            _temp['player']['sensor-id'] = _temp['sensor-id'] ? _temp['sensor-id'] : 'Unknown';
+                                            _temp["team"] = "Unknown";
+            
+                                            if (_temp['impact-id'] && _temp['sensor-id']) {
+                                                delete _temp['impact-id'];
+                                                delete _temp['sensor-id'];
+                                            }
+                                            
+                                            if (req.body.organization) {
+                                                _temp['organization'] = req.body.organization
+                                            }
+            
+                                            if (req.body.team) {
+                                                _temp['player']['team'] = req.body.team
+                                                _temp['team'] = req.body.team
+                                            }
+            
+                                            await getUserDetailBySensorId(_temp["sensor"], _temp.player_id.split("$")[0])
+                                                .then (user_detail => {
+                                                    // console.log(user_detail);
+                                                    if (user_detail.length > 0) {
+                                                        _temp['player']['first-name'] = user_detail[0]['first_name'];
+                                                        _temp['player']['last-name'] = user_detail[0]['last_name'];
+                                                        new_items_array[i] = _temp;
+                                                        removeRequestedPlayerFromOrganizationTeam(req.body.organization, req.body.team, user_detail[0]['user_cognito_id'])
+                                                            .then(data => {
+                                                                // console.log(data);
+                                                            })
+                                                    } else {
+                                                        new_items_array[i] = _temp;
+                                                    }
+                                                })
+                                                .catch(err => {
+                                                    new_items_array[i] = _temp;
+                                                })
+                                        }
+            
+                                        console.log('New items array is ', new_items_array);
+            
+                                        // Stores sensor data in db 
+                                        // TableName: "sensor_data"
+                                        // team, player_id
+            
+                                        storeSensorData(new_items_array)
+                                            .then(flag => {
+            
+                                                if (level === 300) {
+                                                    for (var i = 0; i < new_items_array.length; i++) {
+                                                        let _temp1 = new_items_array[i];
+                                                        _temp1.sensor = req.body.sensor_brand
+                                                        new_items_array[i] = _temp1;
+                                                    }
+                                                }
+            
+                                                var players = new_items_array.map(function (player) {
+                                                    return {
+                                                        player_id: player.player_id.split("$")[0],
+                                                        team: player.player.team,
+                                                        sensor: player.sensor,
+                                                        player: player.player,
+                                                        organization: player.organization,
+                                                    }
+                                                });
+            
+                                                // Fetching unique players
+                                                const result = _.uniqBy(players, 'player_id')
+            
+                                                var simulation_result_urls = [];
+            
+                                                if (result.length == 0) {
+                                                    res.send({
+                                                        message: "success"
+                                                    })
+                                                } else {
+                                                    // Run simulation here and send data
+                                                    // {
+                                                    //     "player_id" : "STRING",
+                                                    //     "team" : "STRING",
+                                                    //     "organization" : "STRING"
+                                                    // }
+                                                    var counter = 0;
+            
+                                                    for (var i = 0; i < result.length; i++) {
+                                                        var temp = result[i];
+            
+                                                        // Adds team details in db if doesn't already exist
+                                                        addPlayerToTeamOfOrganization(level === 300 ? null : req.body.sensor_brand, req.body.user_cognito_id, temp.organization, temp.team, temp.player_id)
+                                                            .then(d => {
+                                                                counter++;
+                                                                if (counter == result.length) {
+                                                                    // Upload player selfie if not present and generate meshes
+                                                                    // Generate simulation for player
+            
+                                                                    // Generate 10 digits unique number
+                                                                    let account_id = Math.floor(Math.random() * 9000000000) + 1000000000;
+                                                                    let player_id = temp.player_id + '-' + temp.sensor;
+                                                                    // getUserByPlayerId(player_id)
+                                                                    getUserDetailBySensorId(temp.sensor, temp.player_id)
+                                                                        .then (user_detail => {
+                                                                            // console.log(user_detail);
+                                                                            if (user_detail.length > 0) {
+                                                                                if (user_detail[0]['account_id']) {
+                                                                                    account_id = user_detail[0]['account_id'];
+                                                                                }    
+                                                                                if (user_detail[0]['player_id']) {
+                                                                                    player_id = user_detail[0]['player_id'];
+                                                                                }
+                                                                                var userParams = {
+                                                                                    TableName: "users",
+                                                                                    Key: {
+                                                                                        "user_cognito_id": user_detail[0]['user_cognito_id'],
+                                                                                    },
+                                                                                    UpdateExpression: "set account_id = :account_id, player_id = :player_id",
+                                                                                    ExpressionAttributeValues: {
+                                                                                        ":account_id": account_id,
+                                                                                        ":player_id": player_id
+                                                                                    },
+                                                                                    ReturnValues: "UPDATED_NEW"
+                                                                                };
+                                                                                docClient.update(userParams, (err, data) => {
+                                                                                    if (err) {
+                                                                                        console.log(err);
+                                                                                    }
+                                                                                })
+                                                                            } else {
+                                                                                let obj = {};
+                                                                                obj['user_cognito_id'] = player_id;
+                                                                                obj['account_id'] = account_id;
+                                                                                obj['sensor_id_number'] = temp.player['sensor-id'] ? temp.player['sensor-id'] : '';
+                                                                                obj['sensor'] = temp.sensor;
+                                                                                obj['player_id'] = player_id;
+                                                                                obj['first_name'] = temp.player['first-name'];
+                                                                                obj['last_name'] = temp.player['last-name'];
+                                                                                obj['sport'] = temp.player['sport'] ? temp.player['sport'] : '';
+                                                                                obj['team'] = temp.player['team'] ? temp.player['team'] : '';
+                                                                                obj['position'] = temp.player['position'] ? temp.player['position'] : '';                               
+                                                                                
+                                                                                addPlayer(obj)
+                                                                                    .then( playerData => {
+                                                                                        console.log('Player added in user table');
+                                                                                    })
+                                                                            }
+                                                                            uploadPlayerSelfieIfNotPresent(req.body.selfie, player_id, req.body.filename, account_id)
+                                                                                .then((selfieDetails) => {
+                                                                                    return generateSimulationForPlayers(new_items_array, reader, apiMode, sensor, mesh, account_id);
+                                                                                })
+                                                                                .then(urls => {
+                                                                                    simulation_result_urls.push(urls)
+                                                                                    res.send({
+                                                                                        message: "success",
+                                                                                        image_url: _.spread(_.union)(simulation_result_urls)
+                                                                                    })
+                                                                                })
+                                                                                .catch(err => {
+                                                                                    console.log(err);
+                                                                                    counter = result.length;
+                                                                                    i = result.length;
+                                                                                    res.send({
+                                                                                        message: "failure",
+                                                                                        error: err
+                                                                                    })
+                                                                                })
+                                                                        })
+                                                                        .catch(err => {
+                                                                            console.log(err);
+                                                                            counter = result.length;
+                                                                            i = result.length;
+                                                                            res.send({
+                                                                                message: "failure",
+                                                                                error: err
+                                                                            })
+                                                                        })
+                                                                    
+                                                                }
+                                                            })
+                                                            .catch(err => {
+                                                                console.log(err);
+                                                                counter = result.length;
+                                                                i = result.length;
+                                                                res.send({
+                                                                    message: "failure",
+                                                                    error: err
+                                                                })
+                                                            })
+                                                    }
+                                                }
+                                            })
+                                    })();
+                                }
+                            });    
+                        }
                     })
                     .catch(err => {
                         res.send({

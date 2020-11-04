@@ -1448,6 +1448,37 @@ function getOrganizationTeamData(obj) {
     });
 }
 
+function checkSensorDataExists(obj) {
+    console.log(obj);
+    return new Promise((resolve, reject) => {
+        let params = {
+            TableName: "sensor_data",
+            FilterExpression: "player.#impact_id = :impact_id and player.#sensor_id = :sensor_id",
+            ExpressionAttributeValues: {
+                ":impact_id": obj['impact-id'],
+                ":sensor_id": obj['sensor-id']
+            },
+            ExpressionAttributeNames: {
+                "#impact_id": "impact-id",
+                "#sensor_id": "sensor-id",
+            },
+            ProjectionExpression: "image_id, team, player_id"
+        };
+        var item = [];
+        docClient.scan(params).eachPage((err, data, done) => {
+            if (err) {
+                reject(err);
+            }
+            if (data == null) {
+                resolve(concatArrays(item));
+            } else {
+                item.push(data.Items);
+            }
+            done();
+        });
+    })
+}
+
 function getPlayerSimulationFile(obj) {
     return new Promise((resolve, reject) => {
         let params = {
@@ -1539,5 +1570,6 @@ module.exports = {
     getCumulativeAccelerationRecords,
     getUserByPlayerId,
     addPlayer,
+    checkSensorDataExists,
     getUserDetailByPlayerId
 };
