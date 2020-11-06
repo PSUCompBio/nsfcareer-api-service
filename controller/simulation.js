@@ -514,6 +514,33 @@ function uploadMorphedVTKZip(user_id, timestamp) {
     })
 }
 
+function uploadStlZip(user_id, timestamp) {
+    return new Promise((resolve, reject) => {
+        var uploadParams = {
+            Bucket: config.usersbucket,
+            Key: `${user_id}/profile/avatar/${timestamp}.zip`, // pass key
+            Body: null,
+        };
+        fs.readFile(`./../users_data/${user_id}/stl/${timestamp}.zip`, function (err, headBuffer) {
+            if (err) {
+                console.log(err);
+                reject(err);
+            }
+            else {
+                uploadParams.Body = headBuffer;
+                s3.upload(uploadParams, (err, data) => {
+                    if (err) {
+                        reject(err);
+                    }
+                    else {
+                        resolve(data);
+                    }
+                });
+            }
+        })
+    })
+}
+
 function createMorphedVTKZip(user_id, timestamp) {
     return new Promise((resolve, reject) => {
         try {
@@ -539,6 +566,41 @@ function createMorphedVTKZip(user_id, timestamp) {
 
             // append files from a glob pattern
             archive.glob(`*_rotated.vtk`, { cwd: `./../users_data/${user_id}/morphed_vtk` });
+
+            archive.finalize();
+
+        } catch (error) {
+            console.log(error);
+            reject(error);
+        }
+    })
+}
+
+function createStlZip(user_id, timestamp) {
+    return new Promise((resolve, reject) => {
+        try {
+            //archive zip
+            var output = fs.createWriteStream(`./../users_data/${user_id}/stl/${timestamp}.zip`);
+            var archive = archiver('zip', {
+                zlib: { level: 9 } // Sets the compression level.
+            });
+
+            output.on("close", async function () {
+                console.log(archive.pointer() + " total bytes");
+                console.log(
+                    "archiver has been finalized and the output file descriptor has closed."
+                );
+                console.log("zip file uploading");
+                resolve(true);
+            });
+            archive.on("error", function (err) {
+                console.log('error for zip ', err)
+                reject(err);
+            });
+            archive.pipe(output);
+
+            // append files from a glob pattern
+            archive.glob(`*`, { cwd: `./../users_data/${user_id}/stl` });
 
             archive.finalize();
 
@@ -623,6 +685,12 @@ function generateINP(user_id, obj = null) {
                                         return uploadMorphedVTKZip(user_id, obj.file_name);
                                     })
                                     .then(d => {
+                                        return createStlZip(user_id, obj.file_name);
+                                    })
+                                    .then(d => {
+                                        return uploadStlZip(user_id, obj.file_name);
+                                    })
+                                    .then(d => {
                                         return uploadSkullFile(user_id);
                                     })
                                     .then(d => {
@@ -632,7 +700,7 @@ function generateINP(user_id, obj = null) {
                                         return uploadAvatarModelFile(user_id);
                                     })
                                     .then(d => {
-                                        return uploadAvatarModelPlyFile(user_id);
+                                        return uploadAvatarModelPlyFile(user_id, obj.file_name);
                                     })
                                     .then(d => {
                                         resolve(true);
@@ -743,7 +811,7 @@ function uploadAvatarModelFile(user_id) {
     });
 }
 
-function uploadAvatarModelPlyFile(user_id) {
+function uploadAvatarModelPlyFile(user_id, timestamp) {
     return new Promise((resolve, reject) => {
         var uploadParams = {
             Bucket: config.usersbucket,
@@ -752,7 +820,7 @@ function uploadAvatarModelPlyFile(user_id) {
         };
 
         const params = uploadParams;
-        fs.readFile(`./avatars/${user_id}/head/model.ply`, function (err, headBuffer) {
+        fs.readFile(`../users_data/${user_id}/stl/${timestamp}_model.ply`, function (err, headBuffer) {
             if (err) {
                 reject(err);
             }
@@ -887,8 +955,37 @@ function generateMorphedVTK(obj) {
                 let sensor_cmd = `python3 ./../rbf-brain/RBF_CG.py --p ./../users_data/${obj.user_cognito_id}/parameters/${obj.file_name}.prm --m ./../rbf-brain/sensor.vtk --output ./../users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_sensor.txt`;
                 return executeShellCommands(sensor_cmd);
             })
+            // .then(sensor => {
+            //     console.log('output of sensor value ', sensor);
+            //     resolve(cg_val);
+            // })
             .then(sensor => {
                 console.log('output of sensor value ', sensor);
+                let chophead_cmd = `pvpython ./../rbf-brain/chophead.py --input ./avatars/${obj.user_cognito_id}/head/model.ply --output ./../users_data/${obj.user_cognito_id}/stl/${obj.file_name}_headchopped.stl`;
+                return executeShellCommands(chophead_cmd);
+            })
+            .then(chophead => {
+                console.log('output of chophead ', chophead);
+                let plytostl_cmd = `pvpython ./../rbf-brain/plytostl.py --input ./avatars/${obj.user_cognito_id}/face/model.ply --output ./../users_data/${obj.user_cognito_id}/stl/${obj.file_name}_face.stl`;
+                return executeShellCommands(plytostl_cmd);
+            })
+            .then(plytostl => {
+                console.log('output of plytostl ', plytostl);
+                let extractnose_cmd = `python3 ./../rbf-brain/extractnose.py --inputhead ./../users_data/${obj.user_cognito_id}/stl/${obj.file_name}_headchopped.stl --inputface ./../users_data/${obj.user_cognito_id}/stl/${obj.file_name}_face.stl`;
+                return executeShellCommands(extractnose_cmd);
+            })
+            .then(extractnose => {
+                console.log('output of extractnose ', extractnose);
+                let headtoface_cmd = `pvpython ./../rbf-brain/headtoface.py --inputhead ./avatars/${obj.user_cognito_id}/head/model.ply --outputhead ./../users_data/${obj.user_cognito_id}/stl/${obj.file_name}_headtrans.ply`;
+                return executeShellCommands(headtoface_cmd);
+            })
+            .then(headtoface => {
+                console.log('output of headtoface ', headtoface);
+                let textureaddition_cmd = `python3 ./../rbf-brain/textureaddition.py --inputheadoriginal ./avatars/${obj.user_cognito_id}/head/model.ply --inputheadtrans ./../users_data/${obj.user_cognito_id}/stl/${obj.file_name}_headtrans.ply --outputheadtransUV ./../users_data/${obj.user_cognito_id}/stl/${obj.file_name}_model.ply`;
+                return executeShellCommands(textureaddition_cmd);
+            })
+            .then(textureaddition => {
+                console.log('output of textureaddition ', textureaddition);
                 resolve(cg_val);
             })
             .catch(err => {
