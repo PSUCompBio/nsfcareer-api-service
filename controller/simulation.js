@@ -600,7 +600,7 @@ function createStlZip(user_id, timestamp) {
             archive.pipe(output);
 
             // append files from a glob pattern
-            archive.glob(`*`, { cwd: `./../users_data/${user_id}/stl` });
+            archive.glob(`${timestamp}_*`, { cwd: `./../users_data/${user_id}/stl` });
 
             archive.finalize();
 
@@ -820,7 +820,7 @@ function uploadAvatarModelPlyFile(user_id, timestamp) {
         };
 
         const params = uploadParams;
-        fs.readFile(`../users_data/${user_id}/stl/${timestamp}_model.ply`, function (err, headBuffer) {
+        fs.readFile(`./../users_data/${user_id}/stl/${timestamp}_model.ply`, function (err, headBuffer) {
             if (err) {
                 reject(err);
             }
