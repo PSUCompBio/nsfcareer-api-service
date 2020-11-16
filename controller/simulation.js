@@ -1169,7 +1169,7 @@ function uploadFineVTKFile(user_id, timestamp) {
 function generate3DModel(obj) {
     console.log(obj);
     return new Promise((resolve, reject) => {
-        const pythonProcess = spawn("python", [
+        const pythonProcess = spawn("python2", [
             "./config/AvatarTest.py",
             obj.image_url,
             config.avatar3dClientId,
