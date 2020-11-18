@@ -59,6 +59,7 @@ const BUCKET_NAME = config_env.usersbucket;
 var s3 = new AWS.S3();
 var batch = new AWS.Batch();
 const csvparser = require("csvtojson");
+const rootPath = '/home/ec2-user';
 
 function convertFileDataToJson(buf, reader, filename) {
     return new Promise((resolve, reject) => {
@@ -452,7 +453,7 @@ function computeImageData(req) {
             })
             .then(data => {
                 // Create Selfie PNG Image using ProjectedTexture VTK
-                return executeShellCommands(`xvfb-run /home/ec2-user/MergePolyData/build/ImageCapture ./avatars/${req.body.user_cognito_id}/head/model.ply ./avatars/${req.body.user_cognito_id}/head/model.jpg ./avatars/${req.body.user_cognito_id}/head/${req.body.file_name}.png`);
+                return executeShellCommands(`xvfb-run ${rootPath}/MergePolyData/build/ImageCapture ./avatars/${req.body.user_cognito_id}/head/model.ply ./avatars/${req.body.user_cognito_id}/head/model.jpg ./avatars/${req.body.user_cognito_id}/head/${req.body.file_name}.png`);
             })
             .then((data) => {
                 console.log('Selfie PNG Image ', data);
@@ -495,7 +496,7 @@ function uploadMorphedVTKZip(user_id, timestamp) {
             Key: `${user_id}/profile/morphed_vtk/combined_meshes/${timestamp}.zip`, // pass key
             Body: null,
         };
-        fs.readFile(`./../users_data/${user_id}/morphed_vtk/${timestamp}.zip`, function (err, headBuffer) {
+        fs.readFile(`${rootPath}/users_data/${user_id}/morphed_vtk/${timestamp}.zip`, function (err, headBuffer) {
             if (err) {
                 console.log(err);
                 reject(err);
@@ -522,7 +523,7 @@ function uploadStlZip(user_id, timestamp) {
             Key: `${user_id}/profile/avatar/${timestamp}.zip`, // pass key
             Body: null,
         };
-        fs.readFile(`./../users_data/${user_id}/stl/${timestamp}.zip`, function (err, headBuffer) {
+        fs.readFile(`${rootPath}/users_data/${user_id}/stl/${timestamp}.zip`, function (err, headBuffer) {
             if (err) {
                 console.log(err);
                 reject(err);
@@ -546,7 +547,7 @@ function createMorphedVTKZip(user_id, timestamp) {
     return new Promise((resolve, reject) => {
         try {
             //archive zip
-            var output = fs.createWriteStream(`./../users_data/${user_id}/morphed_vtk/${timestamp}.zip`);
+            var output = fs.createWriteStream(`${rootPath}/users_data/${user_id}/morphed_vtk/${timestamp}.zip`);
             var archive = archiver('zip', {
                 zlib: { level: 9 } // Sets the compression level.
             });
@@ -566,7 +567,7 @@ function createMorphedVTKZip(user_id, timestamp) {
             archive.pipe(output);
 
             // append files from a glob pattern
-            archive.glob(`*_rotated.vtk`, { cwd: `./../users_data/${user_id}/morphed_vtk` });
+            archive.glob(`*_rotated.vtk`, { cwd: `${rootPath}/users_data/${user_id}/morphed_vtk` });
 
             archive.finalize();
 
@@ -581,7 +582,7 @@ function createStlZip(user_id, timestamp) {
     return new Promise((resolve, reject) => {
         try {
             //archive zip
-            var output = fs.createWriteStream(`./../users_data/${user_id}/stl/${timestamp}.zip`);
+            var output = fs.createWriteStream(`${rootPath}/users_data/${user_id}/stl/${timestamp}.zip`);
             var archive = archiver('zip', {
                 zlib: { level: 9 } // Sets the compression level.
             });
@@ -601,7 +602,7 @@ function createStlZip(user_id, timestamp) {
             archive.pipe(output);
 
             // append files from a glob pattern
-            archive.glob(`${timestamp}_*`, { cwd: `./../users_data/${user_id}/stl` });
+            archive.glob(`${timestamp}_*`, { cwd: `${rootPath}/users_data/${user_id}/stl` });
 
             archive.finalize();
 
@@ -657,11 +658,11 @@ function generateINP(user_id, obj = null) {
                             else {
                                 generateMorphedVTK(obj)
                                     .then((d) => {
-                                        var cmd = `mkdir -p ./../users_data/${user_id}/rbf/ ;  ./../MergePolyData/build/InpFromVTK  -in ./../users_data/${user_id}/morphed_vtk/${obj.file_name}.vtk -out ./../users_data/${user_id}/rbf/${obj.file_name}_coarse.inp`;
+                                        var cmd = `mkdir -p ${rootPath}/users_data/${user_id}/rbf/ ;  ${rootPath}/MergePolyData/build/InpFromVTK  -in ${rootPath}/users_data/${user_id}/morphed_vtk/${obj.file_name}.vtk -out ${rootPath}/users_data/${user_id}/rbf/${obj.file_name}_coarse.inp`;
                                         return executeShellCommands(cmd);
                                     })
                                     .then(d => {
-                                        var fine_cmd = `./../MergePolyData/build/InpFromVTK  -in ./../users_data/${user_id}/morphed_vtk/${obj.file_name}_fine.vtk -out ./../users_data/${user_id}/rbf/${obj.file_name}_fine.inp`;
+                                        var fine_cmd = `${rootPath}/MergePolyData/build/InpFromVTK  -in ${rootPath}/users_data/${user_id}/morphed_vtk/${obj.file_name}_fine.vtk -out ${rootPath}/users_data/${user_id}/rbf/${obj.file_name}_fine.inp`;
                                         return executeShellCommands(fine_cmd);
                                     })
                                     .then(d => {
@@ -821,7 +822,7 @@ function uploadAvatarModelPlyFile(user_id, timestamp) {
         };
 
         const params = uploadParams;
-        fs.readFile(`./../users_data/${user_id}/stl/${timestamp}_model.ply`, function (err, headBuffer) {
+        fs.readFile(`${rootPath}/users_data/${user_id}/stl/${timestamp}_model.ply`, function (err, headBuffer) {
             if (err) {
                 reject(err);
             }
@@ -878,24 +879,24 @@ function getFileSignedUrl(key, cb) {
 
 // function generateMorphedVTK(obj) {
 //     return new Promise((resolve, reject) => {
-//         var cmd = `mkdir -p ./../users_data/${obj.user_cognito_id}/morphed_vtk/ && python3  ./../rbf-brain/RBF_coarse.py  --p ./../users_data/${obj.user_cognito_id}/parameters/${obj.file_name}.prm --m ./../rbf-brain/coarse_brain.vtk --output ./../users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}.vtk`;
+//         var cmd = `mkdir -p ${rootPath}/users_data/${obj.user_cognito_id}/morphed_vtk/ && python3  ${rootPath}/rbf-brain/RBF_coarse.py  --p ${rootPath}/users_data/${obj.user_cognito_id}/parameters/${obj.file_name}.prm --m ${rootPath}/rbf-brain/coarse_brain.vtk --output ${rootPath}/users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}.vtk`;
 //         console.log(cmd);
 //         let cg_val = '';
 //         executeShellCommands(cmd)
 //             .then(d => {
 //                 console.log("MORPHED VTK POST<<<<<--------------\n", d);
-//                 let fiber_cmd = `python3  ./../rbf-brain/RBF_coarse.py  --p ./../users_data/${obj.user_cognito_id}/parameters/${obj.file_name}.prm --m ./../rbf-brain/fiber_mesh.vtk --output ./../users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_fiber.vtk`;
+//                 let fiber_cmd = `python3  ${rootPath}/rbf-brain/RBF_coarse.py  --p ${rootPath}/users_data/${obj.user_cognito_id}/parameters/${obj.file_name}.prm --m ${rootPath}/rbf-brain/fiber_mesh.vtk --output ${rootPath}/users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_fiber.vtk`;
 //                 return executeShellCommands(fiber_cmd);
 //             })
 //             .then(output => {
 //                 console.log('Output of fiber mesh ', output);
-//                 let cg_cmd = `python3  ./../rbf-brain/RBF_CG.py  --p ./../users_data/${obj.user_cognito_id}/parameters/${obj.file_name}.prm --m ./../rbf-brain/cg.vtk --output ./../users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_cg.txt`;
+//                 let cg_cmd = `python3  ${rootPath}/rbf-brain/RBF_CG.py  --p ${rootPath}/users_data/${obj.user_cognito_id}/parameters/${obj.file_name}.prm --m ${rootPath}/rbf-brain/cg.vtk --output ${rootPath}/users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_cg.txt`;
 //                 return executeShellCommands(cg_cmd);
 //             })
 //             .then(cg => {
 //                 console.log('output of cg value ', cg);
 //                 cg_val = cg;
-//                 let sensor_cmd = `python3 ./../rbf-brain/RBF_CG.py --p ./../users_data/${obj.user_cognito_id}/parameters/${obj.file_name}.prm --m ./../rbf-brain/sensor.vtk --output ./../users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_sensor.txt`;
+//                 let sensor_cmd = `python3 ${rootPath}/rbf-brain/RBF_CG.py --p ${rootPath}/users_data/${obj.user_cognito_id}/parameters/${obj.file_name}.prm --m ${rootPath}/rbf-brain/sensor.vtk --output ${rootPath}/users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_sensor.txt`;
 //                 return executeShellCommands(sensor_cmd);
 //             })
 //             .then(sensor => {
@@ -911,49 +912,49 @@ function getFileSignedUrl(key, cb) {
 
 function generateMorphedVTK(obj) {
     return new Promise((resolve, reject) => {
-        var cmd = `mkdir -p ./../users_data/${obj.user_cognito_id}/morphed_vtk/ && python3 ./../rbf-brain/RBF_coarse.py --p ./../users_data/${obj.user_cognito_id}/parameters/${obj.file_name}.prm --m ./../rbf-brain/coarse_brain.vtk --output ./../users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}.vtk`;
+        var cmd = `mkdir -p ${rootPath}/users_data/${obj.user_cognito_id}/morphed_vtk/ && python3 ${rootPath}/rbf-brain/RBF_coarse.py --p ${rootPath}/users_data/${obj.user_cognito_id}/parameters/${obj.file_name}.prm --m ${rootPath}/rbf-brain/coarse_brain.vtk --output ${rootPath}/users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}.vtk`;
         console.log(cmd);
         let cg_val = '';
         executeShellCommands(cmd)
             .then(d => {
                 console.log("MORPHED VTK POST<<<<<--------------\n", d);
-                let meshrotate_cmd = `pvpython ./../rbf-brain/meshrotate.py --input ./../users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}.vtk --output ./../users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_brain_rotated.vtk`;
+                let meshrotate_cmd = `pvpython ${rootPath}/rbf-brain/meshrotate.py --input ${rootPath}/users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}.vtk --output ${rootPath}/users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_brain_rotated.vtk`;
                 return executeShellCommands(meshrotate_cmd);
             })
             .then(mesh_output => {
                 console.log("MESROTATE VTK POST<<<<<--------------\n", mesh_output);
-                let fine_mesh_cmd = `python3 ./../rbf-brain/RBF_coarse.py --p ./../users_data/${obj.user_cognito_id}/parameters/${obj.file_name}.prm --m ./../rbf-brain/fine_mesh.vtk --output ./../users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_fine.vtk`;
+                let fine_mesh_cmd = `python3 ${rootPath}/rbf-brain/RBF_coarse.py --p ${rootPath}/users_data/${obj.user_cognito_id}/parameters/${obj.file_name}.prm --m ${rootPath}/rbf-brain/fine_mesh.vtk --output ${rootPath}/users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_fine.vtk`;
                 return executeShellCommands(fine_mesh_cmd);
             })
             .then(fine_mesh_output => {
                 console.log("FINEMESH VTK POST<<<<<--------------\n", fine_mesh_output);
-                let fine_rotated_mesh_cmd = `pvpython ./../rbf-brain/meshrotate.py --input ./../users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_fine.vtk --output ./../users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_fine_rotated.vtk`;
+                let fine_rotated_mesh_cmd = `pvpython ${rootPath}/rbf-brain/meshrotate.py --input ${rootPath}/users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_fine.vtk --output ${rootPath}/users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_fine_rotated.vtk`;
                 return executeShellCommands(fine_rotated_mesh_cmd);
             })
             .then(fine_rotated_mesh_output => {
                 console.log("FINEROTATED MESH VTK POST<<<<<--------------\n", fine_rotated_mesh_output);
-                let fiber_cmd = `python3 ./../rbf-brain/RBF_coarse.py --p ./../users_data/${obj.user_cognito_id}/parameters/${obj.file_name}.prm --m ./../rbf-brain/fiber_mesh.vtk --output ./../users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_fiber.vtk`;
+                let fiber_cmd = `python3 ${rootPath}/rbf-brain/RBF_coarse.py --p ${rootPath}/users_data/${obj.user_cognito_id}/parameters/${obj.file_name}.prm --m ${rootPath}/rbf-brain/fiber_mesh.vtk --output ${rootPath}/users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_fiber.vtk`;
                 return executeShellCommands(fiber_cmd);
             })
             .then(output => {
                 console.log('Output of fiber mesh ', output);
-                let meshrotate_cmd2 = `pvpython ./../rbf-brain/meshrotate.py --input ./../users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_fiber.vtk --output ./../users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_fiber_rotated.vtk`;
+                let meshrotate_cmd2 = `pvpython ${rootPath}/rbf-brain/meshrotate.py --input ${rootPath}/users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_fiber.vtk --output ${rootPath}/users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_fiber_rotated.vtk`;
                 return executeShellCommands(meshrotate_cmd2);
             })
             .then(mesh_output2 => {
                 console.log("MESROTATE VTK2 POST<<<<<--------------\n", mesh_output2);
-                let extract_surface_cmd = `pvpython ./../rbf-brain/extract_surface.py --input ./../users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_brain_rotated.vtk --outputskull ./../users_data/${obj.user_cognito_id}/morphed_vtk/skull.ply --outputbrain ./../users_data/${obj.user_cognito_id}/morphed_vtk/brain.ply`;
+                let extract_surface_cmd = `pvpython ${rootPath}/rbf-brain/extract_surface.py --input ${rootPath}/users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_brain_rotated.vtk --outputskull ${rootPath}/users_data/${obj.user_cognito_id}/morphed_vtk/skull.ply --outputbrain ${rootPath}/users_data/${obj.user_cognito_id}/morphed_vtk/brain.ply`;
                 return executeShellCommands(extract_surface_cmd);
             })
             .then(extract_surface_output => {
                 console.log("extract surface <<<<<--------------\n", extract_surface_output);
-                let cg_cmd = `python3 ./../rbf-brain/RBF_CG.py --p ./../users_data/${obj.user_cognito_id}/parameters/${obj.file_name}.prm --m ./../rbf-brain/cg.vtk --output ./../users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_cg.txt`;
+                let cg_cmd = `python3 ${rootPath}/rbf-brain/RBF_CG.py --p ${rootPath}/users_data/${obj.user_cognito_id}/parameters/${obj.file_name}.prm --m ${rootPath}/rbf-brain/cg.vtk --output ${rootPath}/users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_cg.txt`;
                 return executeShellCommands(cg_cmd);
             })
             .then(cg => {
                 console.log('output of cg value ', cg);
                 cg_val = cg;
-                let sensor_cmd = `python3 ./../rbf-brain/RBF_CG.py --p ./../users_data/${obj.user_cognito_id}/parameters/${obj.file_name}.prm --m ./../rbf-brain/sensor.vtk --output ./../users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_sensor.txt`;
+                let sensor_cmd = `python3 ${rootPath}/rbf-brain/RBF_CG.py --p ${rootPath}/users_data/${obj.user_cognito_id}/parameters/${obj.file_name}.prm --m ${rootPath}/rbf-brain/sensor.vtk --output ${rootPath}/users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_sensor.txt`;
                 return executeShellCommands(sensor_cmd);
             })
             // .then(sensor => {
@@ -962,27 +963,27 @@ function generateMorphedVTK(obj) {
             // })
             .then(sensor => {
                 console.log('output of sensor value ', sensor);
-                let chophead_cmd = `pvpython ./../rbf-brain/chophead.py --input ./avatars/${obj.user_cognito_id}/head/model.ply --output ./../users_data/${obj.user_cognito_id}/stl/${obj.file_name}_headchopped.stl`;
+                let chophead_cmd = `pvpython ${rootPath}/rbf-brain/chophead.py --input ./avatars/${obj.user_cognito_id}/head/model.ply --output ${rootPath}/users_data/${obj.user_cognito_id}/stl/${obj.file_name}_headchopped.stl`;
                 return executeShellCommands(chophead_cmd);
             })
             .then(chophead => {
                 console.log('output of chophead ', chophead);
-                let plytostl_cmd = `pvpython ./../rbf-brain/plytostl.py --input ./avatars/${obj.user_cognito_id}/face/model.ply --output ./../users_data/${obj.user_cognito_id}/stl/${obj.file_name}_face.stl`;
+                let plytostl_cmd = `pvpython ${rootPath}/rbf-brain/plytostl.py --input ./avatars/${obj.user_cognito_id}/face/model.ply --output ${rootPath}/users_data/${obj.user_cognito_id}/stl/${obj.file_name}_face.stl`;
                 return executeShellCommands(plytostl_cmd);
             })
             .then(plytostl => {
                 console.log('output of plytostl ', plytostl);
-                let extractnose_cmd = `python3 ./../rbf-brain/extractnose.py --inputhead ./../users_data/${obj.user_cognito_id}/stl/${obj.file_name}_headchopped.stl --inputface ./../users_data/${obj.user_cognito_id}/stl/${obj.file_name}_face.stl`;
+                let extractnose_cmd = `python3 ${rootPath}/rbf-brain/extractnose.py --inputhead ${rootPath}/users_data/${obj.user_cognito_id}/stl/${obj.file_name}_headchopped.stl --inputface ${rootPath}/users_data/${obj.user_cognito_id}/stl/${obj.file_name}_face.stl`;
                 return executeShellCommands(extractnose_cmd);
             })
             .then(extractnose => {
                 console.log('output of extractnose ', extractnose);
-                let headtoface_cmd = `pvpython ./../rbf-brain/headtoface.py --inputhead ./avatars/${obj.user_cognito_id}/head/model.ply --outputhead ./../users_data/${obj.user_cognito_id}/stl/${obj.file_name}_headtrans.ply`;
+                let headtoface_cmd = `pvpython ${rootPath}/rbf-brain/headtoface.py --inputhead ./avatars/${obj.user_cognito_id}/head/model.ply --outputhead ${rootPath}/users_data/${obj.user_cognito_id}/stl/${obj.file_name}_headtrans.ply`;
                 return executeShellCommands(headtoface_cmd);
             })
             .then(headtoface => {
                 console.log('output of headtoface ', headtoface);
-                let textureaddition_cmd = `python3 ./../rbf-brain/textureaddition.py --inputheadoriginal ./avatars/${obj.user_cognito_id}/head/model.ply --inputheadtrans ./../users_data/${obj.user_cognito_id}/stl/${obj.file_name}_headtrans.ply --outputheadtransUV ./../users_data/${obj.user_cognito_id}/stl/${obj.file_name}_model.ply`;
+                let textureaddition_cmd = `python3 ${rootPath}/rbf-brain/textureaddition.py --inputheadoriginal ./avatars/${obj.user_cognito_id}/head/model.ply --inputheadtrans ${rootPath}/users_data/${obj.user_cognito_id}/stl/${obj.file_name}_headtrans.ply --outputheadtransUV ${rootPath}/users_data/${obj.user_cognito_id}/stl/${obj.file_name}_model.ply`;
                 return executeShellCommands(textureaddition_cmd);
             })
             .then(textureaddition => {
@@ -1006,7 +1007,7 @@ function uploadCentroidLookUpFile(obj) {
 
         const params = uploadParams;
 
-        fs.readFile(`./../users_data/${obj.user_cognito_id}/centroid_table/${obj.file_name}.txt`, function (err, headBuffer) {
+        fs.readFile(`${rootPath}/users_data/${obj.user_cognito_id}/centroid_table/${obj.file_name}.txt`, function (err, headBuffer) {
             if (err) {
                 reject(err)
             }
@@ -1042,7 +1043,7 @@ function uploadINPFile(user_id, timestamp) {
 
         const params = uploadParams;
 
-        fs.readFile(`./../users_data/${user_id}/rbf/${timestamp}_coarse.inp`, function (err, headBuffer) {
+        fs.readFile(`${rootPath}/users_data/${user_id}/rbf/${timestamp}_coarse.inp`, function (err, headBuffer) {
             if (err) {
                 reject(err);
             }
@@ -1110,7 +1111,7 @@ function uploadFineINPFile(user_id, timestamp) {
 
         const params = uploadParams;
 
-        fs.readFile(`./../users_data/${user_id}/rbf/${timestamp}_fine.inp`, function (err, headBuffer) {
+        fs.readFile(`${rootPath}/users_data/${user_id}/rbf/${timestamp}_fine.inp`, function (err, headBuffer) {
             if (err) {
                 reject(err);
             }
@@ -1282,7 +1283,7 @@ function uploadGeneratedSelfieImage(obj) {
 
 function generateStlFromPly(obj) {
     return new Promise((resolve, reject) => {
-        var cmd = `mkdir -p ./../users_data/${obj.user_cognito_id}/stl/ && pvpython ./../rbf-brain/extract.py --input ./avatars/${obj.user_cognito_id}/face/model.ply --output ./../users_data/${obj.user_cognito_id}/stl/${obj.file_name}.stl`
+        var cmd = `mkdir -p ${rootPath}/users_data/${obj.user_cognito_id}/stl/ && pvpython ${rootPath}/rbf-brain/extract.py --input ./avatars/${obj.user_cognito_id}/face/model.ply --output ${rootPath}/users_data/${obj.user_cognito_id}/stl/${obj.file_name}.stl`
         console.log(cmd);
         executeShellCommands(cmd)
             .then(d => {
@@ -1299,7 +1300,7 @@ function generateStlFromPly(obj) {
 function generateParametersFileFromStl(obj) {
     return new Promise((resolve, reject) => {
         console.log("THI IS PRESENT WORKING DIRECTORY ", __dirname);
-        var cmd = `mkdir -p ./../users_data/${obj.user_cognito_id}/parameters/ && pvpython ./../rbf-brain/controlpoints.py --input ./../users_data/${obj.user_cognito_id}/stl/${obj.file_name}.stl --output ./../users_data/${obj.user_cognito_id}/parameters/${obj.file_name}.prm`
+        var cmd = `mkdir -p ${rootPath}/users_data/${obj.user_cognito_id}/parameters/ && pvpython ${rootPath}/rbf-brain/controlpoints.py --input ${rootPath}/users_data/${obj.user_cognito_id}/stl/${obj.file_name}.stl --output ${rootPath}/users_data/${obj.user_cognito_id}/parameters/${obj.file_name}.prm`
         console.log(cmd)
         executeShellCommands(cmd)
             .then(d => {
@@ -1768,7 +1769,7 @@ function parseDate(date, arg, timezone) {
 function cleanUp(obj) {
     return new Promise((resolve, reject) => {
         console.log("Clean is called");
-        executeShellCommands(`rm -fr ./../users_data/${obj.user_cognito_id}/ ; rm -rf ./avatars/${obj.user_cognito_id}/ ; rm -f ./avatars/${obj.user_cognito_id}.zip;`)
+        executeShellCommands(`rm -fr ${rootPath}/users_data/${obj.user_cognito_id}/ ; rm -rf ./avatars/${obj.user_cognito_id}/ ; rm -f ./avatars/${obj.user_cognito_id}.zip;`)
             .then(d => {
                 resolve(d);
             })
