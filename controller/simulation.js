@@ -662,6 +662,7 @@ function generateINP(user_id, obj = null) {
                                         return executeShellCommands(cmd);
                                     })
                                     .then(d => {
+                                        console.log('aaaaaaaa ', d)
                                         var fine_cmd = `${rootPath}/MergePolyData/build/InpFromVTK  -in ${rootPath}/users_data/${user_id}/morphed_vtk/${obj.file_name}_fine.vtk -out ${rootPath}/users_data/${user_id}/rbf/${obj.file_name}_fine.inp`;
                                         return executeShellCommands(fine_cmd);
                                     })
