@@ -455,6 +455,7 @@ function computeImageData(req) {
                 return executeShellCommands(`xvfb-run ./../MergePolyData/build/ImageCapture ./avatars/${req.body.user_cognito_id}/head/model.ply ./avatars/${req.body.user_cognito_id}/head/model.jpg ./avatars/${req.body.user_cognito_id}/head/${req.body.file_name}.png`);
             })
             .then((data) => {
+                console.log('Selfie PNG Image ', data);
                 // Upload the selfie image generated on S3
                 return uploadGeneratedSelfieImage(req.body);
             })
