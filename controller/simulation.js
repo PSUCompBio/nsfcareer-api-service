@@ -452,7 +452,7 @@ function computeImageData(req) {
             })
             .then(data => {
                 // Create Selfie PNG Image using ProjectedTexture VTK
-                return executeShellCommands(`xvfb-run ./../MergePolyData/build/ImageCapture ./avatars/${req.body.user_cognito_id}/head/model.ply ./avatars/${req.body.user_cognito_id}/head/model.jpg ./avatars/${req.body.user_cognito_id}/head/${req.body.file_name}.png`);
+                return executeShellCommands(`xvfb-run /home/ec2-user/MergePolyData/build/ImageCapture ./avatars/${req.body.user_cognito_id}/head/model.ply ./avatars/${req.body.user_cognito_id}/head/model.jpg ./avatars/${req.body.user_cognito_id}/head/${req.body.file_name}.png`);
             })
             .then((data) => {
                 console.log('Selfie PNG Image ', data);
