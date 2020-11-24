@@ -648,7 +648,7 @@ function generateINP(user_id, obj = null) {
                         var timestamp = Date.now();
                         var zipFileName = timestamp + ".zip";
                         var options = {
-                            directory: `../users_data/${user_id}/model/`,
+                            directory: `${rootPath}/users_data/${user_id}/model/`,
                             filename: zipFileName
                         }
                         download(url, options, function (err) {
@@ -730,7 +730,7 @@ function uploadSkullFile(user_id) {
         };
 
         const params = uploadParams;
-        fs.readFile(`../users_data/${user_id}/morphed_vtk/skull.ply`, function (err, headBuffer) {
+        fs.readFile(`${rootPath}/users_data/${user_id}/morphed_vtk/skull.ply`, function (err, headBuffer) {
             if (err) {
                 reject(err);
             }
@@ -761,7 +761,7 @@ function uploadBrainFile(user_id) {
         };
 
         const params = uploadParams;
-        fs.readFile(`../users_data/${user_id}/morphed_vtk/brain.ply`, function (err, headBuffer) {
+        fs.readFile(`${rootPath}/users_data/${user_id}/morphed_vtk/brain.ply`, function (err, headBuffer) {
             if (err) {
                 reject(err);
             }
@@ -1078,7 +1078,7 @@ function uploadVTKFile(user_id, timestamp) {
 
         const params = uploadParams;
 
-        fs.readFile(`../users_data/${user_id}/morphed_vtk/${timestamp}.vtk`, function (err, headBuffer) {
+        fs.readFile(`${rootPath}/users_data/${user_id}/morphed_vtk/${timestamp}.vtk`, function (err, headBuffer) {
             if (err) {
                 reject(err);
             }
@@ -1146,7 +1146,7 @@ function uploadFineVTKFile(user_id, timestamp) {
 
         const params = uploadParams;
 
-        fs.readFile(`../users_data/${user_id}/morphed_vtk/${timestamp}_fine.vtk`, function (err, headBuffer) {
+        fs.readFile(`${rootPath}/users_data/${user_id}/morphed_vtk/${timestamp}_fine.vtk`, function (err, headBuffer) {
             if (err) {
                 reject(err);
             }
