@@ -1,4 +1,5 @@
 const AWS = require("aws-sdk");
+const rootPath = '/home/ec2-user';
 
 const docClient = new AWS.DynamoDB.DocumentClient({
     convertEmptyValues: true,
@@ -827,7 +828,7 @@ function getUserByPlayerId(player_id) {
 
 function uploadCGValuesAndSetINPStatus(user_cognito_id, file_name) {
     return new Promise((resolve, reject) => {
-        fs.readFile(`./../users_data/${user_cognito_id}/morphed_vtk/${file_name}_cg.txt`, "utf8", function (err, data) {
+        fs.readFile(`${rootPath}/users_data/${user_cognito_id}/morphed_vtk/${file_name}_cg.txt`, "utf8", function (err, data) {
             if (err) {
                 reject(err)
             }
