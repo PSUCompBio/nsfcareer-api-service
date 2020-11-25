@@ -694,10 +694,10 @@ function generateINP(user_id, obj = null) {
                                         return uploadStlZip(user_id, obj.file_name);
                                     })
                                     .then(d => {
-                                        return uploadSkullFile(user_id);
+                                        return uploadSkullFile(user_id, obj.file_name);
                                     })
                                     .then(d => {
-                                        return uploadBrainFile(user_id);
+                                        return uploadBrainFile(user_id, obj.file_name);
                                     })
                                     .then(d => {
                                         return uploadAvatarModelFile(user_id);
@@ -721,7 +721,7 @@ function generateINP(user_id, obj = null) {
     })
 }
 
-function uploadSkullFile(user_id) {
+function uploadSkullFile(user_id, timestamp) {
     return new Promise((resolve, reject) => {
         var uploadParams = {
             Bucket: config.usersbucket,
@@ -729,8 +729,17 @@ function uploadSkullFile(user_id) {
             Body: null, // pass file body
         };
 
+        fs.readdir(`${rootPath}/users_data/${user_id}/morphed_vtk/`, (err, files) => {
+            if (err) {
+                console.log('File accessing: ', err);
+            }
+            files.forEach(file => {
+              console.log('File name: ', file);
+            });
+        });
+
         const params = uploadParams;
-        fs.readFile(`${rootPath}/users_data/${user_id}/morphed_vtk/skull.ply`, function (err, headBuffer) {
+        fs.readFile(`${rootPath}/users_data/${user_id}/morphed_vtk/${timestamp}_skull.ply`, function (err, headBuffer) {
             if (err) {
                 reject(err);
             }
@@ -752,7 +761,7 @@ function uploadSkullFile(user_id) {
     });
 }
 
-function uploadBrainFile(user_id) {
+function uploadBrainFile(user_id, timestamp) {
     return new Promise((resolve, reject) => {
         var uploadParams = {
             Bucket: config.usersbucket,
@@ -761,7 +770,7 @@ function uploadBrainFile(user_id) {
         };
 
         const params = uploadParams;
-        fs.readFile(`${rootPath}/users_data/${user_id}/morphed_vtk/brain.ply`, function (err, headBuffer) {
+        fs.readFile(`${rootPath}/users_data/${user_id}/morphed_vtk/${timestamp}_brain.ply`, function (err, headBuffer) {
             if (err) {
                 reject(err);
             }
@@ -944,7 +953,7 @@ function generateMorphedVTK(obj) {
             })
             .then(mesh_output2 => {
                 console.log("MESROTATE VTK2 POST<<<<<--------------\n", mesh_output2);
-                let extract_surface_cmd = `pvpython ${rootPath}/rbf-brain/extract_surface.py --input ${rootPath}/users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_brain_rotated.vtk --outputskull ${rootPath}/users_data/${obj.user_cognito_id}/morphed_vtk/skull.ply --outputbrain ${rootPath}/users_data/${obj.user_cognito_id}/morphed_vtk/brain.ply`;
+                let extract_surface_cmd = `pvpython ${rootPath}/rbf-brain/extract_surface.py --input ${rootPath}/users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_brain_rotated.vtk --outputskull ${rootPath}/users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_skull.ply --outputbrain ${rootPath}/users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_brain.ply`;
                 return executeShellCommands(extract_surface_cmd);
             })
             .then(extract_surface_output => {
@@ -1576,7 +1585,7 @@ function generateSimulationForPlayersFromJson(player_data_array, apiMode, mesh, 
                             playerData["simulation"]["angular-acceleration"] = _temp_player.simulation['angular-acceleration'];
                             playerData["simulation"]["maximum-time"] = parseFloat(_temp_player.simulation['linear-acceleration']['xt'][_temp_player.simulation['linear-acceleration']['xt'].length - 1]);
                             // playerData["simulation"]["maximum-time"] = _temp_player["maximum-time"];
-                            playerData["simulation"]["mesh-transformation"] = _temp_player['mesh-transformation'];
+                            playerData["simulation"]["mesh-transformation"] = _temp_player.simulation['mesh-transformation'];
 
                             if (cg_coordinates) {
                                 playerData.simulation["head-cg"] = (cg_coordinates.length == 0) ? [0, -0.3308, -0.037] : cg_coordinates.map(function (x) { return parseFloat(x) });
@@ -1595,8 +1604,8 @@ function generateSimulationForPlayersFromJson(player_data_array, apiMode, mesh, 
                                 delete playerData.simulation["angular-sensor-position"];
                             }
 
-                            if (_temp_player['angular-to-linear-frame']) {
-                                playerData["simulation"]["angular-to-linear-frame"] = _temp_player['angular-to-linear-frame'];
+                            if (_temp_player.simulation['angular-to-linear-frame']) {
+                                playerData["simulation"]["angular-to-linear-frame"] = _temp_player.simulation['angular-to-linear-frame'];
                             }
 
                             if (_temp_player['time-peak-acceleration']) {

@@ -328,7 +328,7 @@ if (cluster.isMaster) {
                     if (sensor_detail.length > 0 && !overwrite) {
                         res.send({
                             message: "failure",
-                            error: 'Duplicate event simulation skipped, use -F "overwrite=true" to recompute'
+                            error: "Duplicate event simulation skipped, use -F \"overwrite=true\" to recompute"
                         })
                     } else {
                         // console.log(new_items_array);
@@ -485,7 +485,8 @@ if (cluster.isMaster) {
                                 }
 
                                 _temp_sensor_data["user_cognito_id"] = req.body.user_cognito_id;
-                                _temp_sensor_data["image_id"] = bypass_simulation_formatting ? _temp.uid : shortid.generate();
+                                //_temp_sensor_data["image_id"] = bypass_simulation_formatting ? _temp.uid : shortid.generate();
+                                _temp_sensor_data["image_id"] = shortid.generate();
                                
                                 if (sensor_detail.length > 0) {
                                     _temp_sensor_data["player_id"] = sensor_detail[0].player_id;
@@ -497,19 +498,19 @@ if (cluster.isMaster) {
                                 _temp_sensor_data["team"] = _temp.player.team;
 
                                 if (req.body.sensor_brand === 'Prevent') {
-                                    _temp_sensor_data['mesh-transformation'] = ["-y", "z", "-x"];
+                                    _temp_sensor_data["simulation"]['mesh-transformation'] = ["-y", "z", "-x"];
                                 } else if (req.body.sensor_brand === 'Sensor Company X' || req.body.sensor_brand === 'SWA') {
-                                    _temp_sensor_data['mesh-transformation'] = ["-z", "x", "-y"];
-                                    _temp_sensor_data['angular-to-linear-frame'] = ["-y", "-x", "z"];
+                                    _temp_sensor_data["simulation"]['mesh-transformation'] = ["-z", "x", "-y"];
+                                    _temp_sensor_data["simulation"]['angular-to-linear-frame'] = ["-y", "-x", "z"];
                                 } else if (req.body.sensor_brand === 'SISU') {
-                                    _temp_sensor_data['mesh-transformation'] = ["-z", "-x", "y"];
+                                    _temp_sensor_data["simulation"]['mesh-transformation'] = ["-z", "-x", "y"];
                                 } else if (req.body.sensor_brand === 'Stanford') {
-                                    _temp_sensor_data['mesh-transformation'] = ["y", "-z", "-x"];
+                                    _temp_sensor_data["simulation"]['mesh-transformation'] = ["y", "-z", "-x"];
                                 }  else if (req.body.sensor_brand === 'Hybrid3') {
-                                // _temp_sensor_data['mesh-transformation'] = ["z", "-x", "-y"];
-                                    _temp_sensor_data['mesh-transformation'] = ["-y", "z", "-x"];
+                                // _temp_sensor_data["simulation"]['mesh-transformation'] = ["z", "-x", "-y"];
+                                    _temp_sensor_data["simulation"]['mesh-transformation'] = ["-y", "z", "-x"];
                                 } else {
-                                    _temp_sensor_data['mesh-transformation'] = ["-y", "z", "-x"];
+                                    _temp_sensor_data["simulation"]['mesh-transformation'] = ["-y", "z", "-x"];
                                 }
 
                                 if (bypass_simulation_formatting) {
