@@ -658,12 +658,12 @@ function generateINP(user_id, obj = null) {
                             else {
                                 generateMorphedVTK(obj)
                                     .then((d) => {
-                                        var cmd = `mkdir -p ${rootPath}/users_data/${user_id}/rbf/ ;  ${rootPath}/MergePolyData/build/InpFromVTK  -in ${rootPath}/users_data/${user_id}/morphed_vtk/${obj.file_name}.vtk -out ${rootPath}/users_data/${user_id}/rbf/${obj.file_name}_coarse.inp`;
+                                        var cmd = `mkdir -p ${rootPath}/users_data/${user_id}/rbf/ ;  ${rootPath}/MergePolyData/build/InpFromVTK  -in ${rootPath}/users_data/${user_id}/morphed_vtk/${obj.file_name}.vtu -out ${rootPath}/users_data/${user_id}/rbf/${obj.file_name}_coarse.inp`;
                                         return executeShellCommands(cmd);
                                     })
                                     .then(d => {
                                         console.log('aaaaaaaa ', d)
-                                        var fine_cmd = `${rootPath}/MergePolyData/build/InpFromVTK  -in ${rootPath}/users_data/${user_id}/morphed_vtk/${obj.file_name}_fine.vtk -out ${rootPath}/users_data/${user_id}/rbf/${obj.file_name}_fine.inp`;
+                                        var fine_cmd = `${rootPath}/MergePolyData/build/InpFromVTK  -in ${rootPath}/users_data/${user_id}/morphed_vtk/${obj.file_name}_fine.vtu -out ${rootPath}/users_data/${user_id}/rbf/${obj.file_name}_fine.inp`;
                                         return executeShellCommands(fine_cmd);
                                     })
                                     .then(d => {
@@ -928,6 +928,16 @@ function generateMorphedVTK(obj) {
         executeShellCommands(cmd)
             .then(d => {
                 console.log("MORPHED VTK POST<<<<<--------------\n", d);
+                let meshio_cmd = `meshio-convert ${rootPath}/users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}.vtk ${rootPath}/users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}.vtu`;
+                return executeShellCommands(meshio_cmd);
+            })
+            .then(d => {
+                console.log("MESHIO POST<<<<<--------------\n", d);
+                let meshiovtu_cmd = `meshio-ascii ${rootPath}/users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}.vtu`;
+                return executeShellCommands(meshiovtu_cmd);
+            })
+            .then(d => {
+                console.log("MESHIOVTU POST<<<<<--------------\n", d);
                 let meshrotate_cmd = `pvpython ${rootPath}/rbf-brain/meshrotate.py --input ${rootPath}/users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}.vtk --output ${rootPath}/users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_brain_rotated.vtk`;
                 return executeShellCommands(meshrotate_cmd);
             })
@@ -938,6 +948,16 @@ function generateMorphedVTK(obj) {
             })
             .then(fine_mesh_output => {
                 console.log("FINEMESH VTK POST<<<<<--------------\n", fine_mesh_output);
+                let fine_meshio_cmd = `meshio-convert ${rootPath}/users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_fine.vtk ${rootPath}/users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_fine.vtu`;
+                return executeShellCommands(fine_meshio_cmd);
+            })
+            .then(d => {
+                console.log("FINE MESHIO POST<<<<<--------------\n", d);
+                let fine_meshiovtu_cmd = `meshio-ascii ${rootPath}/users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_fine.vtu`;
+                return executeShellCommands(fine_meshiovtu_cmd);
+            })
+            .then(d => {
+                console.log("FINE MESHIOVTU POST<<<<<--------------\n", d);
                 let fine_rotated_mesh_cmd = `pvpython ${rootPath}/rbf-brain/meshrotate.py --input ${rootPath}/users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_fine.vtk --output ${rootPath}/users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_fine_rotated.vtk`;
                 return executeShellCommands(fine_rotated_mesh_cmd);
             })
