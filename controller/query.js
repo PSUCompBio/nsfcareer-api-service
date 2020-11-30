@@ -840,27 +840,34 @@ function uploadCGValuesAndSetINPStatus(user_cognito_id, file_name) {
                 reject(err)
             }
             else {
-                var userParams = {
-                    TableName: "users",
-                    Key: {
-                        "user_cognito_id": user_cognito_id
-                    },
-                    UpdateExpression: "set cg_coordinates = :cg, is_cg_present = :present, is_selfie_inp_uploaded = :is_selfie_inp_uploaded",
-                    ExpressionAttributeValues: {
-                        ":cg": data.split(" ").map(function (x) { return parseFloat(x) }),
-                        ":present": true,
-                        ":is_selfie_inp_uploaded": true
-                    },
-                    ReturnValues: "UPDATED_NEW"
-                };
-                docClient.update(userParams, (err, data) => {
-                    if (err) {
-                        reject(err);
-                    } else {
-                        resolve(data);
-                    }
-                })
-
+                fetchCGValues(user_cognito_id)
+                    .then(playerDetail => {
+                        if (playerDetail.length > 0) {
+                            const user_cognito_id = playerDetail[0].user_cognito_id;
+                            var userParams = {
+                                TableName: "users",
+                                Key: {
+                                    "user_cognito_id": user_cognito_id
+                                },
+                                UpdateExpression: "set cg_coordinates = :cg, is_cg_present = :present, is_selfie_inp_uploaded = :is_selfie_inp_uploaded",
+                                ExpressionAttributeValues: {
+                                    ":cg": data.split(" ").map(function (x) { return parseFloat(x) }),
+                                    ":present": true,
+                                    ":is_selfie_inp_uploaded": true
+                                },
+                                ReturnValues: "UPDATED_NEW"
+                            };
+                            docClient.update(userParams, (err, data) => {
+                                if (err) {
+                                    reject(err);
+                                } else {
+                                    resolve(data);
+                                }
+                            })
+                        } else {
+                            reject('Player does not exists.');
+                        }
+                    })
             }
         })
     });
