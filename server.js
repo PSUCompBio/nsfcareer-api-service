@@ -603,9 +603,10 @@ if (cluster.isMaster) {
 
                                                         // Generate 10 digits unique number
                                                         let account_id = Math.floor(Math.random() * 9000000000) + 1000000000;
+                                                        account_id = account_id.toString();
                                                         let player_id = temp.player_id + '-' + temp.sensor;
                                                         // getUserByPlayerId(player_id)
-                                                        getUserDetailBySensorId(temp.sensor, temp.player_id)
+                                                        getUserDetailBySensorId(temp.sensor, temp.player['sensor-id'])
                                                             .then (user_detail => {
                                                                 // console.log(user_detail);
                                                                 if (user_detail.length > 0) {
@@ -880,9 +881,10 @@ if (cluster.isMaster) {
             
                                                                     // Generate 10 digits unique number
                                                                     let account_id = Math.floor(Math.random() * 9000000000) + 1000000000;
+                                                                    account_id = account_id.toString();
                                                                     let player_id = temp.player_id + '-' + temp.sensor;
                                                                     // getUserByPlayerId(player_id)
-                                                                    getUserDetailBySensorId(temp.sensor, temp.player_id)
+                                                                    getUserDetailBySensorId(temp.sensor, temp.player['sensor-id'])
                                                                         .then (user_detail => {
                                                                             // console.log(user_detail);
                                                                             if (user_detail.length > 0) {
