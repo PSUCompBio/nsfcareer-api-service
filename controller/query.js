@@ -603,29 +603,36 @@ function addPlayerToUsers(user_id) {
 }
 
 function updateSelfieAndModelStatusInDB(obj) {
-
     return new Promise((resolve, reject) => {
-        var userParams = {
-            TableName: "users",
-            Key: {
-                "user_cognito_id": obj.user_cognito_id
-            },
-            UpdateExpression: "set is_selfie_image_uploaded = :selfie_image_uploaded, is_selfie_model_uploaded = :selfie_model_uploaded",
-            ExpressionAttributeValues: {
-                ":selfie_model_uploaded": true,
-                ":selfie_image_uploaded": true,
-            },
-            ReturnValues: "UPDATED_NEW"
-        };
-        docClient.update(userParams, (err, data) => {
-            if (err) {
-                reject(err);
-            } else {
-                resolve(data);
-            }
-        })
-    });
+        fetchCGValues(obj.user_cognito_id)
+            .then(playerDetail => {
+                if (playerDetail.length > 0) {
+                    const user_cognito_id = playerDetail[0].user_cognito_id;
 
+                    var userParams = {
+                        TableName: "users",
+                        Key: {
+                            "user_cognito_id": user_cognito_id
+                        },
+                        UpdateExpression: "set is_selfie_image_uploaded = :selfie_image_uploaded, is_selfie_model_uploaded = :selfie_model_uploaded",
+                        ExpressionAttributeValues: {
+                            ":selfie_model_uploaded": true,
+                            ":selfie_image_uploaded": true,
+                        },
+                        ReturnValues: "UPDATED_NEW"
+                    };
+                    docClient.update(userParams, (err, data) => {
+                        if (err) {
+                            reject(err);
+                        } else {
+                            resolve(data);
+                        }
+                    })
+                } else {
+                    reject('Player does not exists.');
+                }
+            })
+        });
 }
 
 function updateSimulationImageToDDB(
