@@ -753,7 +753,7 @@ function getCompletedJobs() {
             if (data == null) {
                 resolve(concatArrays(item));
             } else {
-                console.log(data.Items);
+                // console.log(data.Items);
                 item.push(data.Items);
             }
             done();
@@ -768,9 +768,10 @@ function updateJobComputedTime(obj, cb) {
             image_id: obj.image_id,
         },
         UpdateExpression:
-            "set computed_time = :computed_time",
+            "set computed_time = :computed_time, log_stream_name = :log_stream_name",
         ExpressionAttributeValues: {
             ":computed_time": obj.computed_time,
+            ":log_stream_name": obj.log_stream_name,
         },
         ReturnValues: "UPDATED_NEW",
     };
@@ -782,6 +783,52 @@ function updateJobComputedTime(obj, cb) {
         }
     });
 }
+
+function getJobs() {
+    return new Promise((resolve, reject) => {
+        let params = {
+            TableName: "simulation_images",
+            FilterExpression: "attribute_exists(job_id) and attribute_not_exists(log_stream_name)"
+        };
+        var item = [];
+        docClient.scan(params).eachPage((err, data, done) => {
+            if (err) {
+                reject(err);
+            }
+            if (data == null) {
+                resolve(concatArrays(item));
+            } else {
+                // console.log(data.Items);
+                item.push(data.Items);
+            }
+            done();
+        });
+    });
+}
+
+function updateJobLogStreamName(obj, cb) {
+    var userParams = {
+        TableName: "simulation_images",
+        Key: {
+            image_id: obj.image_id,
+        },
+        UpdateExpression:
+            "set log_stream_name = :log_stream_name",
+        ExpressionAttributeValues: {
+            ":log_stream_name": obj.log_stream_name,
+        },
+        ReturnValues: "UPDATED_NEW",
+    };
+    docClient.update(userParams, (err, data) => {
+        if (err) {
+            cb(err, "");
+        } else {
+            cb("", data);
+        }
+    });
+}
+
+
 
 function fetchCGValues(account_id) {
     return new Promise((resolve, reject) => {
@@ -962,6 +1009,8 @@ module.exports = {
     removeRequestedPlayerFromOrganizationTeam,
     getUserByPlayerId,
     addPlayer,
+    getJobs,
+    updateJobLogStreamName,
     checkSensorDataExists,
     getUserDetailByPlayerId
 };

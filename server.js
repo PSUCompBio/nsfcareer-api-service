@@ -185,6 +185,8 @@ if (cluster.isMaster) {
         getPlayersListFromTeamsDB,
         getCompletedJobs,
         updateJobComputedTime,
+        getJobs,
+        updateJobLogStreamName,
         getPlayerSimulationFile,
         removeRequestedPlayerFromOrganizationTeam,
         addPlayer,
@@ -990,69 +992,94 @@ if (cluster.isMaster) {
     })
 
     // Cron to get job computation time after job completetion
-    cron.schedule('*/5 * * * *', () => {
+    cron.schedule('*/2 * * * *', () => {
         getCompletedJobs()
             .then(simulation_data => {
-                let array_size = simulation_data.length
-                if (array_size > 0) {
+                if (simulation_data.length > 0) {
                     simulation_data.forEach((job) => {
                         if (job.job_id !== undefined) {
                             var params = {
                                 jobs: [job.job_id]
                             };
-                            let cnt = 0;
                             batch.describeJobs(params, function (err, data) {
                                 if (err) {
                                     console.log(err, err.stack);
-                                    // res.send({
-                                    //     message: "failure",
-                                    //     error: err
-                                    // })
                                 } else {
-                                    console.log(data);
-                                    data = data.jobs[0];
-                                    let computed_time = (data.stoppedAt - data.startedAt) // miliseconds
-                                    let obj = {};
-                                    obj.image_id = job.image_id;
-                                    obj.computed_time = computed_time;
+                                    // console.log(data);
+                                    if (data.jobs.length > 0) {
+                                        if (data.jobs[0].status === 'SUCCEEDED') {
+                                            data = data.jobs[0];
+                                            const computed_time = (data.stoppedAt - data.startedAt) // miliseconds
+                                            const log_stream_name = data.container.logStreamName;
+                                            let obj = {};
+                                            obj.image_id = job.image_id;
+                                            obj.computed_time = computed_time;
+                                            obj.log_stream_name = log_stream_name;
 
-                                    updateJobComputedTime(obj, function (err, data) {
-                                        if (err) {
-                                            // res.send({
-                                            //     message: "failure",
-                                            //     error: err
-                                            // })
-                                            console.log(err);
+                                            updateJobComputedTime(obj, function (err, dbdata) {
+                                                if (err) {
+                                                    console.log(err);
+                                                }
+                                                else {
+                                                    console.log('Computed tine and Log stream added in database for job id: ' +  data.jobId);
+                                                }
+                                            })
                                         }
-                                        else {
-                                            cnt++;
-                                            if (cnt === array_size) {
-                                                // res.send({
-                                                //     message: "success",
-                                                //     data: data
-                                                // })
-                                                console.log('Success');
-                                            }
-                                        }
-                                    })
+                                    }
                                 }
                             })
                         }
                     })
                 } else {
-                    // res.send({
-                    //     message: "failure",
-                    //     error: "No job found"
-                    // })
-                    console.log('No job found');
+                    // console.log('No job found');
                 }
             })
             .catch(err => {
-                // res.send({
-                //     message: "failure",
-                //     error: err
-                // })
                 console.log(err);
+            })
+    });
+
+    // Cron to get job log stream name after job completion
+    cron.schedule('*/2 * * * *', () => {
+        getJobs()
+            .then(simulation_data => {
+                if (simulation_data.length > 0) {
+                    // console.log('Jobs ' , simulation_data.length);
+                    simulation_data.forEach((job) => {
+                        if (job.job_id !== undefined) {
+                            var params = {
+                                jobs: [job.job_id]
+                            };
+                            batch.describeJobs(params, function (err, data) {
+                                if (err) {
+                                    console.log(err, err.stack);
+                                } else {
+                                    // console.log(data);
+                                    if (data.jobs.length > 0) {
+                                        if (data.jobs[0].status === 'SUCCEEDED' || data.jobs[0].status === 'FAILED') {
+                                            const log_stream_name = data.jobs[0].container.logStreamName;
+                                            let obj = {};
+                                            obj.image_id = job.image_id;
+                                            obj.log_stream_name = log_stream_name;
+
+                                            updateJobLogStreamName(obj, function (err, dbdata) {
+                                                if (err) {
+                                                    console.log(err);
+                                                }
+                                                else {
+                                                    console.log('Log stream added in database for job id: ' + data.jobs[0].jobId);
+                                                }
+                                            })
+                                        }
+                                    }
+                                }
+                            })
+                        }
+                    })
+                }
+            })
+            .catch(err => {
+               console.log(err);
             })
     });
 
