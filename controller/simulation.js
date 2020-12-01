@@ -729,12 +729,21 @@ function uploadSkullFile(user_id, timestamp) {
             Body: null, // pass file body
         };
 
+        fs.readdir(`${rootPath}/users_data/${user_id}/stl/`, (err, files) => {
+            if (err) {
+                console.log('File accessing: ', err);
+            }
+            files.forEach(file => {
+              console.log('File name in stl: ', file);
+            });
+        });
+
         fs.readdir(`${rootPath}/users_data/${user_id}/morphed_vtk/`, (err, files) => {
             if (err) {
                 console.log('File accessing: ', err);
             }
             files.forEach(file => {
-              console.log('File name: ', file);
+              console.log('File name in morphed_vtk: ', file);
             });
         });
 
