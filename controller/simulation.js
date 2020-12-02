@@ -996,13 +996,10 @@ function generateMorphedVTK(obj) {
                 let sensor_cmd = `python3 ${rootPath}/rbf-brain/RBF_CG.py --p ${rootPath}/users_data/${obj.user_cognito_id}/parameters/${obj.file_name}.prm --m ${rootPath}/rbf-brain/sensor.vtk --output ${rootPath}/users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_sensor.txt`;
                 return executeShellCommands(sensor_cmd);
             })
-            // .then(sensor => {
-            //     console.log('output of sensor value ', sensor);
-            //     resolve(cg_val);
-            // })
             .then(sensor => {
                 console.log('output of sensor value ', sensor);
-                let chophead_cmd = `pvpython ${rootPath}/rbf-brain/chophead.py --input ./avatars/${obj.user_cognito_id}/head/model.ply --output ${rootPath}/users_data/${obj.user_cognito_id}/stl/${obj.file_name}_headchopped.stl`;
+                // let chophead_cmd = `pvpython ${rootPath}/rbf-brain/chophead.py --input ./avatars/${obj.user_cognito_id}/head/model.ply --output ${rootPath}/users_data/${obj.user_cognito_id}/stl/${obj.file_name}_headchopped.stl`;
+                let chophead_cmd = `pvpython ${rootPath}/rbf-brain/chophead.py --input ./avatars/${obj.user_cognito_id}/head/model.ply --output ${rootPath}/users_data/${obj.user_cognito_id}/stl/${obj.file_name}_headchopped.stl --outputascii ${rootPath}/users_data/${obj.user_cognito_id}/stl/${obj.file_name}_head_ascii.ply`;
                 return executeShellCommands(chophead_cmd);
             })
             .then(chophead => {
@@ -1022,7 +1019,8 @@ function generateMorphedVTK(obj) {
             })
             .then(headtoface => {
                 console.log('output of headtoface ', headtoface);
-                let textureaddition_cmd = `python3 ${rootPath}/rbf-brain/textureaddition.py --inputheadoriginal ./avatars/${obj.user_cognito_id}/head/model.ply --inputheadtrans ${rootPath}/users_data/${obj.user_cognito_id}/stl/${obj.file_name}_headtrans.ply --outputheadtransUV ${rootPath}/users_data/${obj.user_cognito_id}/stl/${obj.file_name}_model.ply`;
+                // let textureaddition_cmd = `python3 ${rootPath}/rbf-brain/textureaddition.py --inputheadoriginal ./avatars/${obj.user_cognito_id}/head/model.ply --inputheadtrans ${rootPath}/users_data/${obj.user_cognito_id}/stl/${obj.file_name}_headtrans.ply --outputheadtransUV ${rootPath}/users_data/${obj.user_cognito_id}/stl/${obj.file_name}_model.ply`;
+                let textureaddition_cmd = `python3 ${rootPath}/rbf-brain/textureaddition.py --inputheadoriginal ${rootPath}/users_data/${obj.user_cognito_id}/stl/${obj.file_name}_head_ascii.ply --inputheadtrans ${rootPath}/users_data/${obj.user_cognito_id}/stl/${obj.file_name}_headtrans.ply --outputheadtransUV ${rootPath}/users_data/${obj.user_cognito_id}/stl/${obj.file_name}_model.ply`;
                 return executeShellCommands(textureaddition_cmd);
             })
             .then(textureaddition => {
