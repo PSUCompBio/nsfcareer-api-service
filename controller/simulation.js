@@ -1703,7 +1703,8 @@ function upload_simulation_data(simulation_data) {
         let uploadParams = {
             Bucket: config.simulation_bucket,
             Key: path, // pass key
-            Body: JSON.stringify(simulation_data).replace(/ /g, "")
+            // Body: JSON.stringify(simulation_data).replace(/ /g, ""),
+            Body: JSON.stringify(simulation_data),
         };
         s3.upload(uploadParams, (err, data) => {
             if (err) {

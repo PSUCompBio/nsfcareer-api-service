@@ -491,11 +491,36 @@ if (cluster.isMaster) {
                                 _temp_sensor_data["image_id"] = shortid.generate();
                                
                                 if (sensor_detail.length > 0) {
-                                    _temp_sensor_data["player_id"] = sensor_detail[0].player_id;
-                                } else {
-                                    _temp_sensor_data["player_id"] = _temp["player_id"] + '$' + Date.now();
+                                    let params = {
+                                        TableName: "sensor_data",
+                                        Key: {
+                                            team: sensor_detail[0].team,
+                                            player_id: sensor_detail[0].player_id,
+                                        },
+                                    };
+                                    docClient.delete(params, function (err, data) {
+                                        if (err) {
+                                            console.log(err);
+                                        } else {
+                                            console.log('Player deleted from sensor_data');
+                                            let params1 = {
+                                                TableName: "simulation_images",
+                                                Key: {
+                                                    image_id: sensor_detail[0].image_id,
+                                                },
+                                            };
+                                            docClient.delete(params1, function (err, data) {
+                                                if (err) {
+                                                    console.log(err);
+                                                } else {
+                                                    console.log('Player deleted from simulation_images');
+                                                }
+                                            });
+                                        }
+                                    });
                                 }
-                                
+
+                                _temp_sensor_data["player_id"] = _temp["player_id"] + '$' + Date.now();
                                 _temp_sensor_data["simulation_status"] = 'pending';
                                 _temp_sensor_data["team"] = _temp.player.team;
 
