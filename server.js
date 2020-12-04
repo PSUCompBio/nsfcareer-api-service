@@ -799,7 +799,33 @@ if (cluster.isMaster) {
                                             }
 
                                             if (sensor_detail.length > 0) {
-                                                _temp["player_id"] = sensor_detail[0].player_id;
+                                                let params = {
+                                                    TableName: "sensor_data",
+                                                    Key: {
+                                                        team: sensor_detail[0].team,
+                                                        player_id: sensor_detail[0].player_id,
+                                                    },
+                                                };
+                                                docClient.delete(params, function (err, data) {
+                                                    if (err) {
+                                                        console.log(err);
+                                                    } else {
+                                                        console.log('Player deleted from sensor_data');
+                                                        let params1 = {
+                                                            TableName: "simulation_images",
+                                                            Key: {
+                                                                image_id: sensor_detail[0].image_id,
+                                                            },
+                                                        };
+                                                        docClient.delete(params1, function (err, data) {
+                                                            if (err) {
+                                                                console.log(err);
+                                                            } else {
+                                                                console.log('Player deleted from simulation_images');
+                                                            }
+                                                        });
+                                                    }
+                                                });
                                             }
             
                                             _temp["level"] = level;
