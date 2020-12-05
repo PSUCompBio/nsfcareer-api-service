@@ -207,7 +207,7 @@ function getTeamData(obj) {
                    ":organization": obj.organization,
                    ":team": obj.team
                 },
-                ProjectionExpression: "team, player_id, image_id"
+                ProjectionExpression: "team, player_id, image_id, sensor"
             };
         } else {
             params = {
@@ -218,7 +218,7 @@ function getTeamData(obj) {
                    ":organization": obj.organization,
                    ":team": obj.team
                 },
-                ProjectionExpression: "team, player_id, image_id"
+                ProjectionExpression: "team, player_id, image_id, sensor"
             };
         }
         
@@ -641,7 +641,8 @@ function updateSimulationImageToDDB(
     path,
     status = "completed",
     token = null,
-    secret = null
+    secret = null,
+    account_id
 ) {
     return new Promise((resolve, reject) => {
         if (image_id == null) {
@@ -668,6 +669,7 @@ function updateSimulationImageToDDB(
                                 status: status,
                                 token: token,
                                 secret: secret,
+                                account_id: account_id,
                             },
                         };
                         docClient.put(dbInsert, function (err, data) {

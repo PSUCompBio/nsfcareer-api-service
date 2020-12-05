@@ -274,6 +274,44 @@ if (cluster.isMaster) {
             });
     })
 
+    app.get(`/updateData`, (req, res) => {
+        const obj = {};
+        obj.brand = 'Prevent Biometrics';
+        obj.organization = 'Army Research Laboratory';
+        obj.team = '2020 POMPOC Study';
+
+        getTeamData(obj)
+            .then (data => {
+                console.log(data.length);
+                data.forEach((player) => {
+                    getUserDetailByPlayerId(player.player_id.split('$')[0] + '-' + player.sensor)
+                        .then (u_detail => {
+                            if (u_detail.length > 0 && u_detail[0].account_id) {
+                                var userParams = {
+                                    TableName: "simulation_images",
+                                    Key: {
+                                        image_id: player.image_id,
+                                    },
+                                    UpdateExpression:
+                                        "set account_id = :account_id",
+                                    ExpressionAttributeValues: {
+                                        ":account_id": u_detail[0].account_id,
+                                    },
+                                    ReturnValues: "UPDATED_NEW",
+                                };
+                                docClient.update(userParams, (err, data) => {
+                                    if (err) {
+                                        console.log('Error ', err);
+                                    } else{
+                                        console.log('Player detail updated.');
+                                    }
+                                });
+                            }
+                        })
+                })
+            });
+    })
+
     app.post(`${apiPrefix}generateSimulationForSensorData`, setConnectionTimeout('10m'), function (req, res) {
         // console.log('user_cognito_id', req.body.user_cognito_id);
         let apiMode = req.body.mode;
