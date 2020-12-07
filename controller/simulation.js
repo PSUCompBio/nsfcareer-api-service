@@ -353,31 +353,47 @@ function uploadPlayerSelfieIfNotPresent(selfie, player_id, filename, account_id)
             resolve('No selfie in request');
         } else {
             // Check if selfie model is present
-            checkIfSelfiePresent(player_id.replace(/ /g, "-"))
-                .then(data => {
-                    if (data) {
-                        // If selfie present data = true
-                        resolve(data)
-                    } else {
-                        // upload selfie and generate meshes
-                        uploadPlayerImage(selfie, account_id, filename)
-                            .then((imageDetails) => {
-                                return getSignedUrl(imageDetails.Key)
-                            })
-                            .then((url) => {
-                                // Get signed url for the image
-                                return computeImageData({ body: { image_url: url, user_cognito_id: account_id } });
-                            })
-                            .then((details) => {
-                                resolve(details);
-                            })
-                            .catch((err) => {
-                                console.log(err);
-                                reject(err);
-                            })
-                    }
+            // checkIfSelfiePresent(player_id.replace(/ /g, "-"))
+            //     .then(data => {
+            //         if (data) {
+            //             // If selfie present data = true
+            //             resolve(data)
+            //         } else {
+            //             // upload selfie and generate meshes
+            //             uploadPlayerImage(selfie, account_id, filename)
+            //                 .then((imageDetails) => {
+            //                     return getSignedUrl(imageDetails.Key)
+            //                 })
+            //                 .then((url) => {
+            //                     // Get signed url for the image
+            //                     return computeImageData({ body: { image_url: url, user_cognito_id: account_id } });
+            //                 })
+            //                 .then((details) => {
+            //                     resolve(details);
+            //                 })
+            //                 .catch((err) => {
+            //                     console.log(err);
+            //                     reject(err);
+            //                 })
+            //         }
+            //     })
+            //     .catch(err => {
+            //         console.log(err);
+            //         reject(err);
+            //     })
+            // upload selfie and generate meshes
+            uploadPlayerImage(selfie, account_id, filename)
+                .then((imageDetails) => {
+                    return getSignedUrl(imageDetails.Key)
                 })
-                .catch(err => {
+                .then((url) => {
+                    // Get signed url for the image
+                    return computeImageData({ body: { image_url: url, user_cognito_id: account_id } });
+                })
+                .then((details) => {
+                    resolve(details);
+                })
+                .catch((err) => {
                     console.log(err);
                     reject(err);
                 })
@@ -1085,7 +1101,7 @@ function uploadINPFile(user_id, timestamp) {
                 reject(err);
             }
             else {
-                params.Key = user_id + "/profile/rbf/" + timestamp + "_coarse.inp";
+                params.Key = user_id + "/profile/rbf/coarse_" + timestamp + ".inp";
                 params.Body = headBuffer;
                 // Call S3 Upload
                 s3.upload(params, (err, data) => {
@@ -1119,7 +1135,7 @@ function uploadVTKFile(user_id, timestamp) {
                 reject(err);
             }
             else {
-                params.Key = user_id + "/profile/rbf/vtk/" + timestamp + "_coarse.vtk";
+                params.Key = user_id + "/profile/rbf/vtk/coarse_" + timestamp + ".vtk";
                 params.Body = headBuffer;
                 // Call S3 Upload
                 s3.upload(params, (err, data) => {
@@ -1153,7 +1169,7 @@ function uploadFineINPFile(user_id, timestamp) {
                 reject(err);
             }
             else {
-                params.Key = user_id + "/profile/rbf/" + timestamp + "_fine.inp";
+                params.Key = user_id + "/profile/rbf/fine_" + timestamp + ".inp";
                 params.Body = headBuffer;
                 // Call S3 Upload
                 s3.upload(params, (err, data) => {
@@ -1187,7 +1203,7 @@ function uploadFineVTKFile(user_id, timestamp) {
                 reject(err);
             }
             else {
-                params.Key = user_id + "/profile/rbf/vtk/" + timestamp + "_fine.vtk";
+                params.Key = user_id + "/profile/rbf/vtk/fine_" + timestamp + ".vtk";
                 params.Body = headBuffer;
                 // Call S3 Upload
                 s3.upload(params, (err, data) => {
