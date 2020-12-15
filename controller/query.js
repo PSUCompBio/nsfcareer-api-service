@@ -136,104 +136,133 @@ function addPlayer(obj) {
 function getTeamDataWithPlayerRecords(obj) {
 
     return new Promise((resolve, reject) => {
-        let params;
-
-        if (obj.sensor) {
-            params = {
-                TableName: "sensor_data",
-                KeyConditionExpression:  "team = :team and begins_with(player_id,:player_id)",
-                FilterExpression: "sensor = :sensor and organization = :organization",
-                ExpressionAttributeValues: {
-                ":sensor": obj.sensor,
-                ":organization": obj.organization,
-                ":team": obj.team,
-                ":player_id": obj.player_id + '$',
-                },
-                ExpressionAttributeNames : {
-                    '#time': 'time',
-                    '#date': 'date',
-                    '#Impact_date': 'impact-date',
-                    '#Impact_time': 'impact-time'
-                },
-                ProjectionExpression: " #time, #date,#Impact_date,#Impact_time, image_id,organization,player,player_id,sensor,simulation_status,team,user_cognito_id",
-                ScanIndexForward: false
-            };
-        } else {
-            params = {
-                TableName: "sensor_data",
-                KeyConditionExpression:  "team = :team and begins_with(player_id,:player_id)",
-                FilterExpression: "organization = :organization",
-                ExpressionAttributeValues: {
-                ":organization": obj.organization,
-                ":team": obj.team,
-                ":player_id": obj.player_id + '$',
-                },
-                ExpressionAttributeNames : {
-                    '#time': 'time',
-                    '#date': 'date',
-                    '#Impact_date': 'impact-date',
-                    '#Impact_time': 'impact-time'
-                },
-                ProjectionExpression: " #time, #date,#Impact_date,#Impact_time, image_id,organization,player,player_id,sensor,simulation_status,team,user_cognito_id",
-                ScanIndexForward: false
-            };
+        const player_obj = {};
+        player_obj.organization = obj.organization;
+        player_obj.team_name = obj.team;
+        if (obj.sensor && obj.sensor != 'null') {
+            player_obj.sensor = obj.sensor;
         }
-        var item = [];
-        docClient.query(params).eachPage((err, data, done) => {
-            if (err) {
-                reject(err);
-            }
-            if (data == null) {
-                resolve(concatArrays(item));
-            } else {
-                item.push(data.Items);
-            }
-            done();
-        });
+        getOrganizationData(player_obj)
+            .then (org => {
+                if (org.length > 0) {
+                    let params;
+                    if (obj.sensor && obj.sensor != 'null') {
+                        params = {
+                            TableName: "sensor_details",
+                            KeyConditionExpression:  "org_id = :org_id and begins_with(player_id,:player_id)",
+                            FilterExpression: "sensor = :sensor and organization = :organization and team = :team",
+                            ExpressionAttributeValues: {
+                                ":org_id": org[0].organization_id,
+                                ":sensor": obj.sensor,
+                                ":organization": obj.organization,
+                                ":team": obj.team,
+                                ":player_id": obj.player_id + '$',
+                            },
+                            ExpressionAttributeNames : {
+                                '#time': 'time',
+                                '#date': 'date',
+                                '#Impact_date': 'impact-date',
+                                '#Impact_time': 'impact-time'
+                            },
+                            ProjectionExpression: " #time, #date,#Impact_date,#Impact_time, image_id,organization,player,player_id,sensor,simulation_status,team,user_cognito_id",
+                            ScanIndexForward: false
+                        };
+                    } else {
+                        params = {
+                            TableName: "sensor_details",
+                            KeyConditionExpression:  "org_id = :org_id and begins_with(player_id,:player_id)",
+                            FilterExpression: "organization = :organization and team = :team",
+                            ExpressionAttributeValues: {
+                                ":org_id": org[0].organization_id,
+                                ":organization": obj.organization,
+                                ":team": obj.team,
+                                ":player_id": obj.player_id + '$',
+                            },
+                            ExpressionAttributeNames : {
+                                '#time': 'time',
+                                '#date': 'date',
+                                '#Impact_date': 'impact-date',
+                                '#Impact_time': 'impact-time'
+                            },
+                            ProjectionExpression: " #time, #date,#Impact_date,#Impact_time, image_id,organization,player,player_id,sensor,simulation_status,team,user_cognito_id",
+                            ScanIndexForward: false
+                        };
+                    }
+                    var item = [];
+                    docClient.query(params).eachPage((err, data, done) => {
+                        if (err) {
+                            reject(err);
+                        }
+                        if (data == null) {
+                            resolve(concatArrays(item));
+                        } else {
+                            item.push(data.Items);
+                        }
+                        done();
+                    });
+                } else {
+                    resolve([]);
+                }
+            })    
     });
 }
 
 function getTeamData(obj) {
     return new Promise((resolve, reject) => {
-        let params;
-
-        if (obj.brand) {
-            params = {
-                TableName: "sensor_data",
-                KeyConditionExpression:  "team = :team",
-                FilterExpression: "sensor = :sensor and organization = :organization",
-                ExpressionAttributeValues: {
-                   ":sensor": obj.brand,
-                   ":organization": obj.organization,
-                   ":team": obj.team
-                },
-                ProjectionExpression: "team, player_id, image_id, sensor"
-            };
-        } else {
-            params = {
-                TableName: "sensor_data",
-                KeyConditionExpression:  "team = :team",
-                FilterExpression: "organization = :organization",
-                ExpressionAttributeValues: {
-                   ":organization": obj.organization,
-                   ":team": obj.team
-                },
-                ProjectionExpression: "team, player_id, image_id, sensor"
-            };
+        const player_obj = {};
+        player_obj.organization = obj.organization;
+        player_obj.team_name = obj.team;
+        if (obj.brand && obj.brand != 'null') {
+            player_obj.sensor = obj.brand;
         }
-        
-        var item = [];
-        docClient.query(params).eachPage((err, data, done) => {
-            if (err) {
-                reject(err);
-            }
-            if (data == null) {
-                resolve(concatArrays(item));
-            } else {
-                item.push(data.Items);
-            }
-            done();
-        });
+        getOrganizationData(player_obj)
+            .then (org => {
+                if (org.length > 0) {
+                    let params;
+                    if (obj.brand && obj.brand != 'null') {
+                        params = {
+                            TableName: "sensor_details",
+                            KeyConditionExpression:  "org_id = :org_id",
+                            FilterExpression: "sensor = :sensor and organization = :organization and team = :team",
+                            ExpressionAttributeValues: {
+                                ":org_id": org[0].organization_id,
+                                ":sensor": obj.brand,
+                                ":organization": obj.organization,
+                                ":team": obj.team
+                            },
+                            ProjectionExpression: "team, player_id, image_id, sensor"
+                        };
+                    } else {
+                        params = {
+                            TableName: "sensor_details",
+                            KeyConditionExpression:  "org_id = :org_id",
+                            FilterExpression: "organization = :organization and team = :team",
+                            ExpressionAttributeValues: {
+                                ":org_id": org[0].organization_id,
+                                ":organization": obj.organization,
+                                ":team": obj.team
+                            },
+                            ProjectionExpression: "team, player_id, image_id, sensor"
+                        };
+                    }
+                    
+                    var item = [];
+                    docClient.query(params).eachPage((err, data, done) => {
+                        if (err) {
+                            reject(err);
+                        }
+                        if (data == null) {
+                            resolve(concatArrays(item));
+                        } else {
+                            item.push(data.Items);
+                        }
+                        done();
+                    });
+                } else {
+                    resolve([]);
+                    done();
+                }
+            })    
     });
 }
 
@@ -264,18 +293,59 @@ function getPlayersListFromTeamsDB(obj) {
     });
 }
 
-function storeSensorData(sensor_data_array) {
+function getOrganizationData(obj) {
+    return new Promise((resolve, reject) => {
+        let params;
+
+        if (obj.sensor) {
+            params = {
+                TableName: "organizations",
+                FilterExpression: "organization = :organization and team_name = :team_name and sensor = :sensor",
+                ExpressionAttributeValues: {
+                    ":organization": obj.organization,
+                    ":team_name": obj.team_name,
+                    ":sensor": obj.sensor,
+                },
+            };
+        } else {
+            params = {
+                TableName: "organizations",
+                FilterExpression: "organization = :organization and team_name = :team_name",
+                ExpressionAttributeValues: {
+                    ":organization": obj.organization,
+                    ":team_name": obj.team_name
+                },
+            };
+        }
+                
+        var item = [];
+        docClient.scan(params).eachPage((err, data, done) => {
+            if (err) {
+                reject(err);
+            }
+            if (data == null) {
+                resolve(concatArrays(item));
+            } else {
+                item.push(data.Items);
+            }
+            done();
+        });
+    });
+}
+
+function storeSensorData(sensor_data_array, org_id) {
     return new Promise((resolve, reject) => {
         var counter = 0;
         if (sensor_data_array.length == 0) {
             resolve(true);
         }
         for (var i = 0; i < sensor_data_array.length; i++) {
+            sensor_data_array[i].org_id = org_id;
             if (sensor_data_array[i].level === 300) {
                 delete sensor_data_array[i].sensor
             }
             let param = {
-                TableName: "sensor_data",
+                TableName: "sensor_details",
                 Item: sensor_data_array[i],
             };
 
@@ -415,12 +485,12 @@ function addPlayerToTeamOfOrganization(sensor, user_cognito_id, org, team, playe
                                 if (err) {
                                     reject(err);
                                 } else {
-                                    resolve(data);
+                                    resolve(scanData[0].organization_id);
                                 }
                             });
                         } else {
                             console.log("PLAYER ALREADY EXISTS IN TEAM");
-                            resolve("PLAYER ALREADY EXISTS IN TEAM");
+                            resolve(scanData[0].organization_id);
                         }
                     } else {
                         const dbInsert = {
@@ -439,15 +509,16 @@ function addPlayerToTeamOfOrganization(sensor, user_cognito_id, org, team, playe
                                 console.log(err);
                                 reject(err);
                             } else {
-                                resolve(data);
+                                resolve(scanData[0].organization_id);
                             }
                         });
                     }
                 } else {
+                    const org_id = 'org-' + Date.now();
                     const dbInsert = {
                         TableName: "organizations",
                         Item: {
-                            organization_id: 'org-' + Date.now(),
+                            organization_id: org_id,
                             sensor: sensor,
                             user_cognito_id: user_cognito_id,
                             organization: org,
@@ -460,7 +531,7 @@ function addPlayerToTeamOfOrganization(sensor, user_cognito_id, org, team, playe
                             console.log(err);
                             reject(err);
                         } else {
-                            resolve(data);
+                            resolve(org_id);
                         }
                     });
                 }
@@ -926,7 +997,7 @@ function checkSensorDataExists(obj) {
     console.log(obj);
     return new Promise((resolve, reject) => {
         let params = {
-            TableName: "sensor_data",
+            TableName: "sensor_details",
             FilterExpression: "player.#impact_id = :impact_id and player.#sensor_id = :sensor_id",
             ExpressionAttributeValues: {
                 ":impact_id": obj['impact-id'],
@@ -936,7 +1007,7 @@ function checkSensorDataExists(obj) {
                 "#impact_id": "impact-id",
                 "#sensor_id": "sensor-id",
             },
-            ProjectionExpression: "image_id, team, player_id"
+            ProjectionExpression: "org_id, image_id, team, player_id"
         };
         var item = [];
         docClient.scan(params).eachPage((err, data, done) => {
@@ -1014,5 +1085,6 @@ module.exports = {
     getJobs,
     updateJobLogStreamName,
     checkSensorDataExists,
-    getUserDetailByPlayerId
+    getUserDetailByPlayerId,
+    getOrganizationData
 };

@@ -191,7 +191,8 @@ if (cluster.isMaster) {
         removeRequestedPlayerFromOrganizationTeam,
         addPlayer,
         getUserDetailByPlayerId,
-        checkSensorDataExists
+        checkSensorDataExists,
+        getOrganizationData
     } = require('./controller/query');
 
     app.get(`/`, (req, res) => {
@@ -244,7 +245,7 @@ if (cluster.isMaster) {
                 console.log(data.length);
                 data.forEach((player) => {
                     let params = {
-                        TableName: "sensor_data",
+                        TableName: "sensor_details",
                         Key: {
                             team: player.team,
                             player_id: player.player_id,
@@ -254,7 +255,7 @@ if (cluster.isMaster) {
                         if (err) {
                             console.log(err);
                         } else {
-                            console.log('Deleted from sensor_data');
+                            console.log('Deleted from sensor_details');
                             let params1 = {
                                 TableName: "simulation_images",
                                 Key: {
@@ -310,6 +311,49 @@ if (cluster.isMaster) {
                         })
                 })
             });
+    })
+
+    app.get('/migrateData', (req, res) => {
+        const obj = {};
+        // obj.brand = 'Prevent Biometrics';
+        obj.organization = 'Army Research Laboratory';
+        obj.team = 'Ryan Niece H3 Study';
+        getTeamData(obj)
+            .then (data => {
+                console.log(data.length);
+                data.forEach((player) => {
+                    const player_obj = {};
+                    player_obj.organization = player.organization;
+                    player_obj.team_name = player.team;
+                    player_obj.sensor = player.sensor;
+                    console.log(player_obj);
+                    if (player.sensor) {
+                        getOrganizationData(player_obj)
+                            .then (org => {
+                                if (org.length > 0) {
+                                    player.org_id = org[0].organization_id;
+                                    const dbInsert = {
+                                        TableName: "sensor_details",
+                                        Item: player,
+                                    };
+                                    docClient.put(dbInsert, function (err, data) {
+                                        if (err) {
+                                            console.log(err);
+                                            // reject(err);
+                                        } else {
+                                            //.resolve(data);
+                                            console.log('Record added.');
+                                        }
+                                    });
+                                } else {
+                                    console.log('Organization ', player.image_id);
+                                }
+                            })
+                    } else {
+                        console.log('Sensor ', player.image_id);
+                    }
+                })
+            })
     })
 
     app.post(`${apiPrefix}generateSimulationForSensorData`, setConnectionTimeout('10m'), function (req, res) {
@@ -530,9 +574,9 @@ if (cluster.isMaster) {
                                
                                 if (sensor_detail.length > 0) {
                                     let params = {
-                                        TableName: "sensor_data",
+                                        TableName: "sensor_details",
                                         Key: {
-                                            team: sensor_detail[0].team,
+                                            org_id: sensor_detail[0].org_id,
                                             player_id: sensor_detail[0].player_id,
                                         },
                                     };
@@ -540,7 +584,7 @@ if (cluster.isMaster) {
                                         if (err) {
                                             console.log(err);
                                         } else {
-                                            console.log('Player deleted from sensor_data');
+                                            console.log('Player deleted from sensor_details');
                                             let params1 = {
                                                 TableName: "simulation_images",
                                                 Key: {
@@ -613,11 +657,11 @@ if (cluster.isMaster) {
                             console.log('new_items_array is ', (sensor_data_array));
 
                             // Stores sensor data in db 
-                            // TableName: "sensor_data"
+                            // TableName: "sensor_details"
                             // team, player_id
 
-                            storeSensorData(sensor_data_array)
-                                .then(flag => {
+                            // storeSensorData(sensor_data_array)
+                            //     .then(flag => {
 
                                     if (level === 300) {
                                         for (var i = 0; i < sensor_data_array.length; i++) {
@@ -660,7 +704,14 @@ if (cluster.isMaster) {
 
                                             // Adds team details in db if doesn't already exist
                                             addPlayerToTeamOfOrganization(level === 300 ? null : req.body.sensor_brand, req.body.user_cognito_id, temp.organization, temp.team, temp.player_id)
-                                                .then(d => {
+                                                .then(org_id => {
+                                                    console.log('org ', org_id);
+                                                    if (counter === 0) {
+                                                        storeSensorData(sensor_data_array, org_id)
+                                                            .then(flag => {
+                                                                // 
+                                                            })
+                                                    }
                                                     counter++;
                                                     if (counter == result.length) {
                                                         // Upload player selfie if not present and generate meshes
@@ -760,14 +811,14 @@ if (cluster.isMaster) {
                                                 })
                                         }
                                     }
-                                })
-                                .catch(err => {
-                                    console.log(err);
-                                    res.send({
-                                        message: "failure",
-                                        error: err
-                                    })
-                                })
+                                // })
+                                // .catch(err => {
+                                //     console.log(err);
+                                //     res.send({
+                                //         message: "failure",
+                                //         error: err
+                                //     })
+                                // })
                         })();
                     }
                 })
@@ -838,9 +889,9 @@ if (cluster.isMaster) {
 
                                             if (sensor_detail.length > 0) {
                                                 let params = {
-                                                    TableName: "sensor_data",
+                                                    TableName: "sensor_details",
                                                     Key: {
-                                                        team: sensor_detail[0].team,
+                                                        org_id: sensor_detail[0].org_id,
                                                         player_id: sensor_detail[0].player_id,
                                                     },
                                                 };
@@ -848,7 +899,7 @@ if (cluster.isMaster) {
                                                     if (err) {
                                                         console.log(err);
                                                     } else {
-                                                        console.log('Player deleted from sensor_data');
+                                                        console.log('Player deleted from sensor_details');
                                                         let params1 = {
                                                             TableName: "simulation_images",
                                                             Key: {
@@ -917,11 +968,11 @@ if (cluster.isMaster) {
                                         console.log('New items array is ', new_items_array);
             
                                         // Stores sensor data in db 
-                                        // TableName: "sensor_data"
+                                        // TableName: "sensor_details"
                                         // team, player_id
             
-                                        storeSensorData(new_items_array)
-                                            .then(flag => {
+                                        // storeSensorData(new_items_array)
+                                        //     .then(flag => {
             
                                                 if (level === 300) {
                                                     for (var i = 0; i < new_items_array.length; i++) {
@@ -964,7 +1015,14 @@ if (cluster.isMaster) {
             
                                                         // Adds team details in db if doesn't already exist
                                                         addPlayerToTeamOfOrganization(level === 300 ? null : req.body.sensor_brand, req.body.user_cognito_id, temp.organization, temp.team, temp.player_id)
-                                                            .then(d => {
+                                                            .then(org_id => {
+                                                                console.log('org ', org_id);
+                                                                if (counter === 0) {
+                                                                    storeSensorData(new_items_array, org_id)
+                                                                        .then(flag => {
+                                                                            // 
+                                                                        })
+                                                                }
                                                                 counter++;
                                                                 if (counter == result.length) {
                                                                     // Upload player selfie if not present and generate meshes
@@ -1064,7 +1122,7 @@ if (cluster.isMaster) {
                                                             })
                                                     }
                                                 }
-                                            })
+                                            // })
                                     })();
                                 }
                             });    
@@ -1754,7 +1812,7 @@ if (cluster.isMaster) {
     function getHeadAccelerationEvents(obj) {
         return new Promise((resolve, reject) => {
             let params = {
-                TableName: 'sensor_data',
+                TableName: 'sensor_details',
                 KeyConditionExpression: "team = :team and begins_with(player_id, :player_id)",
                 ExpressionAttributeValues: {
                     ":team": obj.team,
