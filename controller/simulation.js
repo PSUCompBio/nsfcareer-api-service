@@ -968,7 +968,7 @@ function generateMorphedVTK(obj) {
             })
             .then(mesh_output => {
                 console.log("MESROTATE VTK POST<<<<<--------------\n", mesh_output);
-                let fine_mesh_cmd = `python3 ${rootPath}/rbf-brain/RBF_coarse.py --p ${rootPath}/users_data/${obj.user_cognito_id}/parameters/${obj.file_name}.prm --m ${rootPath}/rbf-brain/fine_mesh.vtk --output ${rootPath}/users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_fine.vtk`;
+                let fine_mesh_cmd = `python3 ${rootPath}/rbf-brain/RBF_coarse.py --p ${rootPath}/users_data/${obj.user_cognito_id}/parameters/${obj.file_name}.prm --m ${rootPath}/rbf-brain/fine_brain.vtk --output ${rootPath}/users_data/${obj.user_cognito_id}/morphed_vtk/${obj.file_name}_fine.vtk`;
                 return executeShellCommands(fine_mesh_cmd);
             })
             .then(fine_mesh_output => {
