@@ -1834,6 +1834,36 @@ function cleanUp(obj) {
     })
 }
 
+function deleteSimulationFromBucket(obj, callback) {
+    var params = {
+        Bucket: obj.bucket_name,
+        Prefix: obj.root_path
+    };
+
+    s3.listObjects(params, function (err, data) {
+        if (err) return callback(err);
+
+        if (data.Contents.length == 0) callback();
+
+        params = { Bucket: obj.bucket_name };
+        params.Delete = { Objects: [] };
+
+        data.Contents.forEach(function (content) {
+            params.Delete.Objects.push({ Key: content.Key });
+        });
+        console.log('params -----------\n', params)
+        s3.deleteObjects(params, function (err, data) {
+            if (err) return callback(err);
+            if (data.Contents) {
+                deleteSimulationFromBucket(obj, callback);
+            }
+            else {
+                callback();
+            }
+        });
+    });
+}
+
 module.exports = {
     convertFileDataToJson,
     storeSensorData,
@@ -1842,5 +1872,6 @@ module.exports = {
     generateSimulationForPlayers,
     generateSimulationForPlayersFromJson,
     computeImageData,
-    generateINP
+    generateINP,
+    deleteSimulationFromBucket
 };

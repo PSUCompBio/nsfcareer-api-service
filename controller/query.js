@@ -1059,6 +1059,28 @@ function getSensorAdmins(sensor) {
     });
 }
 
+function getUsersWthNoAccountId() {
+    return new Promise((resolve, reject) => {
+        const params = {
+            TableName: "users",
+            FilterExpression: "attribute_exists(first_name) and attribute_not_exists(account_id)"
+        };
+
+        var item = [];
+        docClient.scan(params).eachPage((err, data, done) => {
+            if (err) {
+                reject(err);
+            }
+            if (data == null) {
+                resolve(concatArrays(item));
+            } else {
+                item.push(data.Items);
+            }
+            done();
+        });
+    });
+}
+
 module.exports = {
     getUserDetails,
     getUserDetailBySensorId,
@@ -1086,5 +1108,6 @@ module.exports = {
     updateJobLogStreamName,
     checkSensorDataExists,
     getUserDetailByPlayerId,
-    getOrganizationData
+    getOrganizationData,
+    getUsersWthNoAccountId
 };
