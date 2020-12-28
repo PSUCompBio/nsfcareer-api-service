@@ -607,42 +607,41 @@ if (cluster.isMaster) {
                                
                                 if (sensor_detail.length > 0) {
                                     _temp_sensor_data["image_id"] = sensor_detail[0].image_id;
-                                    
                                     getPlayerSimulationFile({image_id : sensor_detail[0].image_id})
                                         .then(simulation => {
                                             if (simulation) {
                                                 deleteSimulationFromBucket(simulation, function (err, data) {
-                                                    console.log('Deleted from bucket ', data)
-                                                    let params = {
-                                                        TableName: "sensor_details",
-                                                        Key: {
-                                                            org_id: sensor_detail[0].org_id,
-                                                            player_id: sensor_detail[0].player_id,
-                                                        },
-                                                    };
-                                                    docClient.delete(params, function (err, data) {
-                                                        if (err) {
-                                                            console.log(err);
-                                                        } else {
-                                                            console.log('Player deleted from sensor_details');
-                                                            let params1 = {
-                                                                TableName: "simulation_images",
-                                                                Key: {
-                                                                    image_id: sensor_detail[0].image_id,
-                                                                },
-                                                            };
-                                                            docClient.delete(params1, function (err, data) {
-                                                                if (err) {
-                                                                    console.log(err);
-                                                                } else {
-                                                                    console.log('Player deleted from simulation_images');
-                                                                }
-                                                            });
-                                                        }
-                                                    });
-                                                })
+                                                    console.log('Deleted from bucket');
+                                                })  
                                             }
                                         })
+                                    let params = {
+                                        TableName: "sensor_details",
+                                        Key: {
+                                            org_id: sensor_detail[0].org_id,
+                                            player_id: sensor_detail[0].player_id,
+                                        },
+                                    };
+                                    docClient.delete(params, function (err, data) {
+                                        if (err) {
+                                            console.log(err);
+                                        } else {
+                                            console.log('Player deleted from sensor_details');
+                                            let params1 = {
+                                                TableName: "simulation_images",
+                                                Key: {
+                                                    image_id: sensor_detail[0].image_id,
+                                                },
+                                            };
+                                            docClient.delete(params1, function (err, data) {
+                                                if (err) {
+                                                    console.log(err);
+                                                } else {
+                                                    console.log('Player deleted from simulation_images');
+                                                }
+                                            });
+                                        }
+                                    });    
                                 } else {
                                     _temp_sensor_data["image_id"] = shortid.generate();
                                 }
@@ -936,40 +935,40 @@ if (cluster.isMaster) {
                                                 _temp["image_id"] = sensor_detail[0].image_id;
 
                                                 getPlayerSimulationFile({image_id : sensor_detail[0].image_id})
-                                                .then(simulation => {
-                                                    if (simulation) {
-                                                        deleteSimulationFromBucket(simulation, function (err, data) {
-                                                            console.log('Deleted from bucket ', data)
-                                                            let params = {
-                                                                TableName: "sensor_details",
-                                                                Key: {
-                                                                    org_id: sensor_detail[0].org_id,
-                                                                    player_id: sensor_detail[0].player_id,
-                                                                },
-                                                            };
-                                                            docClient.delete(params, function (err, data) {
-                                                                if (err) {
-                                                                    console.log(err);
-                                                                } else {
-                                                                    console.log('Player deleted from sensor_details');
-                                                                    let params1 = {
-                                                                        TableName: "simulation_images",
-                                                                        Key: {
-                                                                            image_id: sensor_detail[0].image_id,
-                                                                        },
-                                                                    };
-                                                                    docClient.delete(params1, function (err, data) {
-                                                                        if (err) {
-                                                                            console.log(err);
-                                                                        } else {
-                                                                            console.log('Player deleted from simulation_images');
-                                                                        }
-                                                                    });
-                                                                }
-                                                            });
-                                                        })
+                                                    .then(simulation => {
+                                                        if (simulation) {
+                                                            deleteSimulationFromBucket(simulation, function (err, data) {
+                                                                console.log('Deleted from bucket');
+                                                            })
+                                                        }
+                                                    })
+                                                let params = {
+                                                    TableName: "sensor_details",
+                                                    Key: {
+                                                        org_id: sensor_detail[0].org_id,
+                                                        player_id: sensor_detail[0].player_id,
+                                                    },
+                                                };
+                                                docClient.delete(params, function (err, data) {
+                                                    if (err) {
+                                                        console.log(err);
+                                                    } else {
+                                                        console.log('Player deleted from sensor_details');
+                                                        let params1 = {
+                                                            TableName: "simulation_images",
+                                                            Key: {
+                                                                image_id: sensor_detail[0].image_id,
+                                                            },
+                                                        };
+                                                        docClient.delete(params1, function (err, data) {
+                                                            if (err) {
+                                                                console.log(err);
+                                                            } else {
+                                                                console.log('Player deleted from simulation_images');
+                                                            }
+                                                        });
                                                     }
-                                                })
+                                                });    
                                             } else {
                                                 _temp["user_cognito_id"] = req.body.user_cognito_id;
                                             }
