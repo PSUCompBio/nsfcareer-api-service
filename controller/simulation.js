@@ -1589,8 +1589,8 @@ function generateSimulationForPlayersFromJson(player_data_array, apiMode, mesh, 
                                 "player_id": "",
                                 "simulation": {
                                     "mesh": mesh === 'fine' ? "fine_brain.inp" : "coarse_brain.inp",
-                                    "time": "",
-                                    "time-units": "",
+                                    // "time": "",
+                                    // "time-units": "",
                                     "linear-acceleration": [0.0, 0.0, 0.0],
                                     "angular-acceleration": [0.0, 0.0, 0.0],
                                     //"time-peak-acceleration": 2.0e-2,
@@ -1617,8 +1617,8 @@ function generateSimulationForPlayersFromJson(player_data_array, apiMode, mesh, 
                             playerData["player"]["organization"] = _temp_player.player.organization ? _temp_player.player.organization : 'Unknown';
                             playerData["player"]["impact-id"] = _temp_player.player['impact-id'] ? _temp_player.player['impact-id'] : ''
                             
-                            playerData["simulation"]["time"] = _temp_player.simulation.time;
-                            playerData["simulation"]["time-units"] = _temp_player.simulation['time-units'];
+                            // playerData["simulation"]["time"] = _temp_player.simulation.time;
+                            // playerData["simulation"]["time-units"] = _temp_player.simulation['time-units'];
 
                             delete _temp_player.simulation['linear-acceleration']['xv-g'];
                             delete _temp_player.simulation['linear-acceleration']['yv-g'];
@@ -1641,6 +1641,14 @@ function generateSimulationForPlayersFromJson(player_data_array, apiMode, mesh, 
 
                             if (_temp_player.simulation['maximum-time']) {
                                 playerData.simulation["maximum-time"] = _temp_player.simulation["maximum-time"]
+                            }
+
+                            if (_temp_player.simulation['output-elements']) {
+                                playerData.simulation["output-elements"] = _temp_player.simulation["output-elements"]
+                            }
+
+                            if (_temp_player.simulation['output-nodes']) {
+                                playerData.simulation["output-nodes"] = _temp_player.simulation["output-nodes"]
                             }
 
                             if (_temp_player["sensor"] && _temp_player["sensor"] === 'Prevent Biometrics') {

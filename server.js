@@ -526,7 +526,7 @@ if (cluster.isMaster) {
                                     })
 
                                     _temp_sensor_data["simulation"]["la-units"] = 'm/s^2';
-                                    _temp_sensor_data["simulation"]["time"] = _temp["simulation"]['linear-acceleration']['xt'];
+                                    // _temp_sensor_data["simulation"]["time"] = _temp["simulation"]['linear-acceleration']['xt'];
                                     _temp_sensor_data["simulation"]["linear-acceleration"]['xv'] = _temp["simulation"]['linear-acceleration']['xv'];
                                     _temp_sensor_data["simulation"]["linear-acceleration"]['xv-g'] = x_g;
                                     _temp_sensor_data["simulation"]["linear-acceleration"]['xt'] = _temp["simulation"]['linear-acceleration']['xt'];
@@ -538,6 +538,8 @@ if (cluster.isMaster) {
                                     _temp_sensor_data["simulation"]["linear-acceleration"]['zt'] = _temp["simulation"]['linear-acceleration']['zt'];
 
                                     _temp_sensor_data["simulation"]["angular-acceleration"] = _temp["simulation"]["angular-acceleration"];
+                                    _temp_sensor_data["simulation"]["output-nodes"] = _temp["simulation"]["output-nodes"];
+                                    _temp_sensor_data["simulation"]["output-elements"] = _temp["simulation"]["output-elements"];
 
                                 } else {
                                     if (_temp["simulation"]['time-units'] === 'seconds') {
