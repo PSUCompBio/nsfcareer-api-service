@@ -1412,6 +1412,7 @@ function generateSimulationForPlayers(player_data_array, reader, apiMode, sensor
                                 "sensor": "",
                                 "simulation": {
                                     "mesh": mesh === 'fine' ? "fine_brain.inp" : "coarse_brain.inp",
+                                    "time-all": [],
                                     "linear-acceleration": [0.0, 0.0, 0.0],
                                     "angular-acceleration": 0.0,
                                     //"time-peak-acceleration": 2.0e-2,
@@ -1443,17 +1444,26 @@ function generateSimulationForPlayers(player_data_array, reader, apiMode, sensor
                                 playerData["player"]["team"] = _temp_player.player.team;
                                 playerData["player"]["position"] = _temp_player.player.position;
 
+                                const time_all = _temp_player['linear-acceleration']['xt'];
+
                                 delete _temp_player['linear-acceleration']['xv-g'];
                                 delete _temp_player['linear-acceleration']['yv-g'];
                                 delete _temp_player['linear-acceleration']['zv-g'];
-
+                                delete _temp_player['linear-acceleration']['xt'];
+                                delete _temp_player['linear-acceleration']['yt'];
+                                delete _temp_player['linear-acceleration']['zt'];
+                                delete _temp_player['angular-acceleration']['xt'];
+                                delete _temp_player['angular-acceleration']['yt'];
+                                delete _temp_player['angular-acceleration']['zt'];
+                                
+                                playerData["simulation"]["time-all"] = time_all;
                                 playerData["simulation"]["linear-acceleration"] = _temp_player['linear-acceleration'];
                                 playerData["simulation"]["angular-acceleration"] = _temp_player['angular-acceleration'];
                     
                                 if (reader == 2) {
                                     playerData["simulation"]["maximum-time"] = _temp_player.max_time * 1000;
                                 } else {
-                                    playerData["simulation"]["maximum-time"] = parseFloat(_temp_player['linear-acceleration']['xt'][_temp_player['linear-acceleration']['xt'].length - 1]);
+                                    playerData["simulation"]["maximum-time"] = parseFloat(time_all[time_all.length - 1]);
                                 }
 
                                 if (sensor === 'prevent' || sensor === 'Prevent') {
@@ -1539,7 +1549,7 @@ function generateSimulationForPlayers(player_data_array, reader, apiMode, sensor
     })
 }
 
-function generateSimulationForPlayersFromJson(player_data_array, apiMode, mesh, account_id) {
+function generateSimulationForPlayersFromJson(player_data_array, apiMode, mesh, account_id, bypass_simulation_formatting) {
     return new Promise((resolve, reject) => {
         var counter = 0;
         var simulation_result_urls = [];
@@ -1593,6 +1603,7 @@ function generateSimulationForPlayersFromJson(player_data_array, apiMode, mesh, 
                                     // "time-units": "",
                                     "linear-acceleration": [0.0, 0.0, 0.0],
                                     "angular-acceleration": [0.0, 0.0, 0.0],
+                                    "time-all": [],
                                     //"time-peak-acceleration": 2.0e-2,
                                     "maximum-time": 4.0e-2,
                                     "head-cg": [0, -0.3308, -0.037],
@@ -1620,13 +1631,25 @@ function generateSimulationForPlayersFromJson(player_data_array, apiMode, mesh, 
                             // playerData["simulation"]["time"] = _temp_player.simulation.time;
                             // playerData["simulation"]["time-units"] = _temp_player.simulation['time-units'];
 
+                            const time_all = _temp_player.simulation['linear-acceleration']['xt'];
+
                             delete _temp_player.simulation['linear-acceleration']['xv-g'];
                             delete _temp_player.simulation['linear-acceleration']['yv-g'];
                             delete _temp_player.simulation['linear-acceleration']['zv-g'];
 
+                            if (!bypass_simulation_formatting) {
+                                delete _temp_player.simulation['linear-acceleration']['xt'];
+                                delete _temp_player.simulation['linear-acceleration']['yt'];
+                                delete _temp_player.simulation['linear-acceleration']['zt'];
+                                delete _temp_player.simulation['angular-acceleration']['xt'];
+                                delete _temp_player.simulation['angular-acceleration']['yt'];
+                                delete _temp_player.simulation['angular-acceleration']['zt'];
+                            }
+
+                            playerData["simulation"]["time-all"] = time_all;
                             playerData["simulation"]["linear-acceleration"] = _temp_player.simulation['linear-acceleration'];
                             playerData["simulation"]["angular-acceleration"] = _temp_player.simulation['angular-acceleration'];
-                            playerData["simulation"]["maximum-time"] = parseFloat(_temp_player.simulation['linear-acceleration']['xt'][_temp_player.simulation['linear-acceleration']['xt'].length - 1]);
+                            playerData["simulation"]["maximum-time"] = parseFloat(time_all[time_all.length - 1]);
                             // playerData["simulation"]["maximum-time"] = _temp_player["maximum-time"];
                             playerData["simulation"]["mesh-transformation"] = _temp_player.simulation['mesh-transformation'];
 
@@ -1643,13 +1666,13 @@ function generateSimulationForPlayersFromJson(player_data_array, apiMode, mesh, 
                                 playerData.simulation["maximum-time"] = _temp_player.simulation["maximum-time"]
                             }
 
-                            if (_temp_player.simulation['output-elements']) {
-                                playerData.simulation["output-elements"] = _temp_player.simulation["output-elements"]
-                            }
+                            // if (_temp_player.simulation['output-elements']) {
+                            //     playerData.simulation["output-elements"] = _temp_player.simulation["output-elements"]
+                            // }
 
-                            if (_temp_player.simulation['output-nodes']) {
-                                playerData.simulation["output-nodes"] = _temp_player.simulation["output-nodes"]
-                            }
+                            // if (_temp_player.simulation['output-nodes']) {
+                            //     playerData.simulation["output-nodes"] = _temp_player.simulation["output-nodes"]
+                            // }
 
                             if (_temp_player["sensor"] && _temp_player["sensor"] === 'Prevent Biometrics') {
                                 delete playerData.simulation["angular-sensor-position"];
@@ -1661,6 +1684,10 @@ function generateSimulationForPlayersFromJson(player_data_array, apiMode, mesh, 
 
                             if (_temp_player['time-peak-acceleration']) {
                                 playerData["simulation"]["time-peak-acceleration"] = _temp_player['time-peak-acceleration'];
+                            }
+
+                            if (bypass_simulation_formatting) {
+                                playerData["simulation"] = _temp_player.simulation;
                             }
                            
                             let temp_simulation_data = {

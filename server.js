@@ -509,6 +509,7 @@ if (cluster.isMaster) {
                                 if (bypass_simulation_formatting) {
 
                                     _temp["player_id"] = _temp["uid"];
+                                    _temp_sensor_data["simulation"] = _temp["simulation"];
 
                                     _temp["simulation"]['linear-acceleration']['xv'].forEach((la, x) => {
                                         const _temp_la = parseFloat(la) / 9.80665;
@@ -525,22 +526,19 @@ if (cluster.isMaster) {
                                         z_g.push(_temp_la);
                                     })
 
-                                    _temp_sensor_data["simulation"]["la-units"] = 'm/s^2';
-                                    // _temp_sensor_data["simulation"]["time"] = _temp["simulation"]['linear-acceleration']['xt'];
-                                    _temp_sensor_data["simulation"]["linear-acceleration"]['xv'] = _temp["simulation"]['linear-acceleration']['xv'];
+                                   if (_temp["simulation"]['time-all']) {
+                                        _temp_sensor_data["simulation"]["linear-acceleration"]['xt'] = _temp["simulation"]['time-all'];
+                                        _temp_sensor_data["simulation"]["linear-acceleration"]['yt'] = _temp["simulation"]['time-all'];
+                                        _temp_sensor_data["simulation"]["linear-acceleration"]['zt'] = _temp["simulation"]['time-all'];
+                                        _temp_sensor_data["simulation"]["angular-acceleration"]['xt'] = _temp["simulation"]['time-all'];
+                                        _temp_sensor_data["simulation"]["angular-acceleration"]['yt'] = _temp["simulation"]['time-all'];
+                                        _temp_sensor_data["simulation"]["angular-acceleration"]['zt'] = _temp["simulation"]['time-all'];
+                                    }
+
                                     _temp_sensor_data["simulation"]["linear-acceleration"]['xv-g'] = x_g;
-                                    _temp_sensor_data["simulation"]["linear-acceleration"]['xt'] = _temp["simulation"]['linear-acceleration']['xt'];
-                                    _temp_sensor_data["simulation"]["linear-acceleration"]['yv'] = _temp["simulation"]['linear-acceleration']['yv'];
                                     _temp_sensor_data["simulation"]["linear-acceleration"]['yv-g'] = y_g;
-                                    _temp_sensor_data["simulation"]["linear-acceleration"]['yt'] = _temp["simulation"]['linear-acceleration']['yt'];
-                                    _temp_sensor_data["simulation"]["linear-acceleration"]['zv'] = _temp["simulation"]['linear-acceleration']['zv'];
                                     _temp_sensor_data["simulation"]["linear-acceleration"]['zv-g'] = z_g;
-                                    _temp_sensor_data["simulation"]["linear-acceleration"]['zt'] = _temp["simulation"]['linear-acceleration']['zt'];
-
-                                    _temp_sensor_data["simulation"]["angular-acceleration"] = _temp["simulation"]["angular-acceleration"];
-                                    _temp_sensor_data["simulation"]["output-nodes"] = _temp["simulation"]["output-nodes"];
-                                    _temp_sensor_data["simulation"]["output-elements"] = _temp["simulation"]["output-elements"];
-
+                                   
                                 } else {
                                     if (_temp["simulation"]['time-units'] === 'seconds') {
                                         _temp["simulation"]['time'].forEach((time, i) => {
@@ -670,10 +668,10 @@ if (cluster.isMaster) {
 
                                 if (bypass_simulation_formatting) {
                                     _temp_sensor_data['uid'] = _temp["uid"];
-                                    _temp_sensor_data["simulation"]['mesh-transformation'] = _temp["simulation"]["mesh-transformation"];
-                                    _temp_sensor_data["simulation"]['mesh'] = _temp["simulation"]["mesh"];
-                                    _temp_sensor_data["simulation"]['maximum-time'] = _temp["simulation"]["maximum-time"];
-                                    _temp_sensor_data["simulation"]['head-cg'] = _temp["simulation"]["head-cg"];
+                                    // _temp_sensor_data["simulation"]['mesh-transformation'] = _temp["simulation"]["mesh-transformation"];
+                                    // _temp_sensor_data["simulation"]['mesh'] = _temp["simulation"]["mesh"];
+                                    // _temp_sensor_data["simulation"]['maximum-time'] = _temp["simulation"]["maximum-time"];
+                                    // _temp_sensor_data["simulation"]['head-cg'] = _temp["simulation"]["head-cg"];
                                 }
 
                                 if (_temp_sensor_data['impact-id'] && _temp_sensor_data['sensor-id']) {
@@ -816,7 +814,7 @@ if (cluster.isMaster) {
 
                                                                 uploadPlayerSelfieIfNotPresent(req.body.selfie, player_id, req.body.filename, account_id)
                                                                     .then((selfieDetails) => {
-                                                                        return generateSimulationForPlayersFromJson(sensor_data_array, apiMode, mesh, account_id);
+                                                                        return generateSimulationForPlayersFromJson(sensor_data_array, apiMode, mesh, account_id, bypass_simulation_formatting);
                                                                     })
                                                                     .then(urls => {
                                                                         simulation_result_urls.push(urls)
