@@ -1415,6 +1415,7 @@ function generateSimulationForPlayers(player_data_array, reader, apiMode, sensor
                                     "time-all": [],
                                     "linear-acceleration": [0.0, 0.0, 0.0],
                                     "angular-acceleration": 0.0,
+                                    "angular-velocity": [0.0, 0.0, 0.0],
                                     //"time-peak-acceleration": 2.0e-2,
                                     "maximum-time": 4.0e-2,
                                     //"impact-point": "",
@@ -1455,10 +1456,14 @@ function generateSimulationForPlayers(player_data_array, reader, apiMode, sensor
                                 delete _temp_player['angular-acceleration']['xt'];
                                 delete _temp_player['angular-acceleration']['yt'];
                                 delete _temp_player['angular-acceleration']['zt'];
+                                delete _temp_player['angular-velocity']['xt'];
+                                delete _temp_player['angular-velocity']['yt'];
+                                delete _temp_player['angular-velocity']['zt'];
                                 
                                 playerData["simulation"]["time-all"] = time_all;
                                 playerData["simulation"]["linear-acceleration"] = _temp_player['linear-acceleration'];
                                 playerData["simulation"]["angular-acceleration"] = _temp_player['angular-acceleration'];
+                                playerData["simulation"]["angular-velocity"] = _temp_player['angular-velocity'];
                     
                                 if (reader == 2) {
                                     playerData["simulation"]["maximum-time"] = _temp_player.max_time * 1000;
@@ -1603,6 +1608,7 @@ function generateSimulationForPlayersFromJson(player_data_array, apiMode, mesh, 
                                     // "time-units": "",
                                     "linear-acceleration": [0.0, 0.0, 0.0],
                                     "angular-acceleration": [0.0, 0.0, 0.0],
+                                    "angular-velocity": [0.0, 0.0, 0.0],
                                     "time-all": [],
                                     //"time-peak-acceleration": 2.0e-2,
                                     "maximum-time": 4.0e-2,
@@ -1644,11 +1650,17 @@ function generateSimulationForPlayersFromJson(player_data_array, apiMode, mesh, 
                                 delete _temp_player.simulation['angular-acceleration']['xt'];
                                 delete _temp_player.simulation['angular-acceleration']['yt'];
                                 delete _temp_player.simulation['angular-acceleration']['zt'];
+                                delete _temp_player.simulation['angular-velocity']['xt'];
+                                delete _temp_player.simulation['angular-velocity']['yt'];
+                                delete _temp_player.simulation['angular-velocity']['zt'];
                             }
 
                             playerData["simulation"]["time-all"] = time_all;
                             playerData["simulation"]["linear-acceleration"] = _temp_player.simulation['linear-acceleration'];
                             playerData["simulation"]["angular-acceleration"] = _temp_player.simulation['angular-acceleration'];
+                            if (_temp_player.simulation['angular-velocity']) {
+                                playerData["simulation"]["angular-velocity"] = _temp_player.simulation['angular-velocity'];
+                            }
                             playerData["simulation"]["maximum-time"] = parseFloat(time_all[time_all.length - 1]);
                             // playerData["simulation"]["maximum-time"] = _temp_player["maximum-time"];
                             playerData["simulation"]["mesh-transformation"] = _temp_player.simulation['mesh-transformation'];
