@@ -605,11 +605,11 @@ if (cluster.isMaster) {
                                     _temp_sensor_data["simulation"]["angular-acceleration"]['zt'] = _temp["simulation"]['time'];
 
                                     if (_temp["simulation"]['angular-velocity']) {
-                                        _temp_sensor_data["simulation"]["angular-velocity"]['xv'] = _temp["simulation"]['angular-velocity']['x-aa-rad/s^2'];
+                                        _temp_sensor_data["simulation"]["angular-velocity"]['xv'] = _temp["simulation"]['angular-velocity']['x-av-rad/s'];
                                         _temp_sensor_data["simulation"]["angular-velocity"]['xt'] = _temp["simulation"]['time'];
-                                        _temp_sensor_data["simulation"]["angular-velocity"]['yv'] = _temp["simulation"]['angular-velocity']['y-aa-rad/s^2'];
+                                        _temp_sensor_data["simulation"]["angular-velocity"]['yv'] = _temp["simulation"]['angular-velocity']['y-av-rad/s'];
                                         _temp_sensor_data["simulation"]["angular-velocity"]['yt'] = _temp["simulation"]['time'];
-                                        _temp_sensor_data["simulation"]["angular-velocity"]['zv'] = _temp["simulation"]['angular-velocity']['z-aa-rad/s^2'];
+                                        _temp_sensor_data["simulation"]["angular-velocity"]['zv'] = _temp["simulation"]['angular-velocity']['z-av-rad/s'];
                                         _temp_sensor_data["simulation"]["angular-velocity"]['zt'] = _temp["simulation"]['time'];
                                     }
                                 }
