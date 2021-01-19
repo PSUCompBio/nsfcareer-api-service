@@ -1401,7 +1401,9 @@ function generateSimulationForPlayers(player_data_array, reader, apiMode, sensor
                             simulation_result_urls.push(`${config_env.simulation_result_host_url}getSimulationMovie/${image_token}/${_temp_player.image_id}`);
 
                             let playerData = {
-                                "uid": "",
+                                // "uid": "",
+                                "event_id": "",
+                                "player_id": "",
                                 "player": {
                                     "first-name": "",
                                     "first-name": "",
@@ -1428,13 +1430,16 @@ function generateSimulationForPlayers(player_data_array, reader, apiMode, sensor
                                 playerData.simulation["angular-sensor-position"] = (cg_coordinates.length == 0) ? [0.025, -0.281, -0.089757] : cg_coordinates.map(function (x) { return parseFloat(x) });
                             }
 
+                            playerData.event_id = _temp_player.image_id;
+                            playerData.player_id = player_id
+
                             if (sensor === 'prevent' ) {
                                 delete playerData.simulation["angular-sensor-position"];
                             }
 
                             playerData["player"]["name"] = _temp_player.player_id.replace(/ /g, "-");
                             // playerData["uid"] = _temp_player.player_id.split("$")[0].replace(/ /g, "-") + '_' + _temp_player.image_id;
-                            playerData["uid"] = _temp_player.image_id;
+                            // playerData["uid"] = _temp_player.image_id;
 
                             if (reader == 1 || reader == 2) {
                                 
@@ -1499,11 +1504,10 @@ function generateSimulationForPlayers(player_data_array, reader, apiMode, sensor
                             let temp_simulation_data = {
                                 "impact_data": playerData,
                                 "index": index,
-                                "image_id": _temp_player.image_id,
-                                "image_token": image_token,
-                                "token_secret": token_secret,
-                                "date": _temp_player.date.split("/").join("-"),
-                                "player_id": player_id,
+                                // "image_token": image_token,
+                                // "token_secret": token_secret,
+                                // "date": _temp_player.date.split("/").join("-"),
+                                // "player_id": player_id,
                                 "account_id": account_id,
                                 "user_cognito_id": playerDetail[0].user_cognito_id,
                             }
@@ -1588,7 +1592,8 @@ function generateSimulationForPlayersFromJson(player_data_array, apiMode, mesh, 
                             simulation_result_urls.push(`${config_env.simulation_result_host_url}getSimulationMovie/${image_token}/${_temp_player.image_id}`);
 
                             let playerData = {
-                                "uid": "",
+                                // "uid": "",
+                                "event_id": "",
                                 "player": {
                                     "first-name": "",
                                     "first-name": "",
@@ -1596,7 +1601,7 @@ function generateSimulationForPlayersFromJson(player_data_array, apiMode, mesh, 
                                     "team": "",
                                     "position": "",
                                     "organization": "",
-                                    "impact-id": "",
+                                    // "impact-id": "",
                                 },
                                 "sensor": "",
                                 "impact-date": "",
@@ -1619,7 +1624,8 @@ function generateSimulationForPlayersFromJson(player_data_array, apiMode, mesh, 
                             }
 
                             // playerData["uid"] = _temp_player.player_id.split("$")[0].replace(/ /g, "-") + '_' + _temp_player.image_id;
-                            playerData["uid"] = _temp_player.image_id;
+                            // playerData["uid"] = _temp_player.image_id;
+                            playerData["event_id"] = _temp_player.image_id;
                             playerData["sensor"] = _temp_player.sensor;
                             playerData["impact-date"] = _temp_player['impact-date'].split(":").join("-");
                             playerData["impact-time"] = _temp_player['impact-time'];
@@ -1632,7 +1638,7 @@ function generateSimulationForPlayersFromJson(player_data_array, apiMode, mesh, 
                             playerData["player"]["team"] = _temp_player.player.team;
                             playerData["player"]["position"] = _temp_player.player.position;
                             playerData["player"]["organization"] = _temp_player.player.organization ? _temp_player.player.organization : 'Unknown';
-                            playerData["player"]["impact-id"] = _temp_player.player['impact-id'] ? _temp_player.player['impact-id'] : ''
+                            // playerData["player"]["impact-id"] = _temp_player.player['impact-id'] ? _temp_player.player['impact-id'] : ''
                             
                             // playerData["simulation"]["time"] = _temp_player.simulation.time;
                             // playerData["simulation"]["time-units"] = _temp_player.simulation['time-units'];
@@ -1705,11 +1711,10 @@ function generateSimulationForPlayersFromJson(player_data_array, apiMode, mesh, 
                             let temp_simulation_data = {
                                 "impact_data": playerData,
                                 "index": index,
-                                "image_id": _temp_player.image_id,
-                                "image_token": image_token,
-                                "token_secret": token_secret,
-                                "date": _temp_player['impact-date'].split(":").join("-"),
-                                "player_id": player_id,
+                                // "image_token": image_token,
+                                // "token_secret": token_secret,
+                                // "date": _temp_player['impact-date'].split(":").join("-"),
+                                // "player_id": player_id,
                                 "account_id": account_id,
                                 "user_cognito_id": playerDetail[0].user_cognito_id,
                             }
@@ -1763,7 +1768,7 @@ function upload_simulation_data(simulation_data, user_bucket) {
 
         let job_id = Math.random().toString(36).slice(2, 12);
         // let path = new Date().toISOString().slice(0, 10) + `/${job_id}.json`;
-        let path = `${simulation_data[0].account_id}/simulation/${simulation_data[0]['impact_data']['impact-date']}/${simulation_data[0].image_id}/${job_id}.json`
+        let path = `${simulation_data[0].account_id}/simulation/${simulation_data[0]['impact_data'].event_id}/${job_id}.json`
         let uploadParams = {
             Bucket: user_bucket, //config.simulation_bucket,
             Key: path, // pass key
@@ -1831,7 +1836,7 @@ function submitJobsToBatch(simulation_data, job_name, file_path, apiMode, user_b
                 let cnt = 0;
                 simulation_data.forEach((value) => {
                     let obj = {};
-                    obj.image_id = value.image_id;
+                    obj.image_id = value.impact_data.event_id;
                     obj.job_id = array_size > 1 ? data.jobId + ':' + value.index : data.jobId;
                     // console.log(obj);
                     updateSimulationData(obj, function (err, dbdata) {
