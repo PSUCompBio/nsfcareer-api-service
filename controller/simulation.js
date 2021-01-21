@@ -63,7 +63,7 @@ const rootPath = '/home/ec2-user';
 
 function convertFileDataToJson(buf, reader, filename) {
     return new Promise((resolve, reject) => {
-        if (reader == 1 || reader == 2) {
+        if (reader == 1 || reader == 2 || reader == 3) {
             convertCSVDataToJSON(buf, reader, filename)
                 .then(data => {
                     resolve(data);
@@ -87,8 +87,10 @@ function convertCSVDataToJSON(buf, reader, filename) {
             .then(data => {
                 if (reader == 1) {
                     resolve(groupSensorData(data));
-                } else {
+                } else if (reader == 2) {
                     resolve(groupSensorDataForY(data, filename));
+                } else {
+                    resolve(groupSensorDataForBioCore(data, filename));
                 }
             })
             .catch(err => {
@@ -147,6 +149,89 @@ function convertXLSXDataToJSON(buf, cb) {
         }
         cb(data_array);
     });
+}
+
+function groupSensorDataForBioCore(arr, filename) {
+    let time = filename.split("-").slice(1, 4).join("-").split("T")[1].split('.')[0];
+    time = time.replace(' ', '+');
+    time = time.replace(/_/g, ':');
+    let impact_id = filename.split('.')[0];
+    impact_id = impact_id.replace(/_/g, '');
+    impact_id = impact_id.replace(/-/g, '');
+    let data = {
+        'player_id': filename.split("-")[0] + '$' + Date.now(),
+        'date': filename.split("-").slice(1, 4).join("-").split("T")[0],
+        'time': time,
+        'impact-id': impact_id,
+        'sensor-id': filename.split("-")[0],
+        'team': config_env.queue_y,
+        'linear-acceleration': {
+            'xt': [],
+            'xv': [],
+            'xv-g': [],
+            'yt': [],
+            'yv': [],
+            'yv-g': [],
+            'zt': [],
+            'zv': [],
+            'zv-g': []
+        },
+        'angular-acceleration': {
+            'xt': [],
+            'xv': [],
+            'yt': [],
+            'yv': [],
+            'zt': [],
+            'zv': []
+        },
+        'angular-velocity': {
+            'xt': [],
+            'xv': [],
+            'yt': [],
+            'yv': [],
+            'zt': [],
+            'zv': []
+        },
+        'mesh-transformation': ["-y", "z", "-x"],
+        'simulation_status': 'pending'
+
+    }
+
+    let max_time = parseFloat(arr[0]["time_ms"]);
+    for (let i = 0; i < arr.length; i++) {
+        let curr_time = parseFloat(arr[i]["time_ms"]);
+        if (curr_time > max_time)
+            max_time = curr_time;
+
+        data['linear-acceleration']['xv'].push(parseFloat(arr[i]["Ah_x"]))
+        data['linear-acceleration']['xv-g'].push(parseFloat(arr[i]["Ah_x"]) / 9.80665)
+        data['linear-acceleration']['xt'].push(curr_time)
+        data['linear-acceleration']['yv'].push(parseFloat(arr[i]['Ah_y']))
+        data['linear-acceleration']['yv-g'].push(parseFloat(arr[i]["Ah_y"]) / 9.80665)
+        data['linear-acceleration']['yt'].push(curr_time)
+        data['linear-acceleration']['zv'].push(parseFloat(arr[i]['Ah_z']))
+        data['linear-acceleration']['zv-g'].push(parseFloat(arr[i]["Ah_z"]) / 9.80665)
+        data['linear-acceleration']['zt'].push(curr_time)
+
+        data['angular-acceleration']['xv'].push(parseFloat(arr[i]["ALP_x"]))
+        data['angular-acceleration']['xt'].push(curr_time)
+        data['angular-acceleration']['yv'].push(parseFloat(arr[i]['ALP_y']))
+        data['angular-acceleration']['yt'].push(curr_time)
+        data['angular-acceleration']['zv'].push(parseFloat(arr[i]['ALP_z']))
+        data['angular-acceleration']['zt'].push(curr_time)
+
+        data['angular-velocity']['xv'].push(parseFloat(arr[i]["W_x"]))
+        data['angular-velocity']['xt'].push(curr_time)
+        data['angular-velocity']['yv'].push(parseFloat(arr[i]['W_y']))
+        data['angular-velocity']['yt'].push(curr_time)
+        data['angular-velocity']['zv'].push(parseFloat(arr[i]['W_z']))
+        data['angular-velocity']['zt'].push(curr_time)
+    }
+
+    // Add max_time in simulation ( in seconds )
+    data.max_time = max_time / 1000;
+
+    return [data];
 }
 
 function groupSensorDataForY(arr, filename) {
@@ -1441,7 +1526,7 @@ function generateSimulationForPlayers(player_data_array, reader, apiMode, sensor
                             // playerData["uid"] = _temp_player.player_id.split("$")[0].replace(/ /g, "-") + '_' + _temp_player.image_id;
                             // playerData["uid"] = _temp_player.image_id;
 
-                            if (reader == 1 || reader == 2) {
+                            if (reader == 1 || reader == 2 || reader == 3) {
                                 
                                 playerData["sensor"] = _temp_player.sensor;
                                 playerData["player"]["first-name"] = _temp_player.player['first-name']
@@ -1470,7 +1555,7 @@ function generateSimulationForPlayers(player_data_array, reader, apiMode, sensor
                                 playerData["simulation"]["angular-acceleration"] = _temp_player['angular-acceleration'];
                                 playerData["simulation"]["angular-velocity"] = _temp_player['angular-velocity'];
                     
-                                if (reader == 2) {
+                                if (reader == 2 || reader == 3) {
                                     playerData["simulation"]["maximum-time"] = _temp_player.max_time * 1000;
                                 } else {
                                     playerData["simulation"]["maximum-time"] = parseFloat(time_all[time_all.length - 1]);

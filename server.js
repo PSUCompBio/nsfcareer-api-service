@@ -411,6 +411,11 @@ if (cluster.isMaster) {
             filename = req.body.data_filename
         }
 
+        if (sensor && sensor === 'biocore') {
+            reader = 3;
+            filename = req.body.data_filename
+        }
+
         if (req.body.upload_file) {
             // The file content will be in 'upload_file' parameter
             buffer = Buffer.from(req.body.upload_file, 'base64');
@@ -1021,9 +1026,12 @@ if (cluster.isMaster) {
                                                         _temp['player']['first-name'] = user_detail[0]['first_name'];
                                                         _temp['player']['last-name'] = user_detail[0]['last_name'];
                                                         new_items_array[i] = _temp;
-                                                        removeRequestedPlayerFromOrganizationTeam(req.body.organization, req.body.team, user_detail[0]['user_cognito_id'])
+                                                        removeRequestedPlayerFromOrganizationTeam(req.body.organization ? req.body.organization : 'Unknown', req.body.team ? req.body.team : 'Unknown', user_detail[0]['user_cognito_id'])
                                                             .then(data => {
                                                                 // console.log(data);
+                                                            })
+                                                            .catch(err => {
+                                                                console.log('Error ', err);
                                                             })
                                                     } else {
                                                         new_items_array[i] = _temp;
