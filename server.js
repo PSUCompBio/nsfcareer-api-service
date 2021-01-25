@@ -48,7 +48,8 @@ if (cluster.isMaster) {
         shortid = require('shortid'),
         archiver = require('archiver'),
         moment = require('moment'),
-        async = require("async");
+        async = require("async"),
+        request = require('request');
 
         shortid.characters('0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_$');
 
@@ -104,7 +105,8 @@ if (cluster.isMaster) {
         "simulation_bucket" : process.env.SIMULATION_BUCKET,
         "queue_x" : process.env.QUEUE_X,
         "queue_y" : process.env.QUEUE_Y,
-        "queue_beta" : process.env.QUEUE_BETA
+        "queue_beta" : process.env.QUEUE_BETA,
+        "mlUrl" : process.env.ML_URL
     };
 
     const subject_signature = fs.readFileSync("data/base64")
@@ -1215,7 +1217,7 @@ if (cluster.isMaster) {
         }
     })
 
-    // Cron to get job computation time after job completetion
+    // Cron to get job computation time after job completion
     cron.schedule('*/2 * * * *', () => {
         getCompletedJobs()
             .then(simulation_data => {
@@ -1246,6 +1248,19 @@ if (cluster.isMaster) {
                                                 }
                                                 else {
                                                     console.log('Computed tine and Log stream added in database for job id: ' +  data.jobId);
+                                                }
+                                            })
+
+                                            request.post({
+                                                url: config.mlUrl,
+                                                body: { simulation_path: job.root_path + job.image_id  + '_input.json' },
+                                                json: true
+                                            }, function (err, httpResponse, body) {
+                                                if (err) {
+                                                    console.log('ML api failure ', err);
+                                                }
+                                                else {
+                                                    console.log('ML api executed successfully.');
                                                 }
                                             })
                                         }
@@ -1722,7 +1737,7 @@ if (cluster.isMaster) {
     })
 
     // Configuring port for APP
-    const port = process.env.PORT || 3000;
+    const port = process.env.PORT || 5000;
     const server = app.listen(port, function () {
         console.log('Magic happens on ' + port);
     });
