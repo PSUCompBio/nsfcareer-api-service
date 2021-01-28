@@ -271,9 +271,9 @@ if (cluster.isMaster) {
 
     app.get(`/deleteTestData`, (req, res) => {
         const obj = {};
-        obj.brand = 'Prevent Biometrics';
-        obj.organization = 'Army Research Laboratory';
-        obj.team = '2020 POMPOC Study';
+        obj.brand = 'SWA';
+        // obj.organization = 'Army Research Laboratory';
+        // obj.team = '2020 POMPOC Study';
 
         getTeamData(obj)
             .then (data => {
@@ -415,6 +415,11 @@ if (cluster.isMaster) {
 
         if (sensor && sensor === 'biocore') {
             reader = 3;
+            filename = req.body.data_filename
+        }
+
+        if (sensor && sensor === 'athlete') {
+            reader = 4;
             filename = req.body.data_filename
         }
 

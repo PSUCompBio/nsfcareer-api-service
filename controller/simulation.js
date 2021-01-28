@@ -63,7 +63,7 @@ const rootPath = '/home/ec2-user';
 
 function convertFileDataToJson(buf, reader, filename) {
     return new Promise((resolve, reject) => {
-        if (reader == 1 || reader == 2 || reader == 3) {
+        if (reader == 1 || reader == 2 || reader == 3 || reader == 4) {
             convertCSVDataToJSON(buf, reader, filename)
                 .then(data => {
                     resolve(data);
@@ -89,8 +89,10 @@ function convertCSVDataToJSON(buf, reader, filename) {
                     resolve(groupSensorData(data));
                 } else if (reader == 2) {
                     resolve(groupSensorDataForY(data, filename));
-                } else {
+                } else if (reader == 3) {
                     resolve(groupSensorDataForBioCore(data, filename));
+                } else {
+                    resolve(groupSensorDataForAthlete(data, filename));
                 }
             })
             .catch(err => {
@@ -225,6 +227,83 @@ function groupSensorDataForBioCore(arr, filename) {
         data['angular-velocity']['yv'].push(parseFloat(arr[i]['W_y']))
         data['angular-velocity']['yt'].push(curr_time)
         data['angular-velocity']['zv'].push(parseFloat(arr[i]['W_z']))
+        data['angular-velocity']['zt'].push(curr_time)
+    }
+
+    // Add max_time in simulation ( in seconds )
+    data.max_time = max_time / 1000;
+
+    return [data];
+}
+
+function groupSensorDataForAthlete(arr, filename) {
+    let data = {
+        'player_id': '1$' + Date.now(),
+        'date': filename.split("-").slice(2, 7).join(" ").split(' ').slice(1, 4).join("-"),
+        'time': filename.split("-").slice(2, 7).join(" ").split(' ').slice(4).join(":").split('.')[0],
+        'impact-id': filename.split("-").slice(2, 7).join(" ").split(' ')[0],
+        'sensor-id': '1',
+        'team': config_env.queue_y,
+        'linear-acceleration': {
+            'xt': [],
+            'xv': [],
+            'xv-g': [],
+            'yt': [],
+            'yv': [],
+            'yv-g': [],
+            'zt': [],
+            'zv': [],
+            'zv-g': []
+        },
+        'angular-acceleration': {
+            'xt': [],
+            'xv': [],
+            'yt': [],
+            'yv': [],
+            'zt': [],
+            'zv': []
+        },
+        'angular-velocity': {
+            'xt': [],
+            'xv': [],
+            'yt': [],
+            'yv': [],
+            'zt': [],
+            'zv': []
+        },
+        'mesh-transformation': ["-y", "z", "-x"],
+        'simulation_status': 'pending'
+
+    }
+
+    let max_time = 1; // 1 milisecond
+    for (let i = 0; i < arr.length; i++) {
+        let curr_time = parseFloat(i + 1);
+        if (curr_time > max_time)
+            max_time = curr_time;
+
+        data['linear-acceleration']['xv'].push(parseFloat(arr[i]["Linear Accel X (g)"]))
+        data['linear-acceleration']['xv-g'].push(parseFloat(arr[i]["Linear Accel X (g)"]) / 9.80665)
+        data['linear-acceleration']['xt'].push(curr_time)
+        data['linear-acceleration']['yv'].push(parseFloat(arr[i]['Linear Accel Y (g)']))
+        data['linear-acceleration']['yv-g'].push(parseFloat(arr[i]["Linear Accel Y (g)"]) / 9.80665)
+        data['linear-acceleration']['yt'].push(curr_time)
+        data['linear-acceleration']['zv'].push(parseFloat(arr[i]['Linear Accel Z (g)']))
+        data['linear-acceleration']['zv-g'].push(parseFloat(arr[i]["Linear Accel Z (g)"]) / 9.80665)
+        data['linear-acceleration']['zt'].push(curr_time)
+
+        data['angular-acceleration']['xv'].push(parseFloat(arr[i]["Rotational Accel X (rad/s^2)"]))
+        data['angular-acceleration']['xt'].push(curr_time)
+        data['angular-acceleration']['yv'].push(parseFloat(arr[i]['Rotational Accel Y (rad/s^2)']))
+        data['angular-acceleration']['yt'].push(curr_time)
+        data['angular-acceleration']['zv'].push(parseFloat(arr[i]['Rotational Accel Z (rad/s^2)']))
+        data['angular-acceleration']['zt'].push(curr_time)
+
+        data['angular-velocity']['xv'].push(parseFloat(arr[i]["Rotational Vel X (rad/s)"]))
+        data['angular-velocity']['xt'].push(curr_time)
+        data['angular-velocity']['yv'].push(parseFloat(arr[i]['Rotational Vel Y (rad/s)']))
+        data['angular-velocity']['yt'].push(curr_time)
+        data['angular-velocity']['zv'].push(parseFloat(arr[i]['Rotational Vel Z (rad/s)']))
         data['angular-velocity']['zt'].push(curr_time)
     }
 
@@ -1526,7 +1605,7 @@ function generateSimulationForPlayers(player_data_array, reader, apiMode, sensor
                             // playerData["uid"] = _temp_player.player_id.split("$")[0].replace(/ /g, "-") + '_' + _temp_player.image_id;
                             // playerData["uid"] = _temp_player.image_id;
 
-                            if (reader == 1 || reader == 2 || reader == 3) {
+                            if (reader == 1 || reader == 2 || reader == 3 || reader == 4) {
                                 
                                 playerData["sensor"] = _temp_player.sensor;
                                 playerData["player"]["first-name"] = _temp_player.player['first-name']
@@ -1555,7 +1634,7 @@ function generateSimulationForPlayers(player_data_array, reader, apiMode, sensor
                                 playerData["simulation"]["angular-acceleration"] = _temp_player['angular-acceleration'];
                                 playerData["simulation"]["angular-velocity"] = _temp_player['angular-velocity'];
                     
-                                if (reader == 2 || reader == 3) {
+                                if (reader == 2 || reader == 3 || reader == 4) {
                                     playerData["simulation"]["maximum-time"] = _temp_player.max_time * 1000;
                                 } else {
                                     playerData["simulation"]["maximum-time"] = parseFloat(time_all[time_all.length - 1]);
