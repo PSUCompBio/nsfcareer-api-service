@@ -714,7 +714,7 @@ function updateSimulationImageToDDB(
     token = null,
     secret = null,
     account_id,
-    mesh,
+    mesh = "coarse",
     admin_detail,
 ) {
     return new Promise((resolve, reject) => {
