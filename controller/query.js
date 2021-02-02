@@ -713,7 +713,8 @@ function updateSimulationImageToDDB(
     status = "completed",
     token = null,
     secret = null,
-    account_id
+    account_id,
+    admin_detail,
 ) {
     return new Promise((resolve, reject) => {
         if (image_id == null) {
@@ -741,6 +742,7 @@ function updateSimulationImageToDDB(
                                 token: token,
                                 secret: secret,
                                 account_id: account_id,
+                                admin_detail: admin_detail,
                             },
                         };
                         docClient.put(dbInsert, function (err, data) {

@@ -19,40 +19,41 @@ const {
     updateSimulationImageToDDB,
     updateSimulationData,
     fetchCGValues,
-    uploadCGValuesAndSetINPStatus
+    uploadCGValuesAndSetINPStatus,
+    getUserDetails,
 } = require('./query');
 
 // ======================================
 //       CONFIGURING AWS SDK & EXPESS
 // ======================================
-var config = {
-    "awsAccessKeyId": process.env.AWS_ACCESS_KEY_ID,
-    "awsSecretAccessKey": process.env.AWS_ACCESS_SECRET_KEY,
-    "avatar3dClientId": process.env.AVATAR_3D_CLIENT_ID,
-    "avatar3dclientSecret": process.env.AVATAR_3D_CLIENT_SECRET,
-    "region" : process.env.REGION,
-    "usersbucket": process.env.USERS_BUCKET,
-    "usersbucketbeta": process.env.USERS_BUCKET_BETA,
-    "apiVersion" : process.env.API_VERSION,
-    "jwt_secret" : process.env.JWT_SECRET,
-    "email_id" : process.env.EMAIL_ID,
-    "mail_list" : process.env.MAIL_LIST,
-    "ComputeInstanceEndpoint" : process.env.COMPUTE_INSTANCE_ENDPOINT,
-    "userPoolId": process.env.USER_POOL_ID,
-    "ClientId" : process.env.CLIENT_ID,
-    "react_website_url" : process.env.REACT_WEBSITE_URL,
-    "simulation_result_host_url" : process.env.SIMULATION_RESULT_HOST_URL,
-    "jobQueueBeta" : process.env.JOB_QUEUE_BETA,
-    "jobDefinitionBeta" : process.env.JOB_DEFINITION_BETA,
-    "jobQueueProduction" : process.env.JOB_QUEUE_PRODUCTION,
-    "jobDefinitionProduction" : process.env.JOB_DEFINITION_PRODUCTION,
-    "simulation_bucket" : process.env.SIMULATION_BUCKET,
-    "queue_x" : process.env.QUEUE_X,
-    "queue_y" : process.env.QUEUE_Y,
-    "queue_beta" : process.env.QUEUE_BETA
-};
+// var config = {
+//     "awsAccessKeyId": process.env.AWS_ACCESS_KEY_ID,
+//     "awsSecretAccessKey": process.env.AWS_ACCESS_SECRET_KEY,
+//     "avatar3dClientId": process.env.AVATAR_3D_CLIENT_ID,
+//     "avatar3dclientSecret": process.env.AVATAR_3D_CLIENT_SECRET,
+//     "region" : process.env.REGION,
+//     "usersbucket": process.env.USERS_BUCKET,
+//     "usersbucketbeta": process.env.USERS_BUCKET_BETA,
+//     "apiVersion" : process.env.API_VERSION,
+//     "jwt_secret" : process.env.JWT_SECRET,
+//     "email_id" : process.env.EMAIL_ID,
+//     "mail_list" : process.env.MAIL_LIST,
+//     "ComputeInstanceEndpoint" : process.env.COMPUTE_INSTANCE_ENDPOINT,
+//     "userPoolId": process.env.USER_POOL_ID,
+//     "ClientId" : process.env.CLIENT_ID,
+//     "react_website_url" : process.env.REACT_WEBSITE_URL,
+//     "simulation_result_host_url" : process.env.SIMULATION_RESULT_HOST_URL,
+//     "jobQueueBeta" : process.env.JOB_QUEUE_BETA,
+//     "jobDefinitionBeta" : process.env.JOB_DEFINITION_BETA,
+//     "jobQueueProduction" : process.env.JOB_QUEUE_PRODUCTION,
+//     "jobDefinitionProduction" : process.env.JOB_DEFINITION_PRODUCTION,
+//     "simulation_bucket" : process.env.SIMULATION_BUCKET,
+//     "queue_x" : process.env.QUEUE_X,
+//     "queue_y" : process.env.QUEUE_Y,
+//     "queue_beta" : process.env.QUEUE_BETA
+// };
 
-// var config = require('../config/configuration_keys.json'); 
+var config = require('../config/configuration_keys.json'); 
 var config_env = config;
 const BUCKET_NAME = config_env.usersbucket;
 
@@ -277,10 +278,14 @@ function groupSensorDataForAthlete(arr, filename) {
     }
 
     let max_time = 1; // 1 milisecond
+    let count = 0.1;
     for (let i = 0; i < arr.length; i++) {
-        let curr_time = parseFloat(i + 1);
+        let curr_time = parseFloat(count);
         if (curr_time > max_time)
             max_time = curr_time;
+
+        count = parseFloat(count) + 0.1; 
+        count = count.toFixed(1)
 
         data['linear-acceleration']['xv'].push(parseFloat(arr[i]["Linear Accel X (g)"]))
         data['linear-acceleration']['xv-g'].push(parseFloat(arr[i]["Linear Accel X (g)"]) / 9.80665)
@@ -1531,7 +1536,7 @@ function generateParametersFileFromStl(obj) {
     })
 }
 
-function generateSimulationForPlayers(player_data_array, reader, apiMode, sensor, mesh, account_id) {
+function generateSimulationForPlayers(player_data_array, reader, apiMode, sensor, mesh, account_id, user_cognito_id) {
     return new Promise((resolve, reject) => {
         var counter = 0;
         var simulation_result_urls = [];
@@ -1549,170 +1554,172 @@ function generateSimulationForPlayers(player_data_array, reader, apiMode, sensor
 
                     let player_id = _temp_player.player_id.split("$")[0] + '-' + _temp_player.sensor;
                     player_id = player_id.replace(/ /g, "-");
-
-                    let user_bucket = apiMode === 'beta' ? config.usersbucketbeta : config.usersbucket;
-                    updateSimulationImageToDDB(_temp_player.image_id, user_bucket, "null", "pending", image_token, token_secret)
-                        .then(value => {
-                            return fetchCGValues(account_id);
-                        })
-                        .then(playerDetail => {
-                            let cg_coordinates =  playerDetail.length > 0 && playerDetail[0]['cg_coordinates'] ? playerDetail[0]['cg_coordinates'] : null;
-                            console.log('CG coordinates are ', cg_coordinates);
-
-                            // console.log("LOOPING THROUGH COMPONENTS ++++++++++ !!!!! ",index ,_temp_player);
-
-                            simulation_result_urls.push(`${config_env.simulation_result_host_url}simulation/results/${image_token}/${_temp_player.image_id}`);
-                            simulation_result_urls.push(`${config_env.simulation_result_host_url}getSimulationMovie/${image_token}/${_temp_player.image_id}`);
-
-                            let playerData = {
-                                // "uid": "",
-                                "event_id": "",
-                                "player_id": "",
-                                "player": {
-                                    "first-name": "",
-                                    "first-name": "",
-                                    "sport": "",
-                                    "team": "",
-                                    "position": ""
-                                },
-                                "sensor": "",
-                                "simulation": {
-                                    "mesh": mesh === 'fine' ? "fine_brain.inp" : "coarse_brain.inp",
-                                    "time-all": [],
-                                    "linear-acceleration": [0.0, 0.0, 0.0],
-                                    "angular-acceleration": 0.0,
-                                    "angular-velocity": [0.0, 0.0, 0.0],
-                                    //"time-peak-acceleration": 2.0e-2,
-                                    "maximum-time": 4.0e-2,
-                                    //"impact-point": "",
-                                    "head-cg": [0, -0.3308, -0.037],
-                                    "angular-sensor-position": [0.025, -0.281, -0.089757]
-                                }
-                            }
-                            if (cg_coordinates) {
-                                playerData.simulation["head-cg"] = (cg_coordinates.length == 0) ? [0, -0.3308, -0.037] : cg_coordinates.map(function (x) { return parseFloat(x) });
-                                playerData.simulation["angular-sensor-position"] = (cg_coordinates.length == 0) ? [0.025, -0.281, -0.089757] : cg_coordinates.map(function (x) { return parseFloat(x) });
-                            }
-
-                            playerData.event_id = _temp_player.image_id;
-                            playerData.player_id = player_id
-
-                            if (sensor === 'prevent' ) {
-                                delete playerData.simulation["angular-sensor-position"];
-                            }
-
-                            playerData["player"]["name"] = _temp_player.player_id.replace(/ /g, "-");
-                            // playerData["uid"] = _temp_player.player_id.split("$")[0].replace(/ /g, "-") + '_' + _temp_player.image_id;
-                            // playerData["uid"] = _temp_player.image_id;
-
-                            if (reader == 1 || reader == 2 || reader == 3 || reader == 4) {
-                                
-                                playerData["sensor"] = _temp_player.sensor;
-                                playerData["player"]["first-name"] = _temp_player.player['first-name']
-                                playerData["player"]["last-name"] = _temp_player.player['last-name'];
-                                playerData["player"]["sport"] = _temp_player.player.sport;
-                                playerData["player"]["team"] = _temp_player.player.team;
-                                playerData["player"]["position"] = _temp_player.player.position;
-
-                                const time_all = _temp_player['linear-acceleration']['xt'];
-
-                                delete _temp_player['linear-acceleration']['xv-g'];
-                                delete _temp_player['linear-acceleration']['yv-g'];
-                                delete _temp_player['linear-acceleration']['zv-g'];
-                                delete _temp_player['linear-acceleration']['xt'];
-                                delete _temp_player['linear-acceleration']['yt'];
-                                delete _temp_player['linear-acceleration']['zt'];
-                                delete _temp_player['angular-acceleration']['xt'];
-                                delete _temp_player['angular-acceleration']['yt'];
-                                delete _temp_player['angular-acceleration']['zt'];
-                                delete _temp_player['angular-velocity']['xt'];
-                                delete _temp_player['angular-velocity']['yt'];
-                                delete _temp_player['angular-velocity']['zt'];
-                                
-                                playerData["simulation"]["time-all"] = time_all;
-                                playerData["simulation"]["linear-acceleration"] = _temp_player['linear-acceleration'];
-                                playerData["simulation"]["angular-acceleration"] = _temp_player['angular-acceleration'];
-                                playerData["simulation"]["angular-velocity"] = _temp_player['angular-velocity'];
                     
-                                if (reader == 2 || reader == 3 || reader == 4) {
-                                    playerData["simulation"]["maximum-time"] = _temp_player.max_time * 1000;
-                                } else {
-                                    playerData["simulation"]["maximum-time"] = parseFloat(time_all[time_all.length - 1]);
-                                }
+                    getUserDetails(user_cognito_id)
+                        .then (user_detail => {
+                            let user_bucket = apiMode === 'beta' ? config.usersbucketbeta : config.usersbucket;
+                            updateSimulationImageToDDB(_temp_player.image_id, user_bucket, "null", "pending", image_token, token_secret, account_id, user_detail.Item)
+                                .then(value => {
+                                    return fetchCGValues(account_id);
+                                })
+                                .then(playerDetail => {
+                                    let cg_coordinates =  playerDetail.length > 0 && playerDetail[0]['cg_coordinates'] ? playerDetail[0]['cg_coordinates'] : null;
+                                    console.log('CG coordinates are ', cg_coordinates);
 
-                                if (sensor === 'prevent' || sensor === 'Prevent') {
-                                    playerData["simulation"]["mesh-transformation"] = ["-y", "z", "-x"];
-                                } else if (sensor === 'sensor_company_x' || sensor === 'swa' || sensor === 'SWA') {
-                                    playerData["simulation"]["mesh-transformation"] = ["-z", "x", "-y"];
-                                    playerData["simulation"]["angular-to-linear-frame"] = ["-y", "-x", "z"];
-                                } else if (sensor === 'sisu' || sensor === 'SISU') {
-                                    playerData["simulation"]["mesh-transformation"] = ["-z", "-x", "y"];
-                                } else if (sensor === 'stanford' || sensor === 'Stanford') {
-                                    playerData["simulation"]["mesh-transformation"] = ["y", "-z", "-x"];
-                                } else if (sensor === 'hybrid3' || sensor === 'Hybrid3') {
-                                    // playerData["simulation"]["mesh-transformation"] = ["z", "-x", "-y"];
-                                    playerData["simulation"]["mesh-transformation"] = ["-y", "z", "-x"];
-                                } else {
-                                    playerData["simulation"]["mesh-transformation"] = ["-y", "z", "-x"];
-                                }
+                                    // console.log("LOOPING THROUGH COMPONENTS ++++++++++ !!!!! ",index ,_temp_player);
 
-                                // playerData["simulation"]["mesh-transformation"] = _temp_player['mesh-transformation'];
-                            } else {
+                                    simulation_result_urls.push(`${config_env.simulation_result_host_url}simulation/results/${image_token}/${_temp_player.image_id}`);
+                                    simulation_result_urls.push(`${config_env.simulation_result_host_url}getSimulationMovie/${image_token}/${_temp_player.image_id}`);
 
-                                playerData["player"]["position"] = _temp_player.position.toLowerCase();
-                                playerData["simulation"]["linear-acceleration"][0] = _temp_player.linear_acceleration_pla;
-                                playerData["simulation"]["angular-acceleration"] = _temp_player.angular_acceleration_paa;
-                                //playerData["simulation"]["impact-point"] = _temp_player.impact_location_on_head.toLowerCase().replace(/ /g, "-");
-                            }
+                                    let playerData = {
+                                        // "uid": "",
+                                        "event_id": "",
+                                        "player_id": "",
+                                        "player": {
+                                            "first-name": "",
+                                            "first-name": "",
+                                            "sport": "",
+                                            "team": "",
+                                            "position": ""
+                                        },
+                                        "sensor": "",
+                                        "simulation": {
+                                            "mesh": mesh === 'fine' ? "fine_brain.inp" : "coarse_brain.inp",
+                                            "time-all": [],
+                                            "linear-acceleration": [0.0, 0.0, 0.0],
+                                            "angular-acceleration": 0.0,
+                                            "angular-velocity": [0.0, 0.0, 0.0],
+                                            //"time-peak-acceleration": 2.0e-2,
+                                            "maximum-time": 4.0e-2,
+                                            //"impact-point": "",
+                                            "head-cg": [0, -0.3308, -0.037],
+                                            "angular-sensor-position": [0.025, -0.281, -0.089757]
+                                        }
+                                    }
+                                    if (cg_coordinates) {
+                                        playerData.simulation["head-cg"] = (cg_coordinates.length == 0) ? [0, -0.3308, -0.037] : cg_coordinates.map(function (x) { return parseFloat(x) });
+                                        playerData.simulation["angular-sensor-position"] = (cg_coordinates.length == 0) ? [0.025, -0.281, -0.089757] : cg_coordinates.map(function (x) { return parseFloat(x) });
+                                    }
 
-                            let temp_simulation_data = {
-                                "impact_data": playerData,
-                                "index": index,
-                                // "image_token": image_token,
-                                // "token_secret": token_secret,
-                                // "date": _temp_player.date.split("/").join("-"),
-                                // "player_id": player_id,
-                                "account_id": account_id,
-                                "user_cognito_id": playerDetail[0].user_cognito_id,
-                            }
+                                    playerData.event_id = _temp_player.image_id;
+                                    playerData.player_id = player_id
 
-                            if ("impact" in _temp_player) {
-                                temp_simulation_data["impact"] = _temp_player.impact
-                            }
+                                    if (sensor === 'prevent' ) {
+                                        delete playerData.simulation["angular-sensor-position"];
+                                    }
 
-                            simulation_data.push(temp_simulation_data);
+                                    playerData["player"]["name"] = _temp_player.player_id.replace(/ /g, "-");
+                                    // playerData["uid"] = _temp_player.player_id.split("$")[0].replace(/ /g, "-") + '_' + _temp_player.image_id;
+                                    // playerData["uid"] = _temp_player.image_id;
 
-                            counter++;
+                                    if (reader == 1 || reader == 2 || reader == 3 || reader == 4) {
+                                        
+                                        playerData["sensor"] = _temp_player.sensor;
+                                        playerData["player"]["first-name"] = _temp_player.player['first-name']
+                                        playerData["player"]["last-name"] = _temp_player.player['last-name'];
+                                        playerData["player"]["sport"] = _temp_player.player.sport;
+                                        playerData["player"]["team"] = _temp_player.player.team;
+                                        playerData["player"]["position"] = _temp_player.player.position;
 
-                            if (counter == player_data_array.length) {
-                                console.log('SIMULATION DATA IS ', JSON.stringify(simulation_data));
-                                // Uploading simulation data file
-                                upload_simulation_data(simulation_data, user_bucket)
-                                    .then(job => {
-                                        // Submitting simulation job
-                                        return submitJobsToBatch(simulation_data, job.job_id, job.path, apiMode, user_bucket);
-                                    })
-                                    .then(value => {
-                                        console.log('simulation_result_urls ', simulation_result_urls);
-                                        resolve(simulation_result_urls);
-                                    })
-                                    .catch(err => {
-                                        console.log(err);
-                                        reject(err);
-                                    })
+                                        const time_all = _temp_player['linear-acceleration']['xt'];
 
-                            }
+                                        delete _temp_player['linear-acceleration']['xv-g'];
+                                        delete _temp_player['linear-acceleration']['yv-g'];
+                                        delete _temp_player['linear-acceleration']['zv-g'];
+                                        delete _temp_player['linear-acceleration']['xt'];
+                                        delete _temp_player['linear-acceleration']['yt'];
+                                        delete _temp_player['linear-acceleration']['zt'];
+                                        delete _temp_player['angular-acceleration']['xt'];
+                                        delete _temp_player['angular-acceleration']['yt'];
+                                        delete _temp_player['angular-acceleration']['zt'];
+                                        delete _temp_player['angular-velocity']['xt'];
+                                        delete _temp_player['angular-velocity']['yt'];
+                                        delete _temp_player['angular-velocity']['zt'];
+                                        
+                                        playerData["simulation"]["time-all"] = time_all;
+                                        playerData["simulation"]["linear-acceleration"] = _temp_player['linear-acceleration'];
+                                        playerData["simulation"]["angular-acceleration"] = _temp_player['angular-acceleration'];
+                                        playerData["simulation"]["angular-velocity"] = _temp_player['angular-velocity'];
+                            
+                                        if (reader == 2 || reader == 3 || reader == 4) {
+                                            playerData["simulation"]["maximum-time"] = _temp_player.max_time * 1000;
+                                        } else {
+                                            playerData["simulation"]["maximum-time"] = parseFloat(time_all[time_all.length - 1]);
+                                        }
 
-                        })
-                        .catch(err => {
-                            console.log(err);
-                            counter = result.length;
-                            j = player_data_array.length;
-                            reject(err)
+                                        if (sensor === 'prevent' || sensor === 'Prevent') {
+                                            playerData["simulation"]["mesh-transformation"] = ["-y", "z", "-x"];
+                                        } else if (sensor === 'sensor_company_x' || sensor === 'swa' || sensor === 'SWA') {
+                                            playerData["simulation"]["mesh-transformation"] = ["-z", "x", "-y"];
+                                            playerData["simulation"]["angular-to-linear-frame"] = ["-y", "-x", "z"];
+                                        } else if (sensor === 'sisu' || sensor === 'SISU') {
+                                            playerData["simulation"]["mesh-transformation"] = ["-z", "-x", "y"];
+                                        } else if (sensor === 'stanford' || sensor === 'Stanford') {
+                                            playerData["simulation"]["mesh-transformation"] = ["y", "-z", "-x"];
+                                        } else if (sensor === 'hybrid3' || sensor === 'Hybrid3') {
+                                            // playerData["simulation"]["mesh-transformation"] = ["z", "-x", "-y"];
+                                            playerData["simulation"]["mesh-transformation"] = ["-y", "z", "-x"];
+                                        } else {
+                                            playerData["simulation"]["mesh-transformation"] = ["-y", "z", "-x"];
+                                        }
+
+                                        // playerData["simulation"]["mesh-transformation"] = _temp_player['mesh-transformation'];
+                                    } else {
+
+                                        playerData["player"]["position"] = _temp_player.position.toLowerCase();
+                                        playerData["simulation"]["linear-acceleration"][0] = _temp_player.linear_acceleration_pla;
+                                        playerData["simulation"]["angular-acceleration"] = _temp_player.angular_acceleration_paa;
+                                        //playerData["simulation"]["impact-point"] = _temp_player.impact_location_on_head.toLowerCase().replace(/ /g, "-");
+                                    }
+
+                                    let temp_simulation_data = {
+                                        "impact_data": playerData,
+                                        "index": index,
+                                        // "image_token": image_token,
+                                        // "token_secret": token_secret,
+                                        // "date": _temp_player.date.split("/").join("-"),
+                                        // "player_id": player_id,
+                                        "account_id": account_id,
+                                        "user_cognito_id": playerDetail[0].user_cognito_id,
+                                    }
+
+                                    if ("impact" in _temp_player) {
+                                        temp_simulation_data["impact"] = _temp_player.impact
+                                    }
+
+                                    simulation_data.push(temp_simulation_data);
+
+                                    counter++;
+
+                                    if (counter == player_data_array.length) {
+                                        console.log('SIMULATION DATA IS ', JSON.stringify(simulation_data));
+                                        // Uploading simulation data file
+                                        upload_simulation_data(simulation_data, user_bucket)
+                                            .then(job => {
+                                                // Submitting simulation job
+                                                return submitJobsToBatch(simulation_data, job.job_id, job.path, apiMode, user_bucket);
+                                            })
+                                            .then(value => {
+                                                console.log('simulation_result_urls ', simulation_result_urls);
+                                                resolve(simulation_result_urls);
+                                            })
+                                            .catch(err => {
+                                                console.log(err);
+                                                reject(err);
+                                            })
+
+                                    }
+
+                                })
+                                .catch(err => {
+                                    console.log(err);
+                                    counter = result.length;
+                                    j = player_data_array.length;
+                                    reject(err)
+                                })
                         })
                 })
                 .catch(err => {
-
                     console.log(err);
                     counter = result.length;
                     j = player_data_array.length;
@@ -1722,7 +1729,7 @@ function generateSimulationForPlayers(player_data_array, reader, apiMode, sensor
     })
 }
 
-function generateSimulationForPlayersFromJson(player_data_array, apiMode, mesh, account_id, bypass_simulation_formatting) {
+function generateSimulationForPlayersFromJson(player_data_array, apiMode, mesh, account_id, bypass_simulation_formatting, user_cognito_id) {
     return new Promise((resolve, reject) => {
         var counter = 0;
         var simulation_result_urls = [];
@@ -1741,179 +1748,182 @@ function generateSimulationForPlayersFromJson(player_data_array, apiMode, mesh, 
                     let player_id = _temp_player.player_id.split("$")[0] + '-' + _temp_player.sensor;
                     player_id = player_id.replace(/ /g, "-");
 
-                    let user_bucket = apiMode === 'beta' ? config.usersbucketbeta : config.usersbucket;
-                    updateSimulationImageToDDB(_temp_player.image_id, user_bucket, "null", "pending", image_token, token_secret, account_id)
-                        .then(value => {
-                            return fetchCGValues(account_id);
-                        })
-                        .then(playerDetail => {
-                            let cg_coordinates =  playerDetail.length > 0 && playerDetail[0]['cg_coordinates'] ? playerDetail[0]['cg_coordinates'] : null;
-                            console.log('CG coordinates are ', cg_coordinates);
+                    getUserDetails(user_cognito_id)
+                        .then (user_detail => {
+                            let user_bucket = apiMode === 'beta' ? config.usersbucketbeta : config.usersbucket;
+                            updateSimulationImageToDDB(_temp_player.image_id, user_bucket, "null", "pending", image_token, token_secret, account_id, user_detail.Item)
+                                .then(value => {
+                                    return fetchCGValues(account_id);
+                                })
+                                .then(playerDetail => {
+                                    let cg_coordinates =  playerDetail.length > 0 && playerDetail[0]['cg_coordinates'] ? playerDetail[0]['cg_coordinates'] : null;
+                                    console.log('CG coordinates are ', cg_coordinates);
 
-                            // console.log("LOOPING THROUGH COMPONENTS ++++++++++ !!!!! ",index ,_temp_player);
+                                    // console.log("LOOPING THROUGH COMPONENTS ++++++++++ !!!!! ",index ,_temp_player);
 
-                            simulation_result_urls.push(`${config_env.simulation_result_host_url}simulation/results/${image_token}/${_temp_player.image_id}`);
-                            simulation_result_urls.push(`${config_env.simulation_result_host_url}getSimulationMovie/${image_token}/${_temp_player.image_id}`);
+                                    simulation_result_urls.push(`${config_env.simulation_result_host_url}simulation/results/${image_token}/${_temp_player.image_id}`);
+                                    simulation_result_urls.push(`${config_env.simulation_result_host_url}getSimulationMovie/${image_token}/${_temp_player.image_id}`);
 
-                            let playerData = {
-                                // "uid": "",
-                                "event_id": "",
-                                "player": {
-                                    "first-name": "",
-                                    "first-name": "",
-                                    "sport": "",
-                                    "team": "",
-                                    "position": "",
-                                    "organization": "",
-                                    // "impact-id": "",
-                                },
-                                "sensor": "",
-                                "impact-date": "",
-                                "impact-time": "",
-                                "player_id": "",
-                                "simulation": {
-                                    "mesh": mesh === 'fine' ? "fine_brain.inp" : "coarse_brain.inp",
-                                    // "time": "",
-                                    // "time-units": "",
-                                    "linear-acceleration": [0.0, 0.0, 0.0],
-                                    "angular-acceleration": [0.0, 0.0, 0.0],
-                                    "angular-velocity": [0.0, 0.0, 0.0],
-                                    "time-all": [],
-                                    //"time-peak-acceleration": 2.0e-2,
-                                    "maximum-time": 4.0e-2,
-                                    "head-cg": [0, -0.3308, -0.037],
-                                    //"impact-point": "",
-                                    "angular-sensor-position": [0.025, -0.281, -0.089757]
-                                }
-                            }
+                                    let playerData = {
+                                        // "uid": "",
+                                        "event_id": "",
+                                        "player": {
+                                            "first-name": "",
+                                            "first-name": "",
+                                            "sport": "",
+                                            "team": "",
+                                            "position": "",
+                                            "organization": "",
+                                            // "impact-id": "",
+                                        },
+                                        "sensor": "",
+                                        "impact-date": "",
+                                        "impact-time": "",
+                                        "player_id": "",
+                                        "simulation": {
+                                            "mesh": mesh === 'fine' ? "fine_brain.inp" : "coarse_brain.inp",
+                                            // "time": "",
+                                            // "time-units": "",
+                                            "linear-acceleration": [0.0, 0.0, 0.0],
+                                            "angular-acceleration": [0.0, 0.0, 0.0],
+                                            "angular-velocity": [0.0, 0.0, 0.0],
+                                            "time-all": [],
+                                            //"time-peak-acceleration": 2.0e-2,
+                                            "maximum-time": 4.0e-2,
+                                            "head-cg": [0, -0.3308, -0.037],
+                                            //"impact-point": "",
+                                            "angular-sensor-position": [0.025, -0.281, -0.089757]
+                                        }
+                                    }
 
-                            // playerData["uid"] = _temp_player.player_id.split("$")[0].replace(/ /g, "-") + '_' + _temp_player.image_id;
-                            // playerData["uid"] = _temp_player.image_id;
-                            playerData["event_id"] = _temp_player.image_id;
-                            playerData["sensor"] = _temp_player.sensor;
-                            playerData["impact-date"] = _temp_player['impact-date'].split(":").join("-");
-                            playerData["impact-time"] = _temp_player['impact-time'];
-                            playerData["player_id"] = player_id
-                            // playerData["organization"] = _temp_player.organization;
+                                    // playerData["uid"] = _temp_player.player_id.split("$")[0].replace(/ /g, "-") + '_' + _temp_player.image_id;
+                                    // playerData["uid"] = _temp_player.image_id;
+                                    playerData["event_id"] = _temp_player.image_id;
+                                    playerData["sensor"] = _temp_player.sensor;
+                                    playerData["impact-date"] = _temp_player['impact-date'].split(":").join("-");
+                                    playerData["impact-time"] = _temp_player['impact-time'];
+                                    playerData["player_id"] = player_id
+                                    // playerData["organization"] = _temp_player.organization;
 
-                            playerData["player"]["first-name"] = _temp_player.player['first-name'];
-                            playerData["player"]["last-name"] = _temp_player.player['last-name'];
-                            playerData["player"]["sport"] = _temp_player.player.sport;
-                            playerData["player"]["team"] = _temp_player.player.team;
-                            playerData["player"]["position"] = _temp_player.player.position;
-                            playerData["player"]["organization"] = _temp_player.player.organization ? _temp_player.player.organization : 'Unknown';
-                            // playerData["player"]["impact-id"] = _temp_player.player['impact-id'] ? _temp_player.player['impact-id'] : ''
-                            
-                            // playerData["simulation"]["time"] = _temp_player.simulation.time;
-                            // playerData["simulation"]["time-units"] = _temp_player.simulation['time-units'];
+                                    playerData["player"]["first-name"] = _temp_player.player['first-name'];
+                                    playerData["player"]["last-name"] = _temp_player.player['last-name'];
+                                    playerData["player"]["sport"] = _temp_player.player.sport;
+                                    playerData["player"]["team"] = _temp_player.player.team;
+                                    playerData["player"]["position"] = _temp_player.player.position;
+                                    playerData["player"]["organization"] = _temp_player.player.organization ? _temp_player.player.organization : 'Unknown';
+                                    // playerData["player"]["impact-id"] = _temp_player.player['impact-id'] ? _temp_player.player['impact-id'] : ''
+                                    
+                                    // playerData["simulation"]["time"] = _temp_player.simulation.time;
+                                    // playerData["simulation"]["time-units"] = _temp_player.simulation['time-units'];
 
-                            const time_all = _temp_player.simulation['linear-acceleration']['xt'];
+                                    const time_all = _temp_player.simulation['linear-acceleration']['xt'];
 
-                            delete _temp_player.simulation['linear-acceleration']['xv-g'];
-                            delete _temp_player.simulation['linear-acceleration']['yv-g'];
-                            delete _temp_player.simulation['linear-acceleration']['zv-g'];
+                                    delete _temp_player.simulation['linear-acceleration']['xv-g'];
+                                    delete _temp_player.simulation['linear-acceleration']['yv-g'];
+                                    delete _temp_player.simulation['linear-acceleration']['zv-g'];
 
-                            if (!bypass_simulation_formatting) {
-                                delete _temp_player.simulation['linear-acceleration']['xt'];
-                                delete _temp_player.simulation['linear-acceleration']['yt'];
-                                delete _temp_player.simulation['linear-acceleration']['zt'];
-                                delete _temp_player.simulation['angular-acceleration']['xt'];
-                                delete _temp_player.simulation['angular-acceleration']['yt'];
-                                delete _temp_player.simulation['angular-acceleration']['zt'];
-                                delete _temp_player.simulation['angular-velocity']['xt'];
-                                delete _temp_player.simulation['angular-velocity']['yt'];
-                                delete _temp_player.simulation['angular-velocity']['zt'];
-                            }
+                                    if (!bypass_simulation_formatting) {
+                                        delete _temp_player.simulation['linear-acceleration']['xt'];
+                                        delete _temp_player.simulation['linear-acceleration']['yt'];
+                                        delete _temp_player.simulation['linear-acceleration']['zt'];
+                                        delete _temp_player.simulation['angular-acceleration']['xt'];
+                                        delete _temp_player.simulation['angular-acceleration']['yt'];
+                                        delete _temp_player.simulation['angular-acceleration']['zt'];
+                                        delete _temp_player.simulation['angular-velocity']['xt'];
+                                        delete _temp_player.simulation['angular-velocity']['yt'];
+                                        delete _temp_player.simulation['angular-velocity']['zt'];
+                                    }
 
-                            playerData["simulation"]["time-all"] = time_all;
-                            playerData["simulation"]["linear-acceleration"] = _temp_player.simulation['linear-acceleration'];
-                            playerData["simulation"]["angular-acceleration"] = _temp_player.simulation['angular-acceleration'];
-                            if (_temp_player.simulation['angular-velocity']) {
-                                playerData["simulation"]["angular-velocity"] = _temp_player.simulation['angular-velocity'];
-                            }
-                            playerData["simulation"]["maximum-time"] = parseFloat(time_all[time_all.length - 1]);
-                            // playerData["simulation"]["maximum-time"] = _temp_player["maximum-time"];
-                            playerData["simulation"]["mesh-transformation"] = _temp_player.simulation['mesh-transformation'];
+                                    playerData["simulation"]["time-all"] = time_all;
+                                    playerData["simulation"]["linear-acceleration"] = _temp_player.simulation['linear-acceleration'];
+                                    playerData["simulation"]["angular-acceleration"] = _temp_player.simulation['angular-acceleration'];
+                                    if (_temp_player.simulation['angular-velocity']) {
+                                        playerData["simulation"]["angular-velocity"] = _temp_player.simulation['angular-velocity'];
+                                    }
+                                    playerData["simulation"]["maximum-time"] = parseFloat(time_all[time_all.length - 1]);
+                                    // playerData["simulation"]["maximum-time"] = _temp_player["maximum-time"];
+                                    playerData["simulation"]["mesh-transformation"] = _temp_player.simulation['mesh-transformation'];
 
-                            if (cg_coordinates) {
-                                playerData.simulation["head-cg"] = (cg_coordinates.length == 0) ? [0, -0.3308, -0.037] : cg_coordinates.map(function (x) { return parseFloat(x) });
-                                playerData.simulation["angular-sensor-position"] = (cg_coordinates.length == 0) ? [0.025, -0.281, -0.089757] : cg_coordinates.map(function (x) { return parseFloat(x) });
-                            }
+                                    if (cg_coordinates) {
+                                        playerData.simulation["head-cg"] = (cg_coordinates.length == 0) ? [0, -0.3308, -0.037] : cg_coordinates.map(function (x) { return parseFloat(x) });
+                                        playerData.simulation["angular-sensor-position"] = (cg_coordinates.length == 0) ? [0.025, -0.281, -0.089757] : cg_coordinates.map(function (x) { return parseFloat(x) });
+                                    }
 
-                            if (_temp_player.simulation['head-cg']) {
-                                playerData.simulation["head-cg"] = _temp_player.simulation["head-cg"]
-                            }
+                                    if (_temp_player.simulation['head-cg']) {
+                                        playerData.simulation["head-cg"] = _temp_player.simulation["head-cg"]
+                                    }
 
-                            if (_temp_player.simulation['maximum-time']) {
-                                playerData.simulation["maximum-time"] = _temp_player.simulation["maximum-time"]
-                            }
+                                    if (_temp_player.simulation['maximum-time']) {
+                                        playerData.simulation["maximum-time"] = _temp_player.simulation["maximum-time"]
+                                    }
 
-                            // if (_temp_player.simulation['output-elements']) {
-                            //     playerData.simulation["output-elements"] = _temp_player.simulation["output-elements"]
-                            // }
+                                    // if (_temp_player.simulation['output-elements']) {
+                                    //     playerData.simulation["output-elements"] = _temp_player.simulation["output-elements"]
+                                    // }
 
-                            // if (_temp_player.simulation['output-nodes']) {
-                            //     playerData.simulation["output-nodes"] = _temp_player.simulation["output-nodes"]
-                            // }
+                                    // if (_temp_player.simulation['output-nodes']) {
+                                    //     playerData.simulation["output-nodes"] = _temp_player.simulation["output-nodes"]
+                                    // }
 
-                            if (_temp_player["sensor"] && _temp_player["sensor"] === 'Prevent Biometrics') {
-                                delete playerData.simulation["angular-sensor-position"];
-                            }
+                                    if (_temp_player["sensor"] && _temp_player["sensor"] === 'Prevent Biometrics') {
+                                        delete playerData.simulation["angular-sensor-position"];
+                                    }
 
-                            if (_temp_player.simulation['angular-to-linear-frame']) {
-                                playerData["simulation"]["angular-to-linear-frame"] = _temp_player.simulation['angular-to-linear-frame'];
-                            }
+                                    if (_temp_player.simulation['angular-to-linear-frame']) {
+                                        playerData["simulation"]["angular-to-linear-frame"] = _temp_player.simulation['angular-to-linear-frame'];
+                                    }
 
-                            if (_temp_player['time-peak-acceleration']) {
-                                playerData["simulation"]["time-peak-acceleration"] = _temp_player['time-peak-acceleration'];
-                            }
+                                    if (_temp_player['time-peak-acceleration']) {
+                                        playerData["simulation"]["time-peak-acceleration"] = _temp_player['time-peak-acceleration'];
+                                    }
 
-                            if (bypass_simulation_formatting) {
-                                playerData["simulation"] = _temp_player.simulation;
-                            }
-                           
-                            let temp_simulation_data = {
-                                "impact_data": playerData,
-                                "index": index,
-                                // "image_token": image_token,
-                                // "token_secret": token_secret,
-                                // "date": _temp_player['impact-date'].split(":").join("-"),
-                                // "player_id": player_id,
-                                "account_id": account_id,
-                                "user_cognito_id": playerDetail[0].user_cognito_id,
-                            }
+                                    if (bypass_simulation_formatting) {
+                                        playerData["simulation"] = _temp_player.simulation;
+                                    }
+                                
+                                    let temp_simulation_data = {
+                                        "impact_data": playerData,
+                                        "index": index,
+                                        // "image_token": image_token,
+                                        // "token_secret": token_secret,
+                                        // "date": _temp_player['impact-date'].split(":").join("-"),
+                                        // "player_id": player_id,
+                                        "account_id": account_id,
+                                        "user_cognito_id": playerDetail[0].user_cognito_id,
+                                    }
 
-                            if ("impact" in _temp_player) {
-                                temp_simulation_data["impact"] = _temp_player.impact
-                            }
+                                    if ("impact" in _temp_player) {
+                                        temp_simulation_data["impact"] = _temp_player.impact
+                                    }
 
-                            simulation_data.push(temp_simulation_data);
+                                    simulation_data.push(temp_simulation_data);
 
-                            counter++;
+                                    counter++;
 
-                            if (counter == player_data_array.length) {
-                                console.log('SIMULATION DATA JSON IS ', JSON.stringify(simulation_data));
-                                // Uploading simulation data file
-                                upload_simulation_data(simulation_data, user_bucket)
-                                    .then(job => {
-                                        // Submitting simulation job
-                                        return submitJobsToBatch(simulation_data, job.job_id, job.path, apiMode, user_bucket);
-                                    })
-                                    .then(value => {
-                                        console.log('simulation_result_urls ', simulation_result_urls);
-                                        resolve(simulation_result_urls);
-                                    })
-                                    .catch(err => {
-                                        console.log(err);
-                                        reject(err);
-                                    })
-                            }
-                        })
-                        .catch(err => {
-                            console.log(err);
-                            counter = result.length;
-                            j = player_data_array.length;
-                            reject(err)
+                                    if (counter == player_data_array.length) {
+                                        console.log('SIMULATION DATA JSON IS ', JSON.stringify(simulation_data));
+                                        // Uploading simulation data file
+                                        upload_simulation_data(simulation_data, user_bucket)
+                                            .then(job => {
+                                                // Submitting simulation job
+                                                return submitJobsToBatch(simulation_data, job.job_id, job.path, apiMode, user_bucket);
+                                            })
+                                            .then(value => {
+                                                console.log('simulation_result_urls ', simulation_result_urls);
+                                                resolve(simulation_result_urls);
+                                            })
+                                            .catch(err => {
+                                                console.log(err);
+                                                reject(err);
+                                            })
+                                    }
+                                })
+                                .catch(err => {
+                                    console.log(err);
+                                    counter = result.length;
+                                    j = player_data_array.length;
+                                    reject(err)
+                                })
                         })
                 })
                 .catch(err => {
