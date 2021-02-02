@@ -714,6 +714,7 @@ function updateSimulationImageToDDB(
     token = null,
     secret = null,
     account_id,
+    mesh,
     admin_detail,
 ) {
     return new Promise((resolve, reject) => {
@@ -742,6 +743,7 @@ function updateSimulationImageToDDB(
                                 token: token,
                                 secret: secret,
                                 account_id: account_id,
+                                mesh: mesh,
                                 admin_detail: admin_detail,
                             },
                         };
@@ -758,14 +760,16 @@ function updateSimulationImageToDDB(
                         var dbInsert = {
                             TableName: "simulation_images",
                             Key: { image_id: image_id },
-                            UpdateExpression: "set #path = :path,#status = :status",
+                            UpdateExpression: "set #path = :path,#status = :status, #mesh = :mesh",
                             ExpressionAttributeNames: {
                                 "#path": "path",
                                 "#status": "status",
+                                "#mesh": 'mesh'
                             },
                             ExpressionAttributeValues: {
                                 ":path": path,
                                 ":status": status,
+                                ":mesh": mesh
                             },
                             ReturnValues: "UPDATED_NEW",
                         };

@@ -1558,7 +1558,7 @@ function generateSimulationForPlayers(player_data_array, reader, apiMode, sensor
                     getUserDetails(user_cognito_id)
                         .then (user_detail => {
                             let user_bucket = apiMode === 'beta' ? config.usersbucketbeta : config.usersbucket;
-                            updateSimulationImageToDDB(_temp_player.image_id, user_bucket, "null", "pending", image_token, token_secret, account_id, user_detail.Item)
+                            updateSimulationImageToDDB(_temp_player.image_id, user_bucket, "null", "pending", image_token, token_secret, account_id, mesh, user_detail.Item)
                                 .then(value => {
                                     return fetchCGValues(account_id);
                                 })
@@ -1751,7 +1751,7 @@ function generateSimulationForPlayersFromJson(player_data_array, apiMode, mesh, 
                     getUserDetails(user_cognito_id)
                         .then (user_detail => {
                             let user_bucket = apiMode === 'beta' ? config.usersbucketbeta : config.usersbucket;
-                            updateSimulationImageToDDB(_temp_player.image_id, user_bucket, "null", "pending", image_token, token_secret, account_id, user_detail.Item)
+                            updateSimulationImageToDDB(_temp_player.image_id, user_bucket, "null", "pending", image_token, token_secret, account_id, mesh, user_detail.Item)
                                 .then(value => {
                                     return fetchCGValues(account_id);
                                 })
