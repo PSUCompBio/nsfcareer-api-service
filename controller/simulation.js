@@ -1551,7 +1551,7 @@ function generateSimulationForPlayers(player_data_array, reader, apiMode, sensor
                     player_id = player_id.replace(/ /g, "-");
 
                     let user_bucket = apiMode === 'beta' ? config.usersbucketbeta : config.usersbucket;
-                    updateSimulationImageToDDB(_temp_player.image_id, user_bucket, "null", "pending", image_token, token_secret)
+                    updateSimulationImageToDDB(_temp_player.image_id, user_bucket, "null", "pending", image_token, token_secret,mesh)
                         .then(value => {
                             return fetchCGValues(account_id);
                         })

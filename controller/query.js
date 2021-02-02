@@ -713,7 +713,8 @@ function updateSimulationImageToDDB(
     status = "completed",
     token = null,
     secret = null,
-    account_id
+    account_id,
+    mesh
 ) {
     return new Promise((resolve, reject) => {
         if (image_id == null) {
@@ -741,6 +742,7 @@ function updateSimulationImageToDDB(
                                 token: token,
                                 secret: secret,
                                 account_id: account_id,
+                                mesh: mesh
                             },
                         };
                         docClient.put(dbInsert, function (err, data) {
@@ -756,14 +758,16 @@ function updateSimulationImageToDDB(
                         var dbInsert = {
                             TableName: "simulation_images",
                             Key: { image_id: image_id },
-                            UpdateExpression: "set #path = :path,#status = :status",
+                            UpdateExpression: "set #path = :path,#status = :status, #mesh = :mesh",
                             ExpressionAttributeNames: {
                                 "#path": "path",
                                 "#status": "status",
+                                "#mesh": 'mesh'
                             },
                             ExpressionAttributeValues: {
                                 ":path": path,
                                 ":status": status,
+                                ":mesh": mesh
                             },
                             ReturnValues: "UPDATED_NEW",
                         };
