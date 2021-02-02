@@ -1557,8 +1557,13 @@ function generateSimulationForPlayers(player_data_array, reader, apiMode, sensor
                     
                     getUserDetails(user_cognito_id)
                         .then (user_detail => {
+                            let admin_details = {};
+                            if (user_detail.Item) {
+                                admin_details.name = user_detail.Item.first_name + ' ' + user_detail.Item.last_name;
+                                admin_details.user_cognito_id = user_detail.Item.user_cognito_id;
+                            }
                             let user_bucket = apiMode === 'beta' ? config.usersbucketbeta : config.usersbucket;
-                            updateSimulationImageToDDB(_temp_player.image_id, user_bucket, "null", "pending", image_token, token_secret, account_id, mesh, user_detail.Item)
+                            updateSimulationImageToDDB(_temp_player.image_id, user_bucket, "null", "pending", image_token, token_secret, account_id, mesh, admin_details)
                                 .then(value => {
                                     return fetchCGValues(account_id);
                                 })
@@ -1750,8 +1755,13 @@ function generateSimulationForPlayersFromJson(player_data_array, apiMode, mesh, 
 
                     getUserDetails(user_cognito_id)
                         .then (user_detail => {
+                            let admin_details = {};
+                            if (user_detail.Item) {
+                                admin_details.name = user_detail.Item.first_name + ' ' + user_detail.Item.last_name;
+                                admin_details.user_cognito_id = user_detail.Item.user_cognito_id;
+                            }
                             let user_bucket = apiMode === 'beta' ? config.usersbucketbeta : config.usersbucket;
-                            updateSimulationImageToDDB(_temp_player.image_id, user_bucket, "null", "pending", image_token, token_secret, account_id, mesh, user_detail.Item)
+                            updateSimulationImageToDDB(_temp_player.image_id, user_bucket, "null", "pending", image_token, token_secret, account_id, mesh, admin_details)
                                 .then(value => {
                                     return fetchCGValues(account_id);
                                 })
