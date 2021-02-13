@@ -361,7 +361,6 @@ function groupSensorDataForY(arr, filename) {
         'simulation_status': 'pending'
 
     }
-    console.log(arr[0]);
     let max_time = parseFloat(arr[0]["t"] ? arr[0]["t"]["ms"] : (arr[0]["T"] ? arr[0]["T"]["ms"] : 0));
     for (let i = 0; i < arr.length; i++) {
         let curr_time = parseFloat(arr[i]["t"] ? arr[i]["t"]["ms"] : (arr[i]["T"] ? arr[i]["T"]["ms"] : 0));;
