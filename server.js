@@ -402,24 +402,30 @@ if (cluster.isMaster) {
         let buffer = '';
         let overwrite = req.body.overwrite !== undefined ? req.body.overwrite : false;
         let bypass_simulation_formatting = req.body.bypass_simulation_formatting !== undefined ? req.body.bypass_simulation_formatting : false;
-
+        console.log('filename ----------------------\n', req.body.data_filename)
+        
         if (sensor && (sensor.toLowerCase() === 'sensor_company_x' || sensor.toLowerCase() === 'swa')) {
             reader = 1;
             filename = req.body.data_filename
         }
 
-        if (sensor && sensor === 'prevent') {
+        if (sensor && sensor.toLowerCase() === 'prevent') {
             reader = 2;
             filename = req.body.data_filename
         }
 
-        if (sensor && sensor === 'biocore') {
+        if (sensor && sensor.toLowerCase() === 'biocore') {
             reader = 3;
             filename = req.body.data_filename
         }
 
-        if (sensor && sensor === 'athlete') {
+        if (sensor && sensor.toLowerCase() === 'athlete') {
             reader = 4;
+            filename = req.body.data_filename
+        }
+
+        if (sensor && sensor.toLowerCase() === 'hybrid3') {
+            reader = 5;
             filename = req.body.data_filename
         }
 
@@ -431,8 +437,11 @@ if (cluster.isMaster) {
         let file_extension = null;
         if (filename !== null) {
             file_extension = filename.split(".");
+
             file_extension = file_extension[file_extension.length - 1];
         }
+
+
 
         if (file_extension === 'json' || filename == null) { // Reading json from file
             let new_items_array = [];

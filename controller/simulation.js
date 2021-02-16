@@ -64,7 +64,7 @@ const rootPath = '/home/ec2-user';
 
 function convertFileDataToJson(buf, reader, filename) {
     return new Promise((resolve, reject) => {
-        if (reader == 1 || reader == 2 || reader == 3 || reader == 4) {
+        if (reader == 1 || reader == 2 || reader == 3 || reader == 4 ||  reader == 5) {
             convertCSVDataToJSON(buf, reader, filename)
                 .then(data => {
                     resolve(data);
@@ -92,6 +92,8 @@ function convertCSVDataToJSON(buf, reader, filename) {
                     resolve(groupSensorDataForY(data, filename));
                 } else if (reader == 3) {
                     resolve(groupSensorDataForBioCore(data, filename));
+                } else if (reader == 5) {
+                    resolve(groupSensorDataForHybrid3(data, filename));
                 } else {
                     resolve(groupSensorDataForAthlete(data, filename));
                 }
@@ -102,6 +104,100 @@ function convertCSVDataToJSON(buf, reader, filename) {
             })
     })
 }
+
+function groupSensorDataForHybrid3(arr, filename) {
+
+    // console.log('filename',filename);
+    // console.log('arr',arr);
+
+    let objName = filename.split('_');
+    let date = objName[2];
+    let time = objName[3].split('.')[0];
+    
+    let data = {
+        'player_id': objName[0] +'$' + Date.now(),
+        'date': date.slice(0, 2)+':'+date.slice(2, 4)+':'+date.slice(4),
+        'time': time.slice(0, 2)+':'+time.slice(2, 4)+':'+time.slice(4),
+        'impact-id': objName[1],
+        'sensor-id': objName[0],
+        'team': config_env.queue_y,
+        'linear-acceleration': {
+            'xt': [],
+            'xv': [],
+            'xv-g': [],
+            'yt': [],
+            'yv': [],
+            'yv-g': [],
+            'zt': [],
+            'zv': [],
+            'zv-g': []
+        },
+        'angular-acceleration': {
+            'xt': [],
+            'xv': [],
+            'yt': [],
+            'yv': [],
+            'zt': [],
+            'zv': []
+        },
+        'angular-velocity': {
+            'xt': [],
+            'xv': [],
+            'yt': [],
+            'yv': [],
+            'zt': [],
+            'zv': []
+        },
+        'mesh-transformation': ["-y", "z", "-x"],
+        'simulation_status': 'pending'
+
+    }
+    // console.log('arr --------------------\n',arr)
+
+    let max_time = 0;
+    for (let i = 0; i < arr.length; i++) {
+        if(i > 1){
+            let rowVal = arr[i]['NAP1'].split('\t');
+            // console.log('rowVal',rowVal)
+            let curr_time = parseFloat(rowVal[0]);
+            if (curr_time > max_time)
+                max_time = curr_time;
+
+            data['linear-acceleration']['xv'].push(parseFloat(rowVal[1]))
+            data['linear-acceleration']['xv-g'].push(parseFloat(rowVal[1]) / 9.80665)
+            data['linear-acceleration']['xt'].push(curr_time)
+            data['linear-acceleration']['yv'].push(parseFloat(rowVal[2]))
+            data['linear-acceleration']['yv-g'].push(parseFloat(rowVal[2]) / 9.80665)
+            data['linear-acceleration']['yt'].push(curr_time)
+            data['linear-acceleration']['zv'].push(parseFloat(rowVal[3]))
+            data['linear-acceleration']['zv-g'].push(parseFloat(rowVal[3]) / 9.80665)
+            data['linear-acceleration']['zt'].push(curr_time)
+
+            data['angular-acceleration']['xv'].push(parseFloat(rowVal[5]))
+            data['angular-acceleration']['xt'].push(curr_time)
+            data['angular-acceleration']['yv'].push(parseFloat(rowVal[6]))
+            data['angular-acceleration']['yt'].push(curr_time)
+            data['angular-acceleration']['zv'].push(parseFloat(rowVal[7]))
+            data['angular-acceleration']['zt'].push(curr_time)
+
+            data['angular-velocity']['xv'].push(parseFloat(rowVal[9]))
+            data['angular-velocity']['xt'].push(curr_time)
+            data['angular-velocity']['yv'].push(parseFloat(rowVal[10]))
+            data['angular-velocity']['yt'].push(curr_time)
+            data['angular-velocity']['zv'].push(parseFloat(rowVal[11]))
+            data['angular-velocity']['zt'].push(curr_time)
+    
+           
+        }
+    }
+
+    // Add max_time in simulation ( in seconds )
+    data.max_time = max_time / 1000;
+
+    // console.log('data----------------------\n\n',data)
+    return [data];
+}
+
 
 function convertXLSXDataToJSON(buf, cb) {
     // Generic data format
@@ -1617,7 +1713,7 @@ function generateSimulationForPlayers(player_data_array, reader, apiMode, sensor
                                     // playerData["uid"] = _temp_player.player_id.split("$")[0].replace(/ /g, "-") + '_' + _temp_player.image_id;
                                     // playerData["uid"] = _temp_player.image_id;
 
-                                    if (reader == 1 || reader == 2 || reader == 3 || reader == 4) {
+                                    if (reader == 1 || reader == 2 || reader == 3 || reader == 4 || reader == 5) {
                                         
                                         playerData["sensor"] = _temp_player.sensor;
                                         playerData["player"]["first-name"] = _temp_player.player['first-name']
@@ -1646,7 +1742,7 @@ function generateSimulationForPlayers(player_data_array, reader, apiMode, sensor
                                         playerData["simulation"]["angular-acceleration"] = _temp_player['angular-acceleration'];
                                         playerData["simulation"]["angular-velocity"] = _temp_player['angular-velocity'];
                             
-                                        if (reader == 2 || reader == 3 || reader == 4) {
+                                        if (reader == 2 || reader == 3 || reader == 4 || reader == 5) {
                                             playerData["simulation"]["maximum-time"] = _temp_player.max_time * 1000;
                                         } else {
                                             playerData["simulation"]["maximum-time"] = parseFloat(time_all[time_all.length - 1]);
