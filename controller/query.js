@@ -863,6 +863,28 @@ function updateJobComputedTime(obj, cb) {
     });
 }
 
+function updateJobImageGenerateStatus(obj, cb) {
+    var userParams = {
+        TableName: "simulation_images",
+        Key: {
+            image_id: obj.image_id,
+        },
+        UpdateExpression:
+            "set simulation_images_status = :simulation_images_status",
+        ExpressionAttributeValues: {
+            ":simulation_images_status": obj.simulation_images_status,
+        },
+        ReturnValues: "UPDATED_NEW",
+    };
+    docClient.update(userParams, (err, data) => {
+        if (err) {
+            cb(err, "");
+        } else {
+            cb("", data);
+        }
+    });
+}
+
 function getJobs() {
     return new Promise((resolve, reject) => {
         let params = {
@@ -1115,5 +1137,6 @@ module.exports = {
     checkSensorDataExists,
     getUserDetailByPlayerId,
     getOrganizationData,
-    getUsersWthNoAccountId
+    getUsersWthNoAccountId,
+    updateJobImageGenerateStatus
 };

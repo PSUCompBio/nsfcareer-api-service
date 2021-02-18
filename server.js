@@ -107,6 +107,8 @@ if (cluster.isMaster) {
         "queue_y" : process.env.QUEUE_Y,
         "queue_beta" : process.env.QUEUE_BETA,
         "mlUrl" : process.env.ML_URL
+        "nodeThreejsUrl" : process.env.nodeThreejsUrl
+
     };
 
     const subject_signature = fs.readFileSync("data/base64")
@@ -196,7 +198,8 @@ if (cluster.isMaster) {
         getUserDetailByPlayerId,
         checkSensorDataExists,
         getOrganizationData,
-        getUsersWthNoAccountId
+        getUsersWthNoAccountId,
+        updateJobImageGenerateStatus
     } = require('./controller/query');
 
     app.get(`/`, (req, res) => {
@@ -344,6 +347,43 @@ if (cluster.isMaster) {
                                 });
                             }
                         })
+                })
+            });
+    })
+
+    app.get(`/updateSensor`, (req, res) => {
+        const obj = {};
+        obj.brand = 'Prevent Biometrics';
+        obj.organization = 'Army Research Laboratory';
+        // obj.team = '2020 POMPOC Study';
+
+        getTeamData(obj)
+            .then (data => {
+                console.log(data.length);
+                data.forEach((player, index) => {
+                    // if(index === 0){
+                        console.log('player ------------',player)
+                        var userParams = {
+                            TableName: "sensor_details",
+                            Key: {
+                                org_id: player.org_id,
+                                player_id: player.player_id
+                            },
+                            UpdateExpression:
+                                "set sensor = :sensor",
+                            ExpressionAttributeValues: {
+                                ":sensor": null,
+                            },
+                            ReturnValues: "UPDATED_NEW",
+                        };
+                        docClient.update(userParams, (err, data) => {
+                            if (err) {
+                                console.log('Error ', err);
+                            } else{
+                                console.log('Player detail updated.');
+                            }
+                        });
+                    // }
                 })
             });
     })
@@ -1256,6 +1296,7 @@ if (cluster.isMaster) {
                                             obj.computed_time = computed_time;
                                             obj.log_stream_name = log_stream_name;
 
+
                                             updateJobComputedTime(obj, function (err, dbdata) {
                                                 if (err) {
                                                     console.log(err);
@@ -1276,6 +1317,27 @@ if (cluster.isMaster) {
                                                 else {
                                                     console.log('ML api executed successfully.');
                                                 }
+                                            })
+
+                                            // Creating image of simulation brain plots...
+                                            request.post({
+                                                url: config.nodeThreejsUrl,
+                                                body: { account_id: job.account_id },
+                                                json: true
+                                            }, function (err, httpResponse, body) {
+                                                if (err) {
+                                                    console.log('Image created failure ', err);
+                                                    obj.simulation_images_status = "Failure";
+                                                }
+                                                else {
+                                                    // console.log('Image created successfully......', body);
+                                                    if(httpResponse.body.status == '200' ){
+                                                        obj.simulation_images_status = "Uploaded";
+                                                    }else{
+                                                        obj.simulation_images_status = "Failure";
+                                                    }
+                                                }
+                                                updateJobImageGenerateStatus(obj);
                                             })
                                         }
                                     }
