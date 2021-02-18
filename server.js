@@ -106,8 +106,8 @@ if (cluster.isMaster) {
         "queue_x" : process.env.QUEUE_X,
         "queue_y" : process.env.QUEUE_Y,
         "queue_beta" : process.env.QUEUE_BETA,
-        "mlUrl" : process.env.ML_URL
-        "nodeThreejsUrl" : process.env.nodeThreejsUrl
+        "mlUrl" : process.env.ML_URL,
+        "nodeThreejsUrl" : process.env.NODE_THREE_JS_URL
 
     };
 
