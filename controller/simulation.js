@@ -163,28 +163,28 @@ function groupSensorDataForHybrid3(arr, filename) {
             if (curr_time > max_time)
                 max_time = curr_time;
 
-            data['linear-acceleration']['xv'].push(parseFloat(rowVal[1]))
-            data['linear-acceleration']['xv-g'].push(parseFloat(rowVal[1]) / 9.80665)
+            data['linear-acceleration']['xv'].push(parseFloat(rowVal[1]) * -1)
+            data['linear-acceleration']['xv-g'].push(parseFloat(rowVal[1]) / 9.80665 * -1)
             data['linear-acceleration']['xt'].push(curr_time)
-            data['linear-acceleration']['yv'].push(parseFloat(rowVal[2]))
-            data['linear-acceleration']['yv-g'].push(parseFloat(rowVal[2]) / 9.80665)
+            data['linear-acceleration']['yv'].push(parseFloat(rowVal[2]) * -1)
+            data['linear-acceleration']['yv-g'].push(parseFloat(rowVal[2]) / 9.80665 * -1)
             data['linear-acceleration']['yt'].push(curr_time)
-            data['linear-acceleration']['zv'].push(parseFloat(rowVal[3]))
-            data['linear-acceleration']['zv-g'].push(parseFloat(rowVal[3]) / 9.80665)
+            data['linear-acceleration']['zv'].push(parseFloat(rowVal[3]) * -1)
+            data['linear-acceleration']['zv-g'].push(parseFloat(rowVal[3]) / 9.80665 * -1)
             data['linear-acceleration']['zt'].push(curr_time)
 
-            data['angular-acceleration']['xv'].push(parseFloat(rowVal[5]))
+            data['angular-acceleration']['xv'].push(parseFloat(rowVal[5]) * -1)
             data['angular-acceleration']['xt'].push(curr_time)
-            data['angular-acceleration']['yv'].push(parseFloat(rowVal[6]))
+            data['angular-acceleration']['yv'].push(parseFloat(rowVal[6]) * -1)
             data['angular-acceleration']['yt'].push(curr_time)
-            data['angular-acceleration']['zv'].push(parseFloat(rowVal[7]))
+            data['angular-acceleration']['zv'].push(parseFloat(rowVal[7]) * -1)
             data['angular-acceleration']['zt'].push(curr_time)
 
-            data['angular-velocity']['xv'].push(parseFloat(rowVal[9]))
+            data['angular-velocity']['xv'].push(parseFloat(rowVal[9]) * -1)
             data['angular-velocity']['xt'].push(curr_time)
-            data['angular-velocity']['yv'].push(parseFloat(rowVal[10]))
+            data['angular-velocity']['yv'].push(parseFloat(rowVal[10]) * -1)
             data['angular-velocity']['yt'].push(curr_time)
-            data['angular-velocity']['zv'].push(parseFloat(rowVal[11]))
+            data['angular-velocity']['zv'].push(parseFloat(rowVal[11]) * -1)
             data['angular-velocity']['zt'].push(curr_time)
     
            
@@ -193,8 +193,8 @@ function groupSensorDataForHybrid3(arr, filename) {
 
     // Add max_time in simulation ( in seconds )
     data.max_time = max_time / 1000;
-
-    // console.log('data----------------------\n\n',data)
+    
+    console.log('data----------------------\n\n', data['linear-acceleration']['xv'])
     return [data];
 }
 
