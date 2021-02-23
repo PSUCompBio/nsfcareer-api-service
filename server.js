@@ -199,7 +199,7 @@ if (cluster.isMaster) {
     });
 
     // Cron to get job computation time after job completion
-    cron.schedule('*/2 * * * *', () => {
+    cron.schedule('*/1 * * * *', () => {
         getCompletedJobs()
             .then(simulation_data => {
                 if (simulation_data.length > 0) {
@@ -275,8 +275,38 @@ if (cluster.isMaster) {
                                                             console.log('Image created successfully');
                                                         }
                                                     })
-                                                })
+                                                });
                                             }
+                                            /* ========================================= 
+                                                Creating brain image of single event 
+                                             ========================================= */
+                                                request.post({
+                                                    url: config.nodeThreejsUrl + 'GetSingleEvent',
+                                                    body: { account_id: job.account_id, event_id: job.image_id},
+                                                    json: true
+                                                }, function (err, httpResponse, body) {
+                                                    if (err) {
+                                                        console.log('Single Image created failure ', err);
+                                                        obj.simulation_images_status = "Failure";
+                                                    }
+                                                    else {
+                                                        console.log('Single Image created successfully......', httpResponse.body);
+                                                        if (httpResponse.body.status == '200') {
+                                                            obj.simulation_single_images_status = "Uploaded";
+                                                        } else {
+                                                            obj.simulation_single_images_status = "Failure";
+                                                        }
+                                                    }
+                                                    updateJobImageGenerateStatus(obj, function (err, dbdata) {
+                                                        if (err) {
+                                                            console.log(err);
+                                                        }
+                                                        else {
+                                                            console.log('Image created successfully');
+                                                        }
+                                                    })
+                                                })
+                                            //  end ...
                                         }
                                     }
                                 }
@@ -710,17 +740,17 @@ if (cluster.isMaster) {
                                         _temp_sensor_data["simulation"] = _temp["simulation"];
 
                                         _temp["simulation"]['linear-acceleration']['xv'].forEach((la, x) => {
-                                            const _temp_la = parseFloat(la) / 9.80665;
+                                            const _temp_la = parseFloat(la) / -9.80665;
                                             x_g.push(_temp_la);
                                         })
 
                                         _temp["simulation"]['linear-acceleration']['yv'].forEach((la, y) => {
-                                            const _temp_la = parseFloat(la) / 9.80665;
+                                            const _temp_la = parseFloat(la) / -9.80665;
                                             y_g.push(_temp_la);
                                         })
 
                                         _temp["simulation"]['linear-acceleration']['zv'].forEach((la, z) => {
-                                            const _temp_la = parseFloat(la) / 9.80665;
+                                            const _temp_la = parseFloat(la) / -9.80665;
                                             z_g.push(_temp_la);
                                         })
 
@@ -750,35 +780,35 @@ if (cluster.isMaster) {
 
                                         if (_temp["simulation"]['linear-acceleration']['la-units'] === 'g') {
                                             _temp["simulation"]['linear-acceleration']['x-la'].forEach((la, x) => {
-                                                const _temp_la = parseFloat(la) * 9.80665;
+                                                const _temp_la = parseFloat(la) * -9.80665;
                                                 _temp["simulation"]['linear-acceleration']['x-la'][x] = _temp_la;
                                                 x_g.push(parseFloat(la));
                                             })
 
                                             _temp["simulation"]['linear-acceleration']['y-la'].forEach((la, y) => {
-                                                const _temp_la = parseFloat(la) * 9.80665;
+                                                const _temp_la = parseFloat(la) * -9.80665;
                                                 _temp["simulation"]['linear-acceleration']['y-la'][y] = _temp_la;
                                                 y_g.push(parseFloat(la));
                                             })
 
                                             _temp["simulation"]['linear-acceleration']['z-la'].forEach((la, z) => {
-                                                const _temp_la = parseFloat(la) * 9.80665;
+                                                const _temp_la = parseFloat(la) * -9.80665;
                                                 _temp["simulation"]['linear-acceleration']['z-la'][z] = _temp_la;
                                                 z_g.push(parseFloat(la));
                                             })
                                         } else {
                                             _temp["simulation"]['linear-acceleration']['x-la'].forEach((la, x) => {
-                                                const _temp_la = parseFloat(la) / 9.80665;
+                                                const _temp_la = parseFloat(la) / -9.80665;
                                                 x_g.push(_temp_la);
                                             })
 
                                             _temp["simulation"]['linear-acceleration']['y-la'].forEach((la, y) => {
-                                                const _temp_la = parseFloat(la) / 9.80665;
+                                                const _temp_la = parseFloat(la) / -9.80665;
                                                 y_g.push(_temp_la);
                                             })
 
                                             _temp["simulation"]['linear-acceleration']['z-la'].forEach((la, z) => {
-                                                const _temp_la = parseFloat(la) / 9.80665;
+                                                const _temp_la = parseFloat(la) / -9.80665;
                                                 z_g.push(_temp_la);
                                             })
                                         }
