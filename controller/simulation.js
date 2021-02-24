@@ -170,7 +170,7 @@ function groupSensorDataForHybrid3(arr, filename) {
             data['linear-acceleration']['yv-g'].push(parseFloat(rowVal[2])  * -1)
             data['linear-acceleration']['yt'].push(curr_time)
             data['linear-acceleration']['zv'].push(parseFloat(rowVal[3])  * -9.80665)
-            data['linear-acceleration']['zv-g'].push(parseFloat(rowVal[3])   * -1)
+            data['linear-acceleration']['zv-g'].push(parseFloat(rowVal[3])  * -1)
             data['linear-acceleration']['zt'].push(curr_time)
 
             data['angular-acceleration']['xv'].push(parseFloat(rowVal[5]) * -1)
@@ -303,13 +303,13 @@ function groupSensorDataForBioCore(arr, filename) {
             max_time = curr_time;
 
         data['linear-acceleration']['xv'].push(parseFloat(arr[i]["Ah_x"]))
-        data['linear-acceleration']['xv-g'].push(parseFloat(arr[i]["Ah_x"]) / (9.80665 * -1))
+        data['linear-acceleration']['xv-g'].push(parseFloat(arr[i]["Ah_x"]) / (9.80665 ))
         data['linear-acceleration']['xt'].push(curr_time)
         data['linear-acceleration']['yv'].push(parseFloat(arr[i]['Ah_y']))
-        data['linear-acceleration']['yv-g'].push(parseFloat(arr[i]["Ah_y"]) / (9.80665 * -1))
+        data['linear-acceleration']['yv-g'].push(parseFloat(arr[i]["Ah_y"]) / (9.80665 ))
         data['linear-acceleration']['yt'].push(curr_time)
         data['linear-acceleration']['zv'].push(parseFloat(arr[i]['Ah_z']))
-        data['linear-acceleration']['zv-g'].push(parseFloat(arr[i]["Ah_z"]) / (9.80665 * -1))
+        data['linear-acceleration']['zv-g'].push(parseFloat(arr[i]["Ah_z"]) / (9.80665))
         data['linear-acceleration']['zt'].push(curr_time)
 
         data['angular-acceleration']['xv'].push(parseFloat(arr[i]["ALP_x"]))
@@ -384,13 +384,13 @@ function groupSensorDataForAthlete(arr, filename) {
         count = count.toFixed(1)
 
         data['linear-acceleration']['xv'].push(parseFloat(arr[i]["Linear Accel X (g)"]))
-        data['linear-acceleration']['xv-g'].push(parseFloat(arr[i]["Linear Accel X (g)"]) / (9.80665 * -1))
+        data['linear-acceleration']['xv-g'].push(parseFloat(arr[i]["Linear Accel X (g)"]) / (9.80665))
         data['linear-acceleration']['xt'].push(curr_time)
         data['linear-acceleration']['yv'].push(parseFloat(arr[i]['Linear Accel Y (g)']))
-        data['linear-acceleration']['yv-g'].push(parseFloat(arr[i]["Linear Accel Y (g)"]) / (9.80665 * -1))
+        data['linear-acceleration']['yv-g'].push(parseFloat(arr[i]["Linear Accel Y (g)"]) / (9.80665))
         data['linear-acceleration']['yt'].push(curr_time)
         data['linear-acceleration']['zv'].push(parseFloat(arr[i]['Linear Accel Z (g)']))
-        data['linear-acceleration']['zv-g'].push(parseFloat(arr[i]["Linear Accel Z (g)"]) / (9.80665 * -1))
+        data['linear-acceleration']['zv-g'].push(parseFloat(arr[i]["Linear Accel Z (g)"]) / (9.80665))
         data['linear-acceleration']['zt'].push(curr_time)
 
         data['angular-acceleration']['xv'].push(parseFloat(arr[i]["Rotational Accel X (rad/s^2)"]))
@@ -476,13 +476,13 @@ function groupSensorDataForY(arr, filename) {
         arr[i]['PAA']['Z']['radsec^2'] = arr[i]['PAA']['Z']['radsec^2'] && arr[i]['PAA']['Z']['radsec^2'] != '' ? arr[i]['PAA']['Z']['radsec^2'] : 0
 
         data['linear-acceleration']['xv'].push(parseFloat(arr[i]["PLA"]['X']['msec^2']))
-        data['linear-acceleration']['xv-g'].push(parseFloat(arr[i]["PLA"]['X']['msec^2']) / (9.80665 * -1))
+        data['linear-acceleration']['xv-g'].push(parseFloat(arr[i]["PLA"]['X']['msec^2']) / (9.80665))
         data['linear-acceleration']['xt'].push(curr_time)
         data['linear-acceleration']['yv'].push(parseFloat(arr[i]['PLA']['Y']['msec^2']))
-        data['linear-acceleration']['yv-g'].push(parseFloat(arr[i]["PLA"]['Y']['msec^2']) / (9.80665 * -1))
+        data['linear-acceleration']['yv-g'].push(parseFloat(arr[i]["PLA"]['Y']['msec^2']) / (9.80665))
         data['linear-acceleration']['yt'].push(curr_time)
         data['linear-acceleration']['zv'].push(parseFloat(arr[i]['PLA']['Z']['msec^2']))
-        data['linear-acceleration']['zv-g'].push(parseFloat(arr[i]["PLA"]['Z']['msec^2']) / (9.80665 * -1))
+        data['linear-acceleration']['zv-g'].push(parseFloat(arr[i]["PLA"]['Z']['msec^2']) / (9.80665))
         data['linear-acceleration']['zt'].push(curr_time)
 
         data['angular-velocity']['xv'].push(parseFloat(arr[i]['PAV']['X']['radsec']))
@@ -541,13 +541,13 @@ function groupSensorData(arr) {
                 'linear-acceleration': {
                     'xt': [parseFloat(data_point['Sample Num'])],
                     'xv': [parseFloat(data_point['Linear Acc x g'])],
-                    'xv-g': [parseFloat(data_point['Linear Acc x g']) / (9.80665 * -1)],
+                    'xv-g': [parseFloat(data_point['Linear Acc x g']) / (9.80665)],
                     'yt': [parseFloat(data_point['Sample Num'])],
                     'yv': [parseFloat(data_point['Linear Acc y g'])],
-                    'yv-g': [parseFloat(data_point['Linear Acc y g']) / (9.80665 * -1)],
+                    'yv-g': [parseFloat(data_point['Linear Acc y g']) / (9.80665)],
                     'zt': [parseFloat(data_point['Sample Num'])],
                     'zv': [parseFloat(data_point['Linear Acc z g'])],
-                    'zv-g': [parseFloat(data_point['Linear Acc z g']) / (9.80665 * -1)]
+                    'zv-g': [parseFloat(data_point['Linear Acc z g']) / (9.80665)]
                 },
                 'angular-acceleration': {
                     'xt': [parseFloat(data_point['Sample Num'])],
@@ -577,13 +577,13 @@ function groupSensorData(arr) {
             // Concat acceleration data
 
             helper[key]['linear-acceleration']['xv'].push(parseFloat(data_point['Linear Acc x g']))
-            helper[key]['linear-acceleration']['xv-g'].push(parseFloat(data_point['Linear Acc x g']) / (9.80665 * -1))
+            helper[key]['linear-acceleration']['xv-g'].push(parseFloat(data_point['Linear Acc x g']) / (9.80665))
             helper[key]['linear-acceleration']['xt'].push(parseFloat(data_point['Sample Num']))
             helper[key]['linear-acceleration']['yv'].push(parseFloat(data_point['Linear Acc y g']))
-            helper[key]['linear-acceleration']['yv-g'].push(parseFloat(data_point['Linear Acc y g']) / (9.80665 * -1))
+            helper[key]['linear-acceleration']['yv-g'].push(parseFloat(data_point['Linear Acc y g']) / (9.80665))
             helper[key]['linear-acceleration']['yt'].push(parseFloat(data_point['Sample Num']))
             helper[key]['linear-acceleration']['zv'].push(parseFloat(data_point['Linear Acc z g']))
-            helper[key]['linear-acceleration']['zv-g'].push(parseFloat(data_point['Linear Acc z g']) / (9.80665 * -1))
+            helper[key]['linear-acceleration']['zv-g'].push(parseFloat(data_point['Linear Acc z g']) / (9.80665))
             helper[key]['linear-acceleration']['zt'].push(parseFloat(data_point['Sample Num']))
 
             helper[key]['linear-acceleration-mag'].push(parseFloat(data_point['Linear Acc Mag g']))

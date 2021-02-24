@@ -740,17 +740,17 @@ if (cluster.isMaster) {
                                         _temp_sensor_data["simulation"] = _temp["simulation"];
 
                                         _temp["simulation"]['linear-acceleration']['xv'].forEach((la, x) => {
-                                            const _temp_la = parseFloat(la) / -9.80665;
+                                            const _temp_la = parseFloat(la) / 9.80665;
                                             x_g.push(_temp_la);
                                         })
 
                                         _temp["simulation"]['linear-acceleration']['yv'].forEach((la, y) => {
-                                            const _temp_la = parseFloat(la) / -9.80665;
+                                            const _temp_la = parseFloat(la) / 9.80665;
                                             y_g.push(_temp_la);
                                         })
 
                                         _temp["simulation"]['linear-acceleration']['zv'].forEach((la, z) => {
-                                            const _temp_la = parseFloat(la) / -9.80665;
+                                            const _temp_la = parseFloat(la) / 9.80665;
                                             z_g.push(_temp_la);
                                         })
 
@@ -780,35 +780,35 @@ if (cluster.isMaster) {
 
                                         if (_temp["simulation"]['linear-acceleration']['la-units'] === 'g') {
                                             _temp["simulation"]['linear-acceleration']['x-la'].forEach((la, x) => {
-                                                const _temp_la = parseFloat(la) * -9.80665;
+                                                const _temp_la = parseFloat(la) * 9.80665;
                                                 _temp["simulation"]['linear-acceleration']['x-la'][x] = _temp_la;
                                                 x_g.push(parseFloat(la));
                                             })
 
                                             _temp["simulation"]['linear-acceleration']['y-la'].forEach((la, y) => {
-                                                const _temp_la = parseFloat(la) * -9.80665;
+                                                const _temp_la = parseFloat(la) * 9.80665;
                                                 _temp["simulation"]['linear-acceleration']['y-la'][y] = _temp_la;
                                                 y_g.push(parseFloat(la));
                                             })
 
                                             _temp["simulation"]['linear-acceleration']['z-la'].forEach((la, z) => {
-                                                const _temp_la = parseFloat(la) * -9.80665;
+                                                const _temp_la = parseFloat(la) * 9.80665;
                                                 _temp["simulation"]['linear-acceleration']['z-la'][z] = _temp_la;
                                                 z_g.push(parseFloat(la));
                                             })
                                         } else {
                                             _temp["simulation"]['linear-acceleration']['x-la'].forEach((la, x) => {
-                                                const _temp_la = parseFloat(la) / -9.80665;
+                                                const _temp_la = parseFloat(la) / 9.80665;
                                                 x_g.push(_temp_la);
                                             })
 
                                             _temp["simulation"]['linear-acceleration']['y-la'].forEach((la, y) => {
-                                                const _temp_la = parseFloat(la) / -9.80665;
+                                                const _temp_la = parseFloat(la) / 9.80665;
                                                 y_g.push(_temp_la);
                                             })
 
                                             _temp["simulation"]['linear-acceleration']['z-la'].forEach((la, z) => {
-                                                const _temp_la = parseFloat(la) / -9.80665;
+                                                const _temp_la = parseFloat(la) / 9.80665;
                                                 z_g.push(_temp_la);
                                             })
                                         }
