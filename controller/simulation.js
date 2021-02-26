@@ -460,9 +460,9 @@ function groupSensorDataForY(arr, filename) {
     let max_time = 0.00;
     if(arr[0]["t"]){
         if(arr[0]["t"]["ms"]){
-            max_time = parseFloat(arr[0]["t"] ? arr[0]["t"]["ms"] : : 0);
+            max_time = parseFloat(arr[0]["t"] ? arr[0]["t"]["ms"] : 0);
         }else{
-            max_time = parseFloat(arr[0]["t"] ? arr[0]["t"]["sec"] :  : 0) * 1000;
+            max_time = parseFloat(arr[0]["t"] ? arr[0]["t"]["sec"] : 0) * 1000;
         }
     }else if(arr[0]["T"]){
         if(arr[0]["T"]["ms"]){
@@ -476,9 +476,9 @@ function groupSensorDataForY(arr, filename) {
         let curr_time = 0.00;
         if(arr[i]["t"]){
             if(arr[i]["t"]["ms"]){
-                curr_time = parseFloat(arr[i]["t"] ? arr[i]["t"]["ms"] : : 0);
+                curr_time = parseFloat(arr[i]["t"] ? arr[i]["t"]["ms"] : 0);
             }else{
-                curr_time = parseFloat(arr[i]["t"] ? arr[i]["t"]["sec"] :  : 0) * 1000;
+                curr_time = parseFloat(arr[i]["t"] ? arr[i]["t"]["sec"] : 0) * 1000;
             }
         }else if(arr[i]["T"]){
             if(arr[i]["T"]["ms"]){
@@ -487,7 +487,7 @@ function groupSensorDataForY(arr, filename) {
                 curr_time = parseFloat(arr[i]["T"] ? arr[i]["T"]["sec"] : 0) * 1000;
             }
         }
-        
+
         if (curr_time > max_time)
             max_time = curr_time;
 
