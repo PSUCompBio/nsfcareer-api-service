@@ -646,13 +646,6 @@ if (cluster.isMaster) {
             file_extension = file_extension[file_extension.length - 1];
         }
 
-        if (bypass_simulation_formatting && level === 300 && sensor === null || sensor === '') {
-            return res.send({
-                message: "failure",
-                error: 'Sensor parameter is required.'
-            })
-        }
-
         if (file_extension === 'json' || filename == null) { // Reading json from file
             let new_items_array = [];
             try {
@@ -689,33 +682,7 @@ if (cluster.isMaster) {
 
                                     if (level === 300) {
                                         if (bypass_simulation_formatting) {
-                                            if (sensor.toLowerCase() === 'sensor_company_x' || sensor.toLowerCase() === 'swa') {
-                                                req.body.sensor_brand = 'SWA';
-                                            } else if (sensor.toLowerCase() === 'sisu') {
-                                                req.body.sensor_brand = 'SISU';
-                                            } else if (sensor.toLowerCase() === 'stanford') {
-                                                req.body.sensor_brand = 'Stanford';
-                                            } else if (sensor.toLowerCase() === 'panther') {
-                                                req.body.sensor_brand = 'Panther';
-                                            } else if (sensor.toLowerCase() === 'hitiq') {
-                                                req.body.sensor_brand = 'HitIQ';
-                                            } else if (sensor.toLowerCase() === 'gforcetracker') {
-                                                req.body.sensor_brand = 'GForceTracker';
-                                            } else if (sensor.toLowerCase() === 'fitguard') {
-                                                req.body.sensor_brand = 'FitGuard';
-                                            } else if (sensor.toLowerCase() === 'blackbox') {
-                                                req.body.sensor_brand = 'Blackbox Biometrics';
-                                            } else if (sensor.toLowerCase() === 'biocore') {
-                                                req.body.sensor_brand = 'BioCore';
-                                            } else if (sensor.toLowerCase() === 'athlete') {
-                                                req.body.sensor_brand = 'Athlete Intelligence';
-                                            } else if (sensor.toLowerCase() === 'medeng') {
-                                                req.body.sensor_brand = 'Med-Eng';
-                                            } else if (sensor.toLowerCase() === 'hybrid3') {
-                                                req.body.sensor_brand = 'Hybrid3';
-                                            } else {
-                                                req.body.sensor_brand = 'Prevent Biometrics';
-                                            }
+                                            req.body.sensor_brand = 'Prevent Biometrics';
                                         } else {
                                             if (_temp["sensor"].toLowerCase() === 'swa') {
                                                 req.body.sensor_brand = 'SWA';
