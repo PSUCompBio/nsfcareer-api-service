@@ -1035,7 +1035,7 @@ function checkSensorDataExists(obj) {
                 "#impact_id": "impact-id",
                 "#sensor_id": "sensor-id",
             },
-            ProjectionExpression: "org_id, image_id, team, player_id"
+            ProjectionExpression: "org_id, image_id, team, player_id, organization"
         };
         var item = [];
         docClient.scan(params).eachPage((err, data, done) => {
@@ -1109,6 +1109,64 @@ function getUsersWthNoAccountId() {
     });
 }
 
+function updateJobStatus(key){
+    console.log('key',key);
+    return new Promise((resolve, reject)=>{
+        var userParams = {
+            TableName: "jobs_log",
+            Key: {
+                "created": key
+            },
+            UpdateExpression: "set #log_status = :log_status",
+            ExpressionAttributeValues: {
+                ":log_status": 'completed'
+            },
+            ExpressionAttributeNames : {
+                '#log_status': 'status',
+            },
+            ReturnValues: "UPDATED_NEW"
+        };
+        docClient.update(userParams, (err, data) => {
+            if (err) {
+                reject(err);
+            } else {
+                resolve(data);
+            }
+        })
+    })
+ 
+}
+
+function getPendingJobsLog() {
+    return new Promise((resolve, reject) => {
+        let params;
+       
+        params = {
+            TableName: "jobs_log",
+            FilterExpression: "#log_status = :log_status",
+            ExpressionAttributeValues: {
+                ":log_status": 'pending'
+            },
+            ExpressionAttributeNames : {
+                '#log_status': 'status',
+            }
+        };
+        
+        var item = [];
+        docClient.scan(params).eachPage((err, data, done) => {
+            if (err) {
+                reject(err);
+            }
+            if (data == null) {
+                resolve(concatArrays(item));
+            } else {
+                item.push(data.Items);
+            }
+            done();
+        });
+    });
+}
+
 module.exports = {
     getUserDetails,
     getUserDetailBySensorId,
@@ -1138,5 +1196,7 @@ module.exports = {
     getUserDetailByPlayerId,
     getOrganizationData,
     getUsersWthNoAccountId,
-    updateJobImageGenerateStatus
+    updateJobImageGenerateStatus,
+    getPendingJobsLog,
+    updateJobStatus
 };

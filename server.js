@@ -89,6 +89,7 @@ const subject_signature = fs.readFileSync("data/base64")
 
 // var config = require('./config/configuration_keys.json');
 var config_env = config;
+const FrontendUrl = "https://nsfcareer.io/";
 
 //AWS.config.loadFromPath('./config/configuration_keys.json');
 const BUCKET_NAME = config_env.usersbucket;
@@ -173,7 +174,9 @@ const {
     checkSensorDataExists,
     getOrganizationData,
     getUsersWthNoAccountId,
-    updateJobImageGenerateStatus
+    updateJobImageGenerateStatus,
+    getPendingJobsLog,
+    updateJobStatus
 } = require('./controller/query');
 
 // Include the cluster module
@@ -199,10 +202,15 @@ if (cluster.isMaster) {
     });
 
     // Cron to get job computation time after job completion
-    cron.schedule('*/1 * * * *', () => {
+    cron.schedule('*/2 * * * *', () => {
+        console.log('cron job')
+        updateJobLogs();
         getCompletedJobs()
             .then(simulation_data => {
+
                 if (simulation_data.length > 0) {
+
+
                     console.log(simulation_data.length);
                     let account_id_list = [];
                     simulation_data.forEach((job) => {
@@ -307,6 +315,12 @@ if (cluster.isMaster) {
                                                     })
                                                 })
                                             //  end ...
+
+                                            /**
+                                            * Call update job log function and send mail to user about simulation status.
+                                            */
+                                                updateJobLogs();
+                                            // end
                                         }
                                     }
                                 }
@@ -321,6 +335,136 @@ if (cluster.isMaster) {
                 console.log(err);
             })
     });
+
+    function getJobsStatus(item){
+        // console.log('item',item);
+        return new Promise((resolve, reject)=>{
+            if(item.listJobs && item.listJobs.length > 0){
+                var i = 0;
+                var listJobslen = item.listJobs.length;
+                var status = 'Completed';
+                var organization = '';
+                var team = '';
+                item.listJobs.forEach((data)=> {
+                    // console.log('data',data)
+                    
+                    checkSensorDataExists({'impact-id': data.impact_id, 'sensor-id': data.sensor_id})
+                    .then(result =>{
+                        // console.log('result',result)
+                        i++
+
+                        if(result && result[0]){
+                            organization = result[0].organization;
+                            team = result[0].team;
+                            getPlayerSimulationFile({image_id: result[0].image_id})
+                            .then(imageData =>{
+                                // console.log('imageData',imageData);
+                                if(imageData.status == 'pending'){
+                                    status = 'Pending';
+                                }
+
+                                if(i == listJobslen){
+                                    resolve({ status, organization, team});
+                                }
+                            })
+                        }else{
+                            if(i == listJobslen){
+                                resolve({status, organization, team});
+                            }
+                        }
+                    }).catch(err=>{
+                        console.log('log plyar detail err--------\n',err)
+                    })
+                })
+            }
+        })
+        
+
+    }
+
+    /**
+    * Update job log function and send mail to user about simulation status.
+    */
+    function updateJobLogs(){
+        getPendingJobsLog()
+        .then(res=>{
+            // console.log('pending joblogs ---------------------\n',res)
+            if(res && res.length > 0){
+                res.forEach(async (item)=>{
+                    // console.log('item',item);
+                    let objJobStatus =  await getJobsStatus(item);
+                    console.log('objJobStatus ---',objJobStatus);
+                    if(objJobStatus.status == 'Completed'){
+                        var PageLink = `${FrontendUrl}TeamAdmin/team/players/${objJobStatus.organization}/${objJobStatus.team}?brand=`;
+                        PageLink = encodeURI(PageLink);
+                        var address = item.email;
+                        var body = `Hi There,\n\nYour simulations have been completed. Please check them out here:\n${PageLink}\n\nKeep Computing!\nThe nsfcareer.ioTeam`;
+                        var subject = "Your BrainSims are complete!";
+                        var mailStatus = await sendMailToUser(address, body, subject);
+                        console.log('mailStatus',mailStatus);
+                        if(mailStatus.message == "Success"){
+                            updateJobStatus(item.created);
+                            // Finish...
+                        }
+                    }
+                })
+            }
+        }).catch(err=>{
+            console.log('err job logs ----------\n',err)
+        })
+    }
+    // end..
+
+    function sendMailToUser(address, body, subject){
+        return new Promise((resolve, reject)=>{
+            var params = {
+                Destination: { /* required */
+                    ToAddresses: [
+                        address
+                        /* more items */
+                    ]
+                },
+                Message: { /* required */
+                    Body: { /* required */
+                        Text: {
+                            Charset: "UTF-8",
+                            Data: body
+                        }
+                    },
+                    Subject: {
+                        Charset: 'UTF-8',
+                        Data: subject
+                    }
+                },
+                Source: 'support@nsfcareer.io', /* required */
+                ReplyToAddresses: [
+                    'support@nsfcareer.io',
+                    /* more items */
+                ],
+            };
+
+            // Create the promise and SES service object
+            var sendPromise = new AWS.SES({ apiVersion: '2010-12-01' }).sendEmail(params).promise();
+
+            // Handle promise's fulfilled/rejected states
+            sendPromise.then(
+            function (data) {
+                console.log(data.MessageId);
+                resolve({
+                    message: "Success",
+                    data: data.MessageId
+                });
+            }).catch(
+            function (err) {
+                console.error(err, err.stack);
+                resolve({
+                    message: "faiure",
+                    error: err
+                });
+            });
+        })
+    }
+
 
      // Cron to get job log stream name after job completion
      cron.schedule('*/2 * * * *', () => {
