@@ -433,7 +433,7 @@ function addPlayerToTeamInDDB(org, team, player_id) {
 function addPlayerToTeamOfOrganization(sensor, user_cognito_id, org, team, player_id) {
     return new Promise((resolve, reject) => {
         let params;
-        if (sensor) {
+        if (sensor && sensor != null && sensor != undefined) {
             params = {
                 TableName: "organizations",
                 FilterExpression: "organization = :organization and sensor = :sensor and team_name = :team",
@@ -1143,7 +1143,7 @@ function getPendingJobsLog() {
        
         params = {
             TableName: "jobs_log",
-            FilterExpression: "#log_status = :log_status",
+            FilterExpression: "attribute_exists(#log_status) and #log_status = :log_status ",
             ExpressionAttributeValues: {
                 ":log_status": 'pending'
             },

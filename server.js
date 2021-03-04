@@ -202,15 +202,13 @@ if (cluster.isMaster) {
     });
 
     // Cron to get job computation time after job completion
-    cron.schedule('*/2 * * * *', () => {
+    cron.schedule('*/1 * * * *', () => {
         console.log('cron job')
         updateJobLogs();
         getCompletedJobs()
             .then(simulation_data => {
-
+                console.log('simulation_data -------------\n',simulation_data)
                 if (simulation_data.length > 0) {
-
-
                     console.log(simulation_data.length);
                     let account_id_list = [];
                     simulation_data.forEach((job) => {
@@ -378,8 +376,6 @@ if (cluster.isMaster) {
                 })
             }
         })
-        
-
     }
 
     /**
@@ -464,7 +460,6 @@ if (cluster.isMaster) {
             });
         })
     }
-
 
      // Cron to get job log stream name after job completion
      cron.schedule('*/2 * * * *', () => {
@@ -863,7 +858,8 @@ if (cluster.isMaster) {
                                     _temp_sensor_data["sensor"] = req.body.sensor_brand;
                                     _temp_sensor_data["impact-date"] = _temp["impact-date"];
                                     _temp_sensor_data["impact-time"] = _temp["impact-time"];
-                                    _temp_sensor_data["organization"] = level === 400 ? (_temp["player"]["organization"] ? _temp["player"]["organization"] : _temp["organization"]) : req.body.organization;
+                                    _temp_sensor_data["organization"] = level === 400 || level === 300 ? (_temp["player"]["organization"] ? _temp["player"]["organization"] : _temp["organization"]) : req.body.organization;
+                                    _temp_sensor_data["used_sensor"] = req.body.sensor_brand;
                                     _temp_sensor_data["player"] = _temp["player"];
 
                                     _temp_sensor_data["simulation"] = {
@@ -1031,6 +1027,7 @@ if (cluster.isMaster) {
                                         _temp_sensor_data["image_id"] = shortid.generate();
                                     }
 
+                                    console.log('_temp_sensor_data --------------------------\n',_temp_sensor_data)
                                     _temp_sensor_data["player_id"] = _temp["player_id"] + '$' + Date.now();
                                     _temp_sensor_data["simulation_status"] = 'pending';
                                     _temp_sensor_data["team"] = _temp.player.team;
@@ -1371,6 +1368,7 @@ if (cluster.isMaster) {
                                                 _temp['player']['impact-id'] = _temp['impact-id'] ? _temp['impact-id'] : 'Unknown';
                                                 _temp['player']['sensor-id'] = _temp['sensor-id'] ? _temp['sensor-id'] : 'Unknown';
                                                 _temp["team"] = "Unknown";
+                                                _temp["used_sensor"] = req.body.sensor_brand;
 
                                                 if (_temp['impact-id'] && _temp['sensor-id']) {
                                                     delete _temp['impact-id'];
