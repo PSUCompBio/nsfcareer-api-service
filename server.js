@@ -345,34 +345,37 @@ if (cluster.isMaster) {
                 var team = '';
                 item.listJobs.forEach((data)=> {
                     // console.log('data',data)
-                    
-                    checkSensorDataExists({'impact-id': data.impact_id, 'sensor-id': data.sensor_id})
-                    .then(result =>{
-                        // console.log('result',result)
-                        i++
+                    if(data.sensor_id && data.sensor_id != undefined && data.sensor_id != null){
+                        checkSensorDataExists({'impact-id': data.impact_id, 'sensor-id': data.sensor_id})
+                        .then(result =>{
+                            // console.log('result',result)
+                            i++
 
-                        if(result && result[0]){
-                            organization = result[0].organization;
-                            team = result[0].team;
-                            getPlayerSimulationFile({image_id: result[0].image_id})
-                            .then(imageData =>{
-                                // console.log('imageData',imageData);
-                                if(imageData.status == 'pending'){
-                                    status = 'Pending';
-                                }
+                            if(result && result[0]){
+                                organization = result[0].organization;
+                                team = result[0].team;
+                                getPlayerSimulationFile({image_id: result[0].image_id})
+                                .then(imageData =>{
+                                    // console.log('imageData',imageData);
+                                    if(imageData.status == 'pending'){
+                                        status = 'Pending';
+                                    }
 
+                                    if(i == listJobslen){
+                                        resolve({ status, organization, team});
+                                    }
+                                })
+                            }else{
                                 if(i == listJobslen){
-                                    resolve({ status, organization, team});
+                                    resolve({status, organization, team});
                                 }
-                            })
-                        }else{
-                            if(i == listJobslen){
-                                resolve({status, organization, team});
                             }
-                        }
-                    }).catch(err=>{
-                        console.log('log plyar detail err--------\n',err)
-                    })
+                        }).catch(err=>{
+                            console.log('log plyar detail err--------\n',err)
+                        })
+                    }else{
+                        resolve(false);
+                    }
                 })
             }
         })

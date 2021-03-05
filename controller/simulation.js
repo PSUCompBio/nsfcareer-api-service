@@ -1809,7 +1809,7 @@ function generateSimulationForPlayers(player_data_array, reader, apiMode, sensor
                                         // "date": _temp_player.date.split("/").join("-"),
                                         // "player_id": player_id,
                                         "account_id": account_id,
-                                        "user_cognito_id": playerDetail[0].user_cognito_id,
+                                        "user_cognito_id": playerDetail[0] ? playerDetail[0].user_cognito_id : '',
                                     }
 
                                     if ("impact" in _temp_player) {
