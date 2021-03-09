@@ -1660,7 +1660,7 @@ function generateParametersFileFromStl(obj) {
     })
 }
 
-function generateSimulationForPlayers(player_data_array, reader, apiMode, sensor, mesh, account_id, user_cognito_id) {
+function generateSimulationForPlayers(player_data_array, reader, apiMode, sensor, mesh, account_id, user_cognito_id, impact_video_path) {
     return new Promise((resolve, reject) => {
         var counter = 0;
         var simulation_result_urls = [];
@@ -1687,7 +1687,7 @@ function generateSimulationForPlayers(player_data_array, reader, apiMode, sensor
                                 admin_details.user_cognito_id = user_detail.Item.user_cognito_id;
                             }
                             let user_bucket = apiMode === 'beta' ? config.usersbucketbeta : config.usersbucket;
-                            updateSimulationImageToDDB(_temp_player.image_id, user_bucket, "null", "pending", image_token, token_secret, account_id, mesh, admin_details)
+                            updateSimulationImageToDDB(_temp_player.image_id, user_bucket, "null", "pending", image_token, token_secret, account_id, mesh, admin_details, impact_video_path)
                                 .then(value => {
                                     return fetchCGValues(account_id);
                                 })
@@ -1858,7 +1858,7 @@ function generateSimulationForPlayers(player_data_array, reader, apiMode, sensor
     })
 }
 
-function generateSimulationForPlayersFromJson(player_data_array, apiMode, mesh, account_id, bypass_simulation_formatting, user_cognito_id) {
+function generateSimulationForPlayersFromJson(player_data_array, apiMode, mesh, account_id, bypass_simulation_formatting, user_cognito_id, impact_video_path) {
     return new Promise((resolve, reject) => {
         var counter = 0;
         var simulation_result_urls = [];
@@ -1885,7 +1885,7 @@ function generateSimulationForPlayersFromJson(player_data_array, apiMode, mesh, 
                                 admin_details.user_cognito_id = user_detail.Item.user_cognito_id;
                             }
                             let user_bucket = apiMode === 'beta' ? config.usersbucketbeta : config.usersbucket;
-                            updateSimulationImageToDDB(_temp_player.image_id, user_bucket, "null", "pending", image_token, token_secret, account_id, mesh, admin_details)
+                            updateSimulationImageToDDB(_temp_player.image_id, user_bucket, "null", "pending", image_token, token_secret, account_id, mesh, admin_details, impact_video_path)
                                 .then(value => {
                                     return fetchCGValues(account_id);
                                 })

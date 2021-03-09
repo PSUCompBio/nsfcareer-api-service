@@ -716,7 +716,9 @@ function updateSimulationImageToDDB(
     account_id,
     mesh = "coarse",
     admin_detail,
+    impact_video_path
 ) {
+    console.log('impact_video_path -----------------',impact_video_path)
     return new Promise((resolve, reject) => {
         if (image_id == null) {
             return resolve({ message: "No Image Simulation ID provided" });
@@ -745,6 +747,8 @@ function updateSimulationImageToDDB(
                                 account_id: account_id,
                                 mesh: mesh,
                                 admin_detail: admin_detail,
+                                impact_video_path: impact_video_path
+
                             },
                         };
                         docClient.put(dbInsert, function (err, data) {

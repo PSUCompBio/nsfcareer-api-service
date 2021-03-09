@@ -236,7 +236,7 @@ if (cluster.isMaster) {
                                                     console.log(err);
                                                 }
                                                 else {
-                                                    console.log('Computed tine and Log stream added in database for job id: ' + data.jobId);
+                                                    console.log('Computed time and Log stream added in database for job id: ' + data.jobId);
                                                 }
                                             })
 
@@ -988,12 +988,15 @@ if (cluster.isMaster) {
                                     _temp_sensor_data["user_cognito_id"] = req.body.user_cognito_id;
                                     //_temp_sensor_data["image_id"] = bypass_simulation_formatting ? _temp.uid : shortid.generate();
                                     // _temp_sensor_data["image_id"] = shortid.generate();
-
+                                    var impact_video_path = ''
                                     if (sensor_detail.length > 0) {
                                         _temp_sensor_data["image_id"] = sensor_detail[0].image_id;
+                                        
                                         getPlayerSimulationFile({ image_id: sensor_detail[0].image_id })
                                             .then(simulation => {
                                                 if (simulation) {
+                                                    impact_video_path = simulation.impact_video_path && simulation.impact_video_path != undefined ? simulation.impact_video_path : '';
+
                                                     deleteSimulationFromBucket(simulation, function (err, data) {
                                                         console.log('Deleted from bucket');
                                                     })
@@ -1199,7 +1202,7 @@ if (cluster.isMaster) {
 
                                                             uploadPlayerSelfieIfNotPresent(req.body.selfie, player_id, req.body.filename, account_id)
                                                                 .then((selfieDetails) => {
-                                                                    return generateSimulationForPlayersFromJson(sensor_data_array, apiMode, mesh, account_id, bypass_simulation_formatting, req.body.user_cognito_id);
+                                                                    return generateSimulationForPlayersFromJson(sensor_data_array, apiMode, mesh, account_id, bypass_simulation_formatting, req.body.user_cognito_id, impact_video_path);
                                                                 })
                                                                 .then(urls => {
                                                                     simulation_result_urls.push(urls)
@@ -1315,13 +1318,17 @@ if (cluster.isMaster) {
                                                         req.body.sensor_brand = 'Prevent Biometrics';
                                                     }
                                                 }
-
+                                                var impact_video_path = '';
                                                 if (sensor_detail.length > 0) {
                                                     _temp["image_id"] = sensor_detail[0].image_id;
+                                                   
 
                                                     getPlayerSimulationFile({ image_id: sensor_detail[0].image_id })
                                                         .then(simulation => {
                                                             if (simulation) {
+                                                                 console.log('simulation[0].impact_video_path', simulation.impact_video_path)
+                                                                 impact_video_path = simulation.impact_video_path && simulation.impact_video_path != undefined ? simulation.impact_video_path : '';
+
                                                                 deleteSimulationFromBucket(simulation, function (err, data) {
                                                                     console.log('Deleted from bucket');
                                                                 })
@@ -1525,7 +1532,8 @@ if (cluster.isMaster) {
                                                                         }
                                                                         uploadPlayerSelfieIfNotPresent(req.body.selfie, player_id, req.body.filename, account_id)
                                                                             .then((selfieDetails) => {
-                                                                                return generateSimulationForPlayers(new_items_array, reader, apiMode, sensor, mesh, account_id, req.body.user_cognito_id);
+                                                                                console.log('impact_video_path 1------------------',impact_video_path)
+                                                                                return generateSimulationForPlayers(new_items_array, reader, apiMode, sensor, mesh, account_id, req.body.user_cognito_id, impact_video_path);
                                                                             })
                                                                             .then(urls => {
                                                                                 simulation_result_urls.push(urls)
@@ -2424,7 +2432,7 @@ if (cluster.isMaster) {
                     reject(err);
                 }
                 else {
-                    updateSimulationImageToDDB(image_id, config.usersbucket, user_id + `/simulation/${date}/` + file_name)
+                    updateSimulationImageToDDB(image_id, config.usersbucket, user_id + `/simulation/${date}/` + file_name, '')
                         .then(value => {
 
                             params.Key = user_id + `/simulation/${date}/` + file_name;
