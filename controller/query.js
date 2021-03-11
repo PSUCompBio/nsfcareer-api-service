@@ -844,6 +844,35 @@ function getCompletedJobs() {
     });
 }
 
+function getFialedBrainImgagesJob() {
+    return new Promise((resolve, reject) => {
+        let params = {
+            TableName: "simulation_images",
+            FilterExpression:
+                "#simulation_images_status = :simulation_images_status",
+            ExpressionAttributeValues: {
+                ":simulation_images_status": "Failure",
+            },
+            ExpressionAttributeNames: {
+                "#simulation_images_status": "simulation_images_status",
+            },
+        };
+        var item = [];
+        docClient.scan(params).eachPage((err, data, done) => {
+            if (err) {
+                reject(err);
+            }
+            if (data == null) {
+                resolve(concatArrays(item));
+            } else {
+                // console.log(data.Items);
+                item.push(data.Items);
+            }
+            done();
+        });
+    });
+}
+
 function updateJobComputedTime(obj, cb) {
     var userParams = {
         TableName: "simulation_images",
@@ -868,6 +897,7 @@ function updateJobComputedTime(obj, cb) {
 }
 
 function updateJobImageGenerateStatus(obj, cb) {
+    console.log('updateJobImageGenerateStatus', obj.image_id)
     var userParams = {
         TableName: "simulation_images",
         Key: {
@@ -1202,5 +1232,6 @@ module.exports = {
     getUsersWthNoAccountId,
     updateJobImageGenerateStatus,
     getPendingJobsLog,
-    updateJobStatus
+    updateJobStatus,
+    getFialedBrainImgagesJob
 };

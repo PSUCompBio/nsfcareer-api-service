@@ -176,7 +176,8 @@ const {
     getUsersWthNoAccountId,
     updateJobImageGenerateStatus,
     getPendingJobsLog,
-    updateJobStatus
+    updateJobStatus,
+    getFialedBrainImgagesJob
 } = require('./controller/query');
 
 // Include the cluster module
@@ -207,7 +208,7 @@ if (cluster.isMaster) {
         updateJobLogs();
         getCompletedJobs()
             .then(simulation_data => {
-                console.log('simulation_data -------------\n',simulation_data)
+                console.log('simulation_data -------------\n',simulation_data.length)
                 if (simulation_data.length > 0) {
                     console.log(simulation_data.length);
                     let account_id_list = [];
@@ -256,62 +257,21 @@ if (cluster.isMaster) {
                                             // Creating image of simulation brain plots...
                                             if (!account_id_list.includes(job.account_id)) {
                                                 account_id_list.push(job.account_id);
-                                                request.post({
-                                                    url: config.nodeThreejsUrl + 'getSummary',
-                                                    body: { account_id: job.account_id },
-                                                    json: true
-                                                }, function (err, httpResponse, body) {
-                                                    if (err) {
-                                                        console.log('Image created failure ', err);
-                                                        obj.simulation_images_status = "Failure";
-                                                    }
-                                                    else {
-                                                        console.log('Image created successfully......', httpResponse.body);
-                                                        if (httpResponse.body.status == '200') {
-                                                            obj.simulation_images_status = "Uploaded";
-                                                        } else {
-                                                            obj.simulation_images_status = "Failure";
-                                                        }
-                                                    }
-                                                    updateJobImageGenerateStatus(obj, function (err, dbdata) {
-                                                        if (err) {
-                                                            console.log(err);
-                                                        }
-                                                        else {
-                                                            console.log('Image created successfully');
-                                                        }
-                                                    })
-                                                });
+                                                var bodygetSummaryImage = { account_id: job.account_id };
+                                                generateBrainImages('getSummary', obj, bodygetSummaryImage);
                                             }
                                             /* ========================================= 
                                                 Creating brain image of single event 
                                              ========================================= */
-                                                request.post({
-                                                    url: config.nodeThreejsUrl + 'GetSingleEvent',
-                                                    body: { account_id: job.account_id, event_id: job.image_id},
-                                                    json: true
-                                                }, function (err, httpResponse, body) {
-                                                    if (err) {
-                                                        console.log('Single Image created failure ', err);
-                                                        obj.simulation_images_status = "Failure";
-                                                    }
-                                                    else {
-                                                        console.log('Single Image created successfully......', httpResponse.body);
-                                                        if (httpResponse.body.status == '200') {
-                                                            obj.simulation_single_images_status = "Uploaded";
-                                                        } else {
-                                                            obj.simulation_single_images_status = "Failure";
-                                                        }
-                                                    }
-                                                    updateJobImageGenerateStatus(obj, function (err, dbdata) {
-                                                        if (err) {
-                                                            console.log(err);
-                                                        }
-                                                        else {
-                                                            console.log('Image created successfully');
-                                                        }
-                                                    })
-                                                })
+                                                var bodySingleEventImage = { account_id: job.account_id, event_id: job.image_id};
+                                                generateBrainImages('GetSingleEvent', obj, bodySingleEventImage);
+                                            //  end ...
+
+                                            /* ========================================= 
+                                                Creating label brain image of single event 
+                                             ========================================= */
+                                                var bodyLabelbrainImage = { account_id: job.account_id, event_id: job.image_id};
+                                                generateBrainImages('GetLabeledImage', obj, bodyLabelbrainImage);
                                             //  end ...
 
                                             /**
@@ -333,6 +293,71 @@ if (cluster.isMaster) {
                 console.log(err);
             })
     });
+
+
+    cron.schedule('*/10 * * * *', () => {
+        console.log('cron job of 10 minute ------------------')
+        getFialedBrainImgagesJob()
+            .then(simulation_data => {
+                console.log('simulation_data -------------\n',simulation_data.length)
+                if (simulation_data.length > 0) {
+                    console.log(simulation_data.length);
+                    let account_id_list = [];
+                    simulation_data.forEach((job) => {
+                        let obj = {};
+                        obj.image_id = job.image_id;
+                        obj.account_id = job.account_id;
+                        // Creating image of simulation brain plots...
+                        if (!account_id_list.includes(job.account_id)) {
+                            account_id_list.push(job.account_id);
+                            var bodygetSummaryImage = { account_id: job.account_id };
+                            generateBrainImages('getSummary', obj, bodygetSummaryImage);
+                        }
+                        /* ========================================= 
+                            Creating brain image of single event 
+                         ========================================= */
+                            var bodySingleEventImage = { account_id: job.account_id, event_id: job.image_id};
+                            generateBrainImages('GetSingleEvent', obj, bodySingleEventImage);
+                        //  end ...
+
+                        /* ========================================= 
+                            Creating label brain image of single event 
+                         ========================================= */
+                            var bodyLabelbrainImage = { account_id: job.account_id, event_id: job.image_id};
+                            generateBrainImages('GetLabeledImage', obj, bodyLabelbrainImage);
+                        //  end ...
+                    })
+                }
+            })
+    })
+
+    function generateBrainImages(url, obj, body){
+        console.log('url ---------------',url)
+        request.post({
+            url: config.nodeThreejsUrl + url,
+            body: body,
+            json: true
+        }, function (err, httpResponse, body) {
+            if (err) {
+                console.log(url+' created failure ', err);
+                obj.simulation_images_status = "Failure";
+            }
+            else {
+                console.log('Single Image created successfully......', httpResponse.body +'\n'+,body);
+                obj.simulation_images_status = "Uploaded";
+               
+            }
+            updateJobImageGenerateStatus(obj, function (err, dbdata) {
+                if (err) {
+                    console.log(err);
+                }
+                else {
+                    console.log(url+' Image created successfully');
+                }
+            })
+        })
+
+    }
 
     function getJobsStatus(item){
         // console.log('item',item);
