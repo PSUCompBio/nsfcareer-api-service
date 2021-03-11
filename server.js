@@ -343,7 +343,7 @@ if (cluster.isMaster) {
                 obj.simulation_images_status = "Failure";
             }
             else {
-                console.log('Single Image created successfully......', httpResponse.body +'\n'+,body);
+                console.log('Single Image created successfully......', httpResponse.body +'\n'+body);
                 obj.simulation_images_status = "Uploaded";
                
             }
