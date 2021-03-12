@@ -802,6 +802,11 @@ if (cluster.isMaster) {
             filename = req.body.data_filename
         }
 
+        if (sensor && sensor.toLowerCase() === 'linx_ias') {
+            reader = 6;
+            filename = req.body.data_filename
+        }
+
         if (req.body.upload_file) {
             // The file content will be in 'upload_file' parameter
             buffer = Buffer.from(req.body.upload_file, 'base64');
@@ -1224,6 +1229,7 @@ if (cluster.isMaster) {
                                                                         console.log('Player added in user table');
                                                                     })
                                                             }
+                                                            var data = {account_id: account_id, event_id: sensor_data_array[0].image_id };
 
                                                             uploadPlayerSelfieIfNotPresent(req.body.selfie, player_id, req.body.filename, account_id)
                                                                 .then((selfieDetails) => {
@@ -1233,7 +1239,8 @@ if (cluster.isMaster) {
                                                                     simulation_result_urls.push(urls)
                                                                     res.send({
                                                                         message: "success",
-                                                                        image_url: _.spread(_.union)(simulation_result_urls)
+                                                                        image_url: _.spread(_.union)(simulation_result_urls),
+                                                                        playerDetails: data
                                                                     })
                                                                 })
                                                                 .catch(err => {
@@ -1242,6 +1249,7 @@ if (cluster.isMaster) {
                                                                     i = result.length;
                                                                     res.send({
                                                                         message: "failure",
+                                                                        playerDetails: [],
                                                                         error: err
                                                                     })
                                                                 })
@@ -1555,16 +1563,21 @@ if (cluster.isMaster) {
                                                                                     console.log('Player added in user table');
                                                                                 })
                                                                         }
+
+                                                                        console.log('new_items_array 1------------------',new_items_array[0].image_id)
+                                                                        var data = {account_id: account_id, event_id: new_items_array[0].image_id };
+
                                                                         uploadPlayerSelfieIfNotPresent(req.body.selfie, player_id, req.body.filename, account_id)
                                                                             .then((selfieDetails) => {
-                                                                                console.log('impact_video_path 1------------------',impact_video_path)
+                                                                                
                                                                                 return generateSimulationForPlayers(new_items_array, reader, apiMode, sensor, mesh, account_id, req.body.user_cognito_id, impact_video_path);
                                                                             })
                                                                             .then(urls => {
                                                                                 simulation_result_urls.push(urls)
                                                                                 res.send({
                                                                                     message: "success",
-                                                                                    image_url: _.spread(_.union)(simulation_result_urls)
+                                                                                    image_url: _.spread(_.union)(simulation_result_urls),
+                                                                                    playerDetails: data
                                                                                 })
                                                                             })
                                                                             .catch(err => {
@@ -1604,6 +1617,8 @@ if (cluster.isMaster) {
                                         })();
                                     }
                                 });
+                        
+    
                         }
                     })
                     .catch(err => {

@@ -23,6 +23,8 @@ const {
     getUserDetails,
 } = require('./query');
 
+const xlsxFile = require('read-excel-file/node');
+
 // ======================================
 //       CONFIGURING AWS SDK & EXPESS
 // ======================================
@@ -73,6 +75,14 @@ function convertFileDataToJson(buf, reader, filename) {
                     console.log('ERROR IS ', JSON.stringify(err));
                     reject(err);
                 })
+        }else if(reader == 6){
+            groupSensorDataForLinxIAS(buf).then(item=>{
+                console.log('item ----------',item)
+                resolve(item);
+            }).catch(err=>{
+                console.log('reader error is-',err)
+            })
+            // resolve(items);
         } else {
             convertXLSXDataToJSON(buf, function (items) {
                 resolve(items);
@@ -94,7 +104,7 @@ function convertCSVDataToJSON(buf, reader, filename) {
                     resolve(groupSensorDataForBioCore(data, filename));
                 } else if (reader == 5) {
                     resolve(groupSensorDataForHybrid3(data, filename));
-                } else {
+                }else {
                     resolve(groupSensorDataForAthlete(data, filename));
                 }
             })
@@ -104,6 +114,240 @@ function convertCSVDataToJSON(buf, reader, filename) {
             })
     })
 }
+
+function groupSensorDataForLinxIAS(buf){
+    // console.log('tst')
+    return new Promise((resolve, reject) => {
+        let _events = [];
+        var i = 0
+        xlsxFile('E:/mukesh-rawat/raman-sir-project/nsfcareer-api-service/controller/test.xlsx', { getSheets: true }).then((sheets) => {
+            sheets.forEach((obj)=>{
+            // console.log(obj)
+            // console.log(obj.name)
+            if(obj.name !== 'Summary'){
+                _events[obj.name] = {
+                    'player_id': '',
+                    'date': '',
+                    'time': '',
+                    'impact-id': '',
+                    'sensor-id': '',
+                    'team': '',
+                    'linear-acceleration': {
+                        'xt': [],
+                        'xv': [],
+                        'xv-g': [],
+                        'yt': [],
+                        'yv': [],
+                        'yv-g': [],
+                        'zt': [],
+                        'zv': [],
+                        'zv-g': [],
+                        'mt': [],
+                        'mv': [],
+                        'mv-g': []
+                    },
+                    'angular-velocity': {
+                        'xt': [],
+                        'xv': [],
+                        'yt': [],
+                        'yv': [],
+                        'zt': [],
+                        'zv': [],
+                        'mt': [],
+                        'mv': []
+                    },
+                    'max_time': '',
+                    'mesh-transformation': ["-y", "z", "-x"],
+                    'simulation_status': 'pending'
+
+                };
+
+                xlsxFile('E:/mukesh-rawat/raman-sir-project/nsfcareer-api-service/controller/test.xlsx', { sheet: obj.name }).then((rows) => {
+                    var _time_key_1 = 0,
+                    _time_key_2 = 0,
+                    X_Axis_L_key = 0,
+                    Y_Axis_L_key = 0,
+                    Z_Axis_L_key = 0,
+                    M_Axis_L_key = 0,
+
+                    X_Rot_V_key = 0,
+                    Y_Rot_V_key = 0,
+                    Z_Rot_V_key = 0,
+                    M_Rot_V_key = 0;
+
+
+                    var max_time = 0;
+                    var timelen = 0;
+                    let curr_time_1 = 0;
+                    let curr_time_2 = 0;
+                    rows.forEach((row,index)=>{
+                         // console.log(`${obj.name} --\n ${ row}`)
+                        // if(index === 0){
+                            for (j in row){
+                                // console.log(`${obj.name} --\n ${ row[j]}`)
+
+                                /* store sensor ID ...
+                                  @Device Name is a sensor id in file.
+                                */
+                             
+                                if(row[j] === 'Device Name'){
+                                    var key = parseInt(j) + 1;
+                                    if(row[j] && row[j] !== null && row[j] != undefined){
+                                        _events[obj.name]['sensor-id'] = row[key]; 
+                                        _events[obj.name]['player_id'] = row[key] +'$' + Date.now(); 
+                                    }
+                                }
+
+                                // impact id ...
+                                if(row[j] === 'Event Number'){
+                                    var key = parseInt(j) + 1;
+                                    if(row[j] && row[j] !== null && row[j] != undefined){
+                                        _events[obj.name]['impact-id'] = row[key]; 
+                                    }
+                                }
+
+                                // data and time ...
+                                if(row[j] === 'Time Stamp:'){
+                                    var key = parseInt(j) + 1;
+                                    if(row[j] && row[j] !== null && row[j] != undefined){
+                                        var date =  row[key]+'';
+                                        date = date.split(' ');
+                                        var d = date[0].replace(/\//g, ":");
+                                        _events[obj.name]['date'] = d; 
+                                        _events[obj.name]['time'] = date[1]; 
+                                    }
+                                }
+
+                                // get position of axis value in excel sheet ...
+                                if(row[j] === 'Time (sec)' && !_time_key_2) _time_key_1 = j;
+                                if(row[j] === 'Time (sec)' && _time_key_1) _time_key_2 = j;
+                                // console.log('_time_key_1 --------',_time_key_1, '_time_key_2 ----------------',_time_key_2);
+                                // console.log('_time_key ------------',row[j], _time_key)
+                                if(row[j] === 'X Axis Linear Accel (g)') X_Axis_L_key = j;
+                                if(row[j] === 'Y Axis Linear Accel (g)') Y_Axis_L_key = j;
+                                if(row[j] === 'Z Axis Linear Accel (g)') Z_Axis_L_key = j;
+                                if(row[j] === 'M Axis Linear Accel (g)') M_Axis_L_key = j;
+
+                                if(row[j] === 'X Rotational Velocity (rad/s)') X_Rot_V_key = j;
+                                if(row[j] === 'Y Rotational Velocity (rad/s)') Y_Rot_V_key = j;
+                                if(row[j] === 'Z Rotational Velocity (rad/s)') Z_Rot_V_key = j;
+                                if(row[j] === 'M Rotational Velocity (rad/s)') M_Rot_V_key = j;
+
+                                // Set the max time... 
+                                if(j === _time_key_1 && row[j] !== 'Time (sec)'){
+                                    if(row[_time_key_1] && row[_time_key_1] !== null && row[_time_key_1] != undefined){
+                                        curr_time_1 = parseFloat(row[_time_key_1]);
+                                    }
+                                }
+
+
+                                if(j === _time_key_2 && row[j] !== 'Time (sec)'){
+                                    if(row[_time_key_2] && row[_time_key_2] !== null && row[_time_key_2] != undefined){
+                                        if(timelen == 0) max_time = parseFloat(row[_time_key_2]);
+                                        timelen ++;
+
+                                        curr_time_2 = parseFloat(row[_time_key_2]);
+                                        if (curr_time_2 > max_time)
+                                            _events[obj.name]['max_time'] = curr_time_2;
+                                    }
+                                }
+
+                                //  X Axis Linear Accel (g)
+                                if(j === X_Axis_L_key && row[j] !== 'X Axis Linear Accel (g)'){
+                                    if(row[X_Axis_L_key] && row[X_Axis_L_key] !== null && row[X_Axis_L_key] != undefined){
+                                        _events[obj.name]['linear-acceleration']['xv'].push(parseFloat(row[X_Axis_L_key]))
+                                        _events[obj.name]['linear-acceleration']['xv-g'].push(parseFloat(row[X_Axis_L_key]) / (9.80665 ))
+                                        _events[obj.name]['linear-acceleration']['xt'].push(curr_time_1)
+                                    }
+                                }
+
+                                //Y Axis Linear Accel (g)
+                                if(j === Y_Axis_L_key && row[j] !== 'Y Axis Linear Accel (g)'){
+                                    if(row[Y_Axis_L_key] && row[Y_Axis_L_key] !== null && row[Y_Axis_L_key] != undefined){
+                                        _events[obj.name]['linear-acceleration']['yv'].push(parseFloat(row[Y_Axis_L_key]))
+                                        _events[obj.name]['linear-acceleration']['yv-g'].push(parseFloat(row[Y_Axis_L_key]) / (9.80665 ))
+                                        _events[obj.name]['linear-acceleration']['yt'].push(curr_time_1)
+                                    }
+                                }
+
+                                //Z Axis Linear Accel (g)
+                                if(j === Z_Axis_L_key && row[j] !== 'Z Axis Linear Accel (g)'){
+                                    if(row[Z_Axis_L_key] && row[Z_Axis_L_key] !== null && row[Z_Axis_L_key] != undefined){
+                                        _events[obj.name]['linear-acceleration']['zv'].push(parseFloat(row[Z_Axis_L_key]))
+                                        _events[obj.name]['linear-acceleration']['zv-g'].push(parseFloat(row[Z_Axis_L_key]) / (9.80665 ))
+                                        _events[obj.name]['linear-acceleration']['zt'].push(curr_time_1)
+                                    }
+                                }
+
+                                //M Axis Linear Accel (g)
+                                if(j === M_Axis_L_key && row[j] !== 'M Axis Linear Accel (g)'){
+                                    if(row[M_Axis_L_key] && row[M_Axis_L_key] !== null && row[M_Axis_L_key] != undefined){
+                                        _events[obj.name]['linear-acceleration']['mv'].push(parseFloat(row[M_Axis_L_key]))
+                                        _events[obj.name]['linear-acceleration']['mv-g'].push(parseFloat(row[M_Axis_L_key]) / (9.80665 ))
+                                        _events[obj.name]['linear-acceleration']['mt'].push(curr_time_1)
+                                    }
+                                }
+
+                                //X Rotational Velocity (rad/s)
+                                if(j === X_Rot_V_key && row[j] !== 'X Rotational Velocity (rad/s)'){
+                                    if(row[X_Rot_V_key] && row[X_Rot_V_key] !== null && row[X_Rot_V_key] != undefined){
+                                        _events[obj.name]['angular-velocity']['xv'].push(parseFloat(row[X_Rot_V_key]))
+                                        _events[obj.name]['angular-velocity']['xt'].push(curr_time_2)
+                                    }
+                                }
+
+                                //Y Rotational Velocity (rad/s)
+                                if(j === Y_Rot_V_key && row[j] !== 'Y Rotational Velocity (rad/s)'){
+                                    if(row[Y_Rot_V_key] && row[Y_Rot_V_key] !== null && row[Y_Rot_V_key] != undefined){
+                                        _events[obj.name]['angular-velocity']['yv'].push(parseFloat(row[Y_Rot_V_key]))
+                                        _events[obj.name]['angular-velocity']['yt'].push(curr_time_2)
+                                    }
+                                }
+
+                                //Z Rotational Velocity (rad/s)
+                                if(j === Z_Rot_V_key && row[j] !== 'Z Rotational Velocity (rad/s)'){
+                                    if(row[Z_Rot_V_key] && row[Z_Rot_V_key] !== null && row[Z_Rot_V_key] != undefined){
+                                        _events[obj.name]['angular-velocity']['zv'].push(parseFloat(row[Z_Rot_V_key]))
+                                        _events[obj.name]['angular-velocity']['zt'].push(curr_time_2)
+                                    }
+                                }
+
+                                //M Rotational Velocity (rad/s)
+                                if(j === M_Rot_V_key && row[j] !== 'M Rotational Velocity (rad/s)'){
+                                    if(row[M_Rot_V_key] && row[M_Rot_V_key] !== null && row[M_Rot_V_key] != undefined){
+                                        _events[obj.name]['angular-velocity']['mv'].push(parseFloat(row[M_Rot_V_key]))
+                                        _events[obj.name]['angular-velocity']['mt'].push(curr_time_2)
+                                    }
+                                }
+
+                                // console.log(rows[i][j]);
+                            }
+                            
+                            // console.log(index, '_events --------------\n', _events[obj.name])
+                        // }
+
+
+                    })
+
+                    // console.log('_events ----------------------\n',_events)
+
+                    // for (i in rows){
+                        
+                    //     for (j in rows[i]){
+                    //         console.log(`${obj.name} --\n ${ rows[i][j]}`)
+                    //         // console.log(rows[i][j]);
+                    //     }
+                    // }
+                })
+            }  
+            })
+            // console.log('_events -----------------\n',_events)
+            resolve(_events);
+       }).catch(err=>{
+        console.log('err ----', err)
+       })
+    })
+}   
 
 function groupSensorDataForHybrid3(arr, filename) {
 
