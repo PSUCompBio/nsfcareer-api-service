@@ -7,6 +7,7 @@ const AWS = require('aws-sdk'),
     jwt = require('jsonwebtoken'),
     shortid = require('shortid'),
     archiver = require('archiver'),
+    path = require("path"),
     moment = require('moment');
 
     shortid.characters('0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_$');
@@ -28,34 +29,34 @@ const xlsxFile = require('read-excel-file/node');
 // ======================================
 //       CONFIGURING AWS SDK & EXPESS
 // ======================================
-// var config = {
-//     "awsAccessKeyId": process.env.AWS_ACCESS_KEY_ID,
-//     "awsSecretAccessKey": process.env.AWS_ACCESS_SECRET_KEY,
-//     "avatar3dClientId": process.env.AVATAR_3D_CLIENT_ID,
-//     "avatar3dclientSecret": process.env.AVATAR_3D_CLIENT_SECRET,
-//     "region" : process.env.REGION,
-//     "usersbucket": process.env.USERS_BUCKET,
-//     "usersbucketbeta": process.env.USERS_BUCKET_BETA,
-//     "apiVersion" : process.env.API_VERSION,
-//     "jwt_secret" : process.env.JWT_SECRET,
-//     "email_id" : process.env.EMAIL_ID,
-//     "mail_list" : process.env.MAIL_LIST,
-//     "ComputeInstanceEndpoint" : process.env.COMPUTE_INSTANCE_ENDPOINT,
-//     "userPoolId": process.env.USER_POOL_ID,
-//     "ClientId" : process.env.CLIENT_ID,
-//     "react_website_url" : process.env.REACT_WEBSITE_URL,
-//     "simulation_result_host_url" : process.env.SIMULATION_RESULT_HOST_URL,
-//     "jobQueueBeta" : process.env.JOB_QUEUE_BETA,
-//     "jobDefinitionBeta" : process.env.JOB_DEFINITION_BETA,
-//     "jobQueueProduction" : process.env.JOB_QUEUE_PRODUCTION,
-//     "jobDefinitionProduction" : process.env.JOB_DEFINITION_PRODUCTION,
-//     "simulation_bucket" : process.env.SIMULATION_BUCKET,
-//     "queue_x" : process.env.QUEUE_X,
-//     "queue_y" : process.env.QUEUE_Y,
-//     "queue_beta" : process.env.QUEUE_BETA
-// };
+var config = {
+    "awsAccessKeyId": process.env.AWS_ACCESS_KEY_ID,
+    "awsSecretAccessKey": process.env.AWS_ACCESS_SECRET_KEY,
+    "avatar3dClientId": process.env.AVATAR_3D_CLIENT_ID,
+    "avatar3dclientSecret": process.env.AVATAR_3D_CLIENT_SECRET,
+    "region" : process.env.REGION,
+    "usersbucket": process.env.USERS_BUCKET,
+    "usersbucketbeta": process.env.USERS_BUCKET_BETA,
+    "apiVersion" : process.env.API_VERSION,
+    "jwt_secret" : process.env.JWT_SECRET,
+    "email_id" : process.env.EMAIL_ID,
+    "mail_list" : process.env.MAIL_LIST,
+    "ComputeInstanceEndpoint" : process.env.COMPUTE_INSTANCE_ENDPOINT,
+    "userPoolId": process.env.USER_POOL_ID,
+    "ClientId" : process.env.CLIENT_ID,
+    "react_website_url" : process.env.REACT_WEBSITE_URL,
+    "simulation_result_host_url" : process.env.SIMULATION_RESULT_HOST_URL,
+    "jobQueueBeta" : process.env.JOB_QUEUE_BETA,
+    "jobDefinitionBeta" : process.env.JOB_DEFINITION_BETA,
+    "jobQueueProduction" : process.env.JOB_QUEUE_PRODUCTION,
+    "jobDefinitionProduction" : process.env.JOB_DEFINITION_PRODUCTION,
+    "simulation_bucket" : process.env.SIMULATION_BUCKET,
+    "queue_x" : process.env.QUEUE_X,
+    "queue_y" : process.env.QUEUE_Y,
+    "queue_beta" : process.env.QUEUE_BETA
+};
 
-var config = require('../config/configuration_keys.json'); 
+// var config = require('../config/configuration_keys.json'); 
 var config_env = config;
 const BUCKET_NAME = config_env.usersbucket;
 
@@ -76,11 +77,12 @@ function convertFileDataToJson(buf, reader, filename) {
                     reject(err);
                 })
         }else if(reader == 6){
-            groupSensorDataForLinxIAS(buf).then(item=>{
-                console.log('item ----------',item)
-                resolve(item);
+            groupSensorDataForLinxIAS(buf).then(items=>{
+                // console.log('item ----------',item)
+                resolve(items);
             }).catch(err=>{
-                console.log('reader error is-',err)
+                console.log('reader error is-',err);
+                reject(err);
             })
             // resolve(items);
         } else {
@@ -115,17 +117,36 @@ function convertCSVDataToJSON(buf, reader, filename) {
     })
 }
 
+function saveXlsxFile(buf){
+     return new Promise(async (resolve, reject) => {
+        var file = path.join(__dirname, '/files', Date.now()+'_xlsxFile.xlsx');
+        fs.writeFile(file, new Buffer(buf, 'binary'), err => {
+            if (err) {
+                console.error(err);
+                reject(err)
+            } else {
+               resolve(file);
+            }
+        });
+     })
+}
+
 function groupSensorDataForLinxIAS(buf){
     // console.log('tst')
-    return new Promise((resolve, reject) => {
+    return new Promise(async (resolve, reject) => {
+        var xlsxFile_path = await saveXlsxFile(buf);
+        console.log(' xlsxFile ------------------', xlsxFile_path)
         let _events = [];
         var i = 0
-        xlsxFile('E:/mukesh-rawat/raman-sir-project/nsfcareer-api-service/controller/test.xlsx', { getSheets: true }).then((sheets) => {
-            sheets.forEach((obj)=>{
+        xlsxFile(xlsxFile_path, { getSheets: true }).then((sheets) => {
+            var totalSheet = sheets.length - 1;
+            var num_sheet = 0;
+            sheets.forEach((obj, index)=>{
             // console.log(obj)
             // console.log(obj.name)
             if(obj.name !== 'Summary'){
-                _events[obj.name] = {
+                _events.push({
+                    organization: 'Unknown',
                     'player_id': '',
                     'date': '',
                     'time': '',
@@ -160,9 +181,9 @@ function groupSensorDataForLinxIAS(buf){
                     'mesh-transformation': ["-y", "z", "-x"],
                     'simulation_status': 'pending'
 
-                };
+                });
 
-                xlsxFile('E:/mukesh-rawat/raman-sir-project/nsfcareer-api-service/controller/test.xlsx', { sheet: obj.name }).then((rows) => {
+                xlsxFile(xlsxFile_path, { sheet: obj.name }).then((rows) => {
                     var _time_key_1 = 0,
                     _time_key_2 = 0,
                     X_Axis_L_key = 0,
@@ -180,174 +201,170 @@ function groupSensorDataForLinxIAS(buf){
                     var timelen = 0;
                     let curr_time_1 = 0;
                     let curr_time_2 = 0;
+                    
                     rows.forEach((row,index)=>{
-                         // console.log(`${obj.name} --\n ${ row}`)
-                        // if(index === 0){
-                            for (j in row){
-                                // console.log(`${obj.name} --\n ${ row[j]}`)
+                        for (j in row){
+                            // console.log(`${obj.name} --\n ${ row[j]}`)
 
-                                /* store sensor ID ...
-                                  @Device Name is a sensor id in file.
-                                */
-                             
-                                if(row[j] === 'Device Name'){
-                                    var key = parseInt(j) + 1;
-                                    if(row[j] && row[j] !== null && row[j] != undefined){
-                                        _events[obj.name]['sensor-id'] = row[key]; 
-                                        _events[obj.name]['player_id'] = row[key] +'$' + Date.now(); 
-                                    }
+                            /* store sensor ID ...
+                              @Device Name is a sensor id in file.
+                            */
+                         
+                            if(row[j] === 'Device Name'){
+                                var key = parseInt(j) + 1;
+                                if(row[j] && row[j] !== null && row[j] != undefined){
+                                    _events[num_sheet]['sensor-id'] = row[key]; 
+                                    _events[num_sheet]['player_id'] = row[key] +'$' + Date.now(); 
                                 }
-
-                                // impact id ...
-                                if(row[j] === 'Event Number'){
-                                    var key = parseInt(j) + 1;
-                                    if(row[j] && row[j] !== null && row[j] != undefined){
-                                        _events[obj.name]['impact-id'] = row[key]; 
-                                    }
-                                }
-
-                                // data and time ...
-                                if(row[j] === 'Time Stamp:'){
-                                    var key = parseInt(j) + 1;
-                                    if(row[j] && row[j] !== null && row[j] != undefined){
-                                        var date =  row[key]+'';
-                                        date = date.split(' ');
-                                        var d = date[0].replace(/\//g, ":");
-                                        _events[obj.name]['date'] = d; 
-                                        _events[obj.name]['time'] = date[1]; 
-                                    }
-                                }
-
-                                // get position of axis value in excel sheet ...
-                                if(row[j] === 'Time (sec)' && !_time_key_2) _time_key_1 = j;
-                                if(row[j] === 'Time (sec)' && _time_key_1) _time_key_2 = j;
-                                // console.log('_time_key_1 --------',_time_key_1, '_time_key_2 ----------------',_time_key_2);
-                                // console.log('_time_key ------------',row[j], _time_key)
-                                if(row[j] === 'X Axis Linear Accel (g)') X_Axis_L_key = j;
-                                if(row[j] === 'Y Axis Linear Accel (g)') Y_Axis_L_key = j;
-                                if(row[j] === 'Z Axis Linear Accel (g)') Z_Axis_L_key = j;
-                                if(row[j] === 'M Axis Linear Accel (g)') M_Axis_L_key = j;
-
-                                if(row[j] === 'X Rotational Velocity (rad/s)') X_Rot_V_key = j;
-                                if(row[j] === 'Y Rotational Velocity (rad/s)') Y_Rot_V_key = j;
-                                if(row[j] === 'Z Rotational Velocity (rad/s)') Z_Rot_V_key = j;
-                                if(row[j] === 'M Rotational Velocity (rad/s)') M_Rot_V_key = j;
-
-                                // Set the max time... 
-                                if(j === _time_key_1 && row[j] !== 'Time (sec)'){
-                                    if(row[_time_key_1] && row[_time_key_1] !== null && row[_time_key_1] != undefined){
-                                        curr_time_1 = parseFloat(row[_time_key_1]);
-                                    }
-                                }
-
-
-                                if(j === _time_key_2 && row[j] !== 'Time (sec)'){
-                                    if(row[_time_key_2] && row[_time_key_2] !== null && row[_time_key_2] != undefined){
-                                        if(timelen == 0) max_time = parseFloat(row[_time_key_2]);
-                                        timelen ++;
-
-                                        curr_time_2 = parseFloat(row[_time_key_2]);
-                                        if (curr_time_2 > max_time)
-                                            _events[obj.name]['max_time'] = curr_time_2;
-                                    }
-                                }
-
-                                //  X Axis Linear Accel (g)
-                                if(j === X_Axis_L_key && row[j] !== 'X Axis Linear Accel (g)'){
-                                    if(row[X_Axis_L_key] && row[X_Axis_L_key] !== null && row[X_Axis_L_key] != undefined){
-                                        _events[obj.name]['linear-acceleration']['xv'].push(parseFloat(row[X_Axis_L_key]))
-                                        _events[obj.name]['linear-acceleration']['xv-g'].push(parseFloat(row[X_Axis_L_key]) / (9.80665 ))
-                                        _events[obj.name]['linear-acceleration']['xt'].push(curr_time_1)
-                                    }
-                                }
-
-                                //Y Axis Linear Accel (g)
-                                if(j === Y_Axis_L_key && row[j] !== 'Y Axis Linear Accel (g)'){
-                                    if(row[Y_Axis_L_key] && row[Y_Axis_L_key] !== null && row[Y_Axis_L_key] != undefined){
-                                        _events[obj.name]['linear-acceleration']['yv'].push(parseFloat(row[Y_Axis_L_key]))
-                                        _events[obj.name]['linear-acceleration']['yv-g'].push(parseFloat(row[Y_Axis_L_key]) / (9.80665 ))
-                                        _events[obj.name]['linear-acceleration']['yt'].push(curr_time_1)
-                                    }
-                                }
-
-                                //Z Axis Linear Accel (g)
-                                if(j === Z_Axis_L_key && row[j] !== 'Z Axis Linear Accel (g)'){
-                                    if(row[Z_Axis_L_key] && row[Z_Axis_L_key] !== null && row[Z_Axis_L_key] != undefined){
-                                        _events[obj.name]['linear-acceleration']['zv'].push(parseFloat(row[Z_Axis_L_key]))
-                                        _events[obj.name]['linear-acceleration']['zv-g'].push(parseFloat(row[Z_Axis_L_key]) / (9.80665 ))
-                                        _events[obj.name]['linear-acceleration']['zt'].push(curr_time_1)
-                                    }
-                                }
-
-                                //M Axis Linear Accel (g)
-                                if(j === M_Axis_L_key && row[j] !== 'M Axis Linear Accel (g)'){
-                                    if(row[M_Axis_L_key] && row[M_Axis_L_key] !== null && row[M_Axis_L_key] != undefined){
-                                        _events[obj.name]['linear-acceleration']['mv'].push(parseFloat(row[M_Axis_L_key]))
-                                        _events[obj.name]['linear-acceleration']['mv-g'].push(parseFloat(row[M_Axis_L_key]) / (9.80665 ))
-                                        _events[obj.name]['linear-acceleration']['mt'].push(curr_time_1)
-                                    }
-                                }
-
-                                //X Rotational Velocity (rad/s)
-                                if(j === X_Rot_V_key && row[j] !== 'X Rotational Velocity (rad/s)'){
-                                    if(row[X_Rot_V_key] && row[X_Rot_V_key] !== null && row[X_Rot_V_key] != undefined){
-                                        _events[obj.name]['angular-velocity']['xv'].push(parseFloat(row[X_Rot_V_key]))
-                                        _events[obj.name]['angular-velocity']['xt'].push(curr_time_2)
-                                    }
-                                }
-
-                                //Y Rotational Velocity (rad/s)
-                                if(j === Y_Rot_V_key && row[j] !== 'Y Rotational Velocity (rad/s)'){
-                                    if(row[Y_Rot_V_key] && row[Y_Rot_V_key] !== null && row[Y_Rot_V_key] != undefined){
-                                        _events[obj.name]['angular-velocity']['yv'].push(parseFloat(row[Y_Rot_V_key]))
-                                        _events[obj.name]['angular-velocity']['yt'].push(curr_time_2)
-                                    }
-                                }
-
-                                //Z Rotational Velocity (rad/s)
-                                if(j === Z_Rot_V_key && row[j] !== 'Z Rotational Velocity (rad/s)'){
-                                    if(row[Z_Rot_V_key] && row[Z_Rot_V_key] !== null && row[Z_Rot_V_key] != undefined){
-                                        _events[obj.name]['angular-velocity']['zv'].push(parseFloat(row[Z_Rot_V_key]))
-                                        _events[obj.name]['angular-velocity']['zt'].push(curr_time_2)
-                                    }
-                                }
-
-                                //M Rotational Velocity (rad/s)
-                                if(j === M_Rot_V_key && row[j] !== 'M Rotational Velocity (rad/s)'){
-                                    if(row[M_Rot_V_key] && row[M_Rot_V_key] !== null && row[M_Rot_V_key] != undefined){
-                                        _events[obj.name]['angular-velocity']['mv'].push(parseFloat(row[M_Rot_V_key]))
-                                        _events[obj.name]['angular-velocity']['mt'].push(curr_time_2)
-                                    }
-                                }
-
-                                // console.log(rows[i][j]);
                             }
-                            
-                            // console.log(index, '_events --------------\n', _events[obj.name])
-                        // }
+
+                            // impact id ...
+                            if(row[j] === 'Event Number'){
+                                var key = parseInt(j) + 1;
+                                if(row[j] && row[j] !== null && row[j] != undefined){
+                                    _events[num_sheet]['impact-id'] = row[key]; 
+                                }
+                            }
+
+                            // data and time ...
+                            if(row[j] === 'Time Stamp:'){
+                                var key = parseInt(j) + 1;
+                                if(row[j] && row[j] !== null && row[j] != undefined){
+                                    var date =  row[key]+'';
+                                    date = date.split(' ');
+                                    var d = date[0].replace(/\//g, ":");
+                                    _events[num_sheet]['date'] = d; 
+                                    _events[num_sheet]['time'] = date[1]; 
+                                }
+                            }
+
+                            // get position of axis value in excel sheet ...
+                            if(row[j] === 'Time (sec)' && !_time_key_2) _time_key_1 = j;
+                            if(row[j] === 'Time (sec)' && _time_key_1) _time_key_2 = j;
+                            // console.log('_time_key_1 --------',_time_key_1, '_time_key_2 ----------------',_time_key_2);
+                            // console.log('_time_key ------------',row[j], _time_key)
+                            if(row[j] === 'X Axis Linear Accel (g)') X_Axis_L_key = j;
+                            if(row[j] === 'Y Axis Linear Accel (g)') Y_Axis_L_key = j;
+                            if(row[j] === 'Z Axis Linear Accel (g)') Z_Axis_L_key = j;
+                            if(row[j] === 'M Axis Linear Accel (g)') M_Axis_L_key = j;
+
+                            if(row[j] === 'X Rotational Velocity (rad/s)') X_Rot_V_key = j;
+                            if(row[j] === 'Y Rotational Velocity (rad/s)') Y_Rot_V_key = j;
+                            if(row[j] === 'Z Rotational Velocity (rad/s)') Z_Rot_V_key = j;
+                            if(row[j] === 'M Rotational Velocity (rad/s)') M_Rot_V_key = j;
+
+                            // Set the max time... 
+                            if(j === _time_key_1 && row[j] !== 'Time (sec)'){
+                                if(row[_time_key_1] && row[_time_key_1] !== null && row[_time_key_1] != undefined){
+                                    curr_time_1 = parseFloat(row[_time_key_1]);
+                                }
+                            }
 
 
+                            if(j === _time_key_2 && row[j] !== 'Time (sec)'){
+                                if(row[_time_key_2] && row[_time_key_2] !== null && row[_time_key_2] != undefined){
+                                    if(timelen == 0) max_time = parseFloat(row[_time_key_2]);
+                                    timelen ++;
+
+                                    curr_time_2 = parseFloat(row[_time_key_2]);
+                                    if (curr_time_2 > max_time)
+                                        _events[num_sheet]['max_time'] = curr_time_2;
+                                }
+                            }
+
+                            //  X Axis Linear Accel (g)
+                            if(j === X_Axis_L_key && row[j] !== 'X Axis Linear Accel (g)'){
+                                if(row[X_Axis_L_key] && row[X_Axis_L_key] !== null && row[X_Axis_L_key] != undefined){
+                                    _events[num_sheet]['linear-acceleration']['xv'].push(parseFloat(row[X_Axis_L_key]))
+                                    _events[num_sheet]['linear-acceleration']['xv-g'].push(parseFloat(row[X_Axis_L_key]) / (9.80665 ))
+                                    _events[num_sheet]['linear-acceleration']['xt'].push(curr_time_1)
+                                }
+                            }
+
+                            //Y Axis Linear Accel (g)
+                            if(j === Y_Axis_L_key && row[j] !== 'Y Axis Linear Accel (g)'){
+                                if(row[Y_Axis_L_key] && row[Y_Axis_L_key] !== null && row[Y_Axis_L_key] != undefined){
+                                    _events[num_sheet]['linear-acceleration']['yv'].push(parseFloat(row[Y_Axis_L_key]))
+                                    _events[num_sheet]['linear-acceleration']['yv-g'].push(parseFloat(row[Y_Axis_L_key]) / (9.80665 ))
+                                    _events[num_sheet]['linear-acceleration']['yt'].push(curr_time_1)
+                                }
+                            }
+
+                            //Z Axis Linear Accel (g)
+                            if(j === Z_Axis_L_key && row[j] !== 'Z Axis Linear Accel (g)'){
+                                if(row[Z_Axis_L_key] && row[Z_Axis_L_key] !== null && row[Z_Axis_L_key] != undefined){
+                                    _events[num_sheet]['linear-acceleration']['zv'].push(parseFloat(row[Z_Axis_L_key]))
+                                    _events[num_sheet]['linear-acceleration']['zv-g'].push(parseFloat(row[Z_Axis_L_key]) / (9.80665 ))
+                                    _events[num_sheet]['linear-acceleration']['zt'].push(curr_time_1)
+                                }
+                            }
+
+                            //M Axis Linear Accel (g)
+                            if(j === M_Axis_L_key && row[j] !== 'M Axis Linear Accel (g)'){
+                                if(row[M_Axis_L_key] && row[M_Axis_L_key] !== null && row[M_Axis_L_key] != undefined){
+                                    _events[num_sheet]['linear-acceleration']['mv'].push(parseFloat(row[M_Axis_L_key]))
+                                    _events[num_sheet]['linear-acceleration']['mv-g'].push(parseFloat(row[M_Axis_L_key]) / (9.80665 ))
+                                    _events[num_sheet]['linear-acceleration']['mt'].push(curr_time_1)
+                                }
+                            }
+
+                            //X Rotational Velocity (rad/s)
+                            if(j === X_Rot_V_key && row[j] !== 'X Rotational Velocity (rad/s)'){
+                                if(row[X_Rot_V_key] && row[X_Rot_V_key] !== null && row[X_Rot_V_key] != undefined){
+                                    _events[num_sheet]['angular-velocity']['xv'].push(parseFloat(row[X_Rot_V_key]))
+                                    _events[num_sheet]['angular-velocity']['xt'].push(curr_time_2)
+                                }
+                            }
+
+                            //Y Rotational Velocity (rad/s)
+                            if(j === Y_Rot_V_key && row[j] !== 'Y Rotational Velocity (rad/s)'){
+                                if(row[Y_Rot_V_key] && row[Y_Rot_V_key] !== null && row[Y_Rot_V_key] != undefined){
+                                    _events[num_sheet]['angular-velocity']['yv'].push(parseFloat(row[Y_Rot_V_key]))
+                                    _events[num_sheet]['angular-velocity']['yt'].push(curr_time_2)
+                                }
+                            }
+
+                            //Z Rotational Velocity (rad/s)
+                            if(j === Z_Rot_V_key && row[j] !== 'Z Rotational Velocity (rad/s)'){
+                                if(row[Z_Rot_V_key] && row[Z_Rot_V_key] !== null && row[Z_Rot_V_key] != undefined){
+                                    _events[num_sheet]['angular-velocity']['zv'].push(parseFloat(row[Z_Rot_V_key]))
+                                    _events[num_sheet]['angular-velocity']['zt'].push(curr_time_2)
+                                }
+                            }
+
+                            //M Rotational Velocity (rad/s)
+                            if(j === M_Rot_V_key && row[j] !== 'M Rotational Velocity (rad/s)'){
+                                if(row[M_Rot_V_key] && row[M_Rot_V_key] !== null && row[M_Rot_V_key] != undefined){
+                                    _events[num_sheet]['angular-velocity']['mv'].push(parseFloat(row[M_Rot_V_key]))
+                                    _events[num_sheet]['angular-velocity']['mt'].push(curr_time_2)
+                                }
+                            }
+
+                            // console.log(rows[i][j]);
+                        }
                     })
-
-                    // console.log('_events ----------------------\n',_events)
-
-                    // for (i in rows){
-                        
-                    //     for (j in rows[i]){
-                    //         console.log(`${obj.name} --\n ${ rows[i][j]}`)
-                    //         // console.log(rows[i][j]);
-                    //     }
-                    // }
+                    num_sheet ++;
+                    // console.log(totalSheet, num_sheet)
+                    if(totalSheet === num_sheet){
+                        fs.unlinkSync(xlsxFile_path);
+                        resolve(_events);
+                    }
                 })
+                
             }  
             })
-            // console.log('_events -----------------\n',_events)
-            resolve(_events);
+            
        }).catch(err=>{
         console.log('err ----', err)
        })
     })
 }   
+
+// function getRows(){
+//     return new Promise((resolve, reject) => {
+
+//     })
+// }
 
 function groupSensorDataForHybrid3(arr, filename) {
 
@@ -1915,6 +1932,7 @@ function generateSimulationForPlayers(player_data_array, reader, apiMode, sensor
         player_data_array.forEach((player, j) => {
 
             var _temp_player = player;
+            console.log('_temp_player', _temp_player)
             var index = j;
             var token_secret = shortid.generate();
             generateJWTokenWithNoExpiry({ image_id: _temp_player.image_id }, token_secret)
@@ -1985,7 +2003,7 @@ function generateSimulationForPlayers(player_data_array, reader, apiMode, sensor
                                     // playerData["uid"] = _temp_player.player_id.split("$")[0].replace(/ /g, "-") + '_' + _temp_player.image_id;
                                     // playerData["uid"] = _temp_player.image_id;
 
-                                    if (reader == 1 || reader == 2 || reader == 3 || reader == 4 || reader == 5) {
+                                    if (reader == 1 || reader == 2 || reader == 3 || reader == 4 || reader == 5 || reader == 6) {
                                         
                                         playerData["sensor"] = _temp_player.sensor;
                                         playerData["player"]["first-name"] = _temp_player.player['first-name']
@@ -2014,7 +2032,7 @@ function generateSimulationForPlayers(player_data_array, reader, apiMode, sensor
                                         playerData["simulation"]["angular-acceleration"] = _temp_player['angular-acceleration'];
                                         playerData["simulation"]["angular-velocity"] = _temp_player['angular-velocity'];
                             
-                                        if (reader == 2 || reader == 3 || reader == 4 || reader == 5) {
+                                        if (reader == 2 || reader == 3 || reader == 4 || reader == 5 || reader == 6) {
                                             playerData["simulation"]["maximum-time"] = _temp_player.max_time * 1000;
                                         } else {
                                             playerData["simulation"]["maximum-time"] = parseFloat(time_all[time_all.length - 1]);
@@ -2032,6 +2050,9 @@ function generateSimulationForPlayers(player_data_array, reader, apiMode, sensor
                                         } else if (sensor === 'hybrid3' || sensor === 'Hybrid3') {
                                             // playerData["simulation"]["mesh-transformation"] = ["z", "-x", "-y"];
                                             playerData["simulation"]["mesh-transformation"] = ["-y", "z", "-x"];
+                                        }else if (sensor === 'linx_ias' || sensor === 'Linx_ias' || sensor === 'Linx IAS') {
+                                            // playerData["simulation"]["mesh-transformation"] = ["z", "-x", "-y"];
+                                            playerData["simulation"]["mesh-transformation"] = ["-y", "z", "-x"];
                                         } else {
                                             playerData["simulation"]["mesh-transformation"] = ["-y", "z", "-x"];
                                         }
@@ -2039,7 +2060,7 @@ function generateSimulationForPlayers(player_data_array, reader, apiMode, sensor
                                         // playerData["simulation"]["mesh-transformation"] = _temp_player['mesh-transformation'];
                                     } else {
 
-                                        playerData["player"]["position"] = _temp_player.position.toLowerCase();
+                                        playerData["player"]["position"] = _temp_player.position ? _temp_player.position.toLowerCase() : 'unknown';
                                         playerData["simulation"]["linear-acceleration"][0] = _temp_player.linear_acceleration_pla;
                                         playerData["simulation"]["angular-acceleration"] = _temp_player.angular_acceleration_paa;
                                         //playerData["simulation"]["impact-point"] = _temp_player.impact_location_on_head.toLowerCase().replace(/ /g, "-");
@@ -2086,7 +2107,7 @@ function generateSimulationForPlayers(player_data_array, reader, apiMode, sensor
                                 })
                                 .catch(err => {
                                     console.log(err);
-                                    counter = result.length;
+                                    // counter = result.length;
                                     j = player_data_array.length;
                                     reject(err)
                                 })
@@ -2094,7 +2115,209 @@ function generateSimulationForPlayers(player_data_array, reader, apiMode, sensor
                 })
                 .catch(err => {
                     console.log(err);
-                    counter = result.length;
+                    // counter = result.length;
+                    j = player_data_array.length;
+                    reject(err)
+                })
+        })
+    })
+}
+
+function generateSimulationForPlayers_v2(player_data_array, reader, apiMode, sensor, mesh, account_id, user_cognito_id, impact_video_path) {
+    return new Promise((resolve, reject) => {
+        var counter = 0;
+        var simulation_result_urls = [];
+
+        // Array that will store all the impact data that will be sent for simulation processing
+
+        var simulation_data = [];
+        player_data_array.forEach((player, j) => {
+
+            var _temp_player = player;
+            console.log('_temp_player', _temp_player)
+            var index = j;
+            var token_secret = shortid.generate();
+            generateJWTokenWithNoExpiry({ image_id: _temp_player.image_id }, token_secret)
+                .then(image_token => {
+
+                    let player_id = _temp_player.player_id.split("$")[0] + '-' + _temp_player.sensor;
+                    player_id = player_id.replace(/ /g, "-");
+                    
+                    getUserDetails(user_cognito_id)
+                        .then (user_detail => {
+                            let admin_details = {};
+                            if (user_detail.Item) {
+                                admin_details.name = user_detail.Item.first_name + ' ' + user_detail.Item.last_name;
+                                admin_details.user_cognito_id = user_detail.Item.user_cognito_id;
+                            }
+                            let user_bucket = apiMode === 'beta' ? config.usersbucketbeta : config.usersbucket;
+                            updateSimulationImageToDDB(_temp_player.image_id, user_bucket, "null", "pending", image_token, token_secret, account_id, mesh, admin_details, impact_video_path)
+                                .then(value => {
+                                    return fetchCGValues(account_id);
+                                })
+                                .then(playerDetail => {
+                                    let cg_coordinates =  playerDetail.length > 0 && playerDetail[0]['cg_coordinates'] ? playerDetail[0]['cg_coordinates'] : null;
+                                    console.log('CG coordinates are ', cg_coordinates);
+
+                                    // console.log("LOOPING THROUGH COMPONENTS ++++++++++ !!!!! ",index ,_temp_player);
+
+                                    simulation_result_urls.push(`${config_env.simulation_result_host_url}simulation/results/${image_token}/${_temp_player.image_id}`);
+                                    simulation_result_urls.push(`${config_env.simulation_result_host_url}getSimulationMovie/${image_token}/${_temp_player.image_id}`);
+
+                                    let playerData = {
+                                        // "uid": "",
+                                        "event_id": "",
+                                        "player_id": "",
+                                        "player": {
+                                            "first-name": "",
+                                            "first-name": "",
+                                            "sport": "",
+                                            "team": "",
+                                            "position": ""
+                                        },
+                                        "sensor": "",
+                                        "simulation": {
+                                            "mesh": mesh === 'fine' ? "fine_brain.inp" : "coarse_brain.inp",
+                                            "time-all": [],
+                                            "linear-acceleration": [0.0, 0.0, 0.0],
+                                            "angular-acceleration": 0.0,
+                                            "angular-velocity": [0.0, 0.0, 0.0],
+                                            //"time-peak-acceleration": 2.0e-2,
+                                            "maximum-time": 4.0e-2,
+                                            //"impact-point": "",
+                                            "head-cg": [0, -0.3308, -0.037],
+                                            "angular-sensor-position": [0.025, -0.281, -0.089757]
+                                        }
+                                    }
+                                    if (cg_coordinates) {
+                                        playerData.simulation["head-cg"] = (cg_coordinates.length == 0) ? [0, -0.3308, -0.037] : cg_coordinates.map(function (x) { return parseFloat(x) });
+                                        playerData.simulation["angular-sensor-position"] = (cg_coordinates.length == 0) ? [0.025, -0.281, -0.089757] : cg_coordinates.map(function (x) { return parseFloat(x) });
+                                    }
+
+                                    playerData.event_id = _temp_player.image_id;
+                                    playerData.player_id = player_id
+
+                                    if (sensor === 'prevent' ) {
+                                        delete playerData.simulation["angular-sensor-position"];
+                                    }
+
+                                    playerData["player"]["name"] = _temp_player.player_id.replace(/ /g, "-");
+                                    // playerData["uid"] = _temp_player.player_id.split("$")[0].replace(/ /g, "-") + '_' + _temp_player.image_id;
+                                    // playerData["uid"] = _temp_player.image_id;
+
+                                    if (reader == 1 || reader == 2 || reader == 3 || reader == 4 || reader == 5 || reader == 6) {
+                                        
+                                        playerData["sensor"] = _temp_player.sensor;
+                                        playerData["player"]["first-name"] = _temp_player.player['first-name']
+                                        playerData["player"]["last-name"] = _temp_player.player['last-name'];
+                                        playerData["player"]["sport"] = _temp_player.player.sport;
+                                        playerData["player"]["team"] = _temp_player.player.team;
+                                        playerData["player"]["position"] = _temp_player.player.position;
+
+                                        const time_all = _temp_player['linear-acceleration']['xt'];
+
+                                        delete _temp_player['linear-acceleration']['xv-g'];
+                                        delete _temp_player['linear-acceleration']['yv-g'];
+                                        delete _temp_player['linear-acceleration']['zv-g'];
+                                        delete _temp_player['linear-acceleration']['xt'];
+                                        delete _temp_player['linear-acceleration']['yt'];
+                                        delete _temp_player['linear-acceleration']['zt'];
+                                         _temp_player['angular-acceleration'] ? delete _temp_player['angular-acceleration']['xt'] : null ;
+                                         _temp_player['angular-acceleration'] ? delete _temp_player['angular-acceleration']['yt'] : null;
+                                         _temp_player['angular-acceleration'] ? delete _temp_player['angular-acceleration']['zt'] : null;
+                                        delete _temp_player['angular-velocity']['xt'];
+                                        delete _temp_player['angular-velocity']['yt'];
+                                        delete _temp_player['angular-velocity']['zt'];
+                                        
+                                        playerData["simulation"]["time-all"] = time_all;
+                                        playerData["simulation"]["linear-acceleration"] = _temp_player['linear-acceleration'];
+                                        playerData["simulation"]["angular-acceleration"] = _temp_player['angular-acceleration'];
+                                        playerData["simulation"]["angular-velocity"] = _temp_player['angular-velocity'];
+                            
+                                        if (reader == 2 || reader == 3 || reader == 4 || reader == 5 || reader == 6) {
+                                            playerData["simulation"]["maximum-time"] = _temp_player.max_time * 1000;
+                                        } else {
+                                            playerData["simulation"]["maximum-time"] = parseFloat(time_all[time_all.length - 1]);
+                                        }
+
+                                        if (sensor === 'prevent' || sensor === 'Prevent') {
+                                            playerData["simulation"]["mesh-transformation"] = ["-y", "z", "-x"];
+                                        } else if (sensor === 'sensor_company_x' || sensor === 'swa' || sensor === 'SWA') {
+                                            playerData["simulation"]["mesh-transformation"] = ["-z", "x", "-y"];
+                                            playerData["simulation"]["angular-to-linear-frame"] = ["-y", "-x", "z"];
+                                        } else if (sensor === 'sisu' || sensor === 'SISU') {
+                                            playerData["simulation"]["mesh-transformation"] = ["-z", "-x", "y"];
+                                        } else if (sensor === 'stanford' || sensor === 'Stanford') {
+                                            playerData["simulation"]["mesh-transformation"] = ["y", "-z", "-x"];
+                                        } else if (sensor === 'hybrid3' || sensor === 'Hybrid3') {
+                                            // playerData["simulation"]["mesh-transformation"] = ["z", "-x", "-y"];
+                                            playerData["simulation"]["mesh-transformation"] = ["-y", "z", "-x"];
+                                        }else if (sensor === 'linx_ias' || sensor === 'Linx_ias' || sensor === 'Linx IAS') {
+                                            // playerData["simulation"]["mesh-transformation"] = ["z", "-x", "-y"];
+                                            playerData["simulation"]["mesh-transformation"] = ["-y", "z", "-x"];
+                                        } else {
+                                            playerData["simulation"]["mesh-transformation"] = ["-y", "z", "-x"];
+                                        }
+
+                                        // playerData["simulation"]["mesh-transformation"] = _temp_player['mesh-transformation'];
+                                    } else {
+
+                                        playerData["player"]["position"] = _temp_player.position ? _temp_player.position.toLowerCase() : 'unknown';
+                                        playerData["simulation"]["linear-acceleration"][0] = _temp_player.linear_acceleration_pla;
+                                        playerData["simulation"]["angular-acceleration"] = _temp_player.angular_acceleration_paa;
+                                        //playerData["simulation"]["impact-point"] = _temp_player.impact_location_on_head.toLowerCase().replace(/ /g, "-");
+                                    }
+
+                                    let temp_simulation_data = {
+                                        "impact_data": playerData,
+                                        "index": index,
+                                        // "image_token": image_token,
+                                        // "token_secret": token_secret,
+                                        // "date": _temp_player.date.split("/").join("-"),
+                                        // "player_id": player_id,
+                                        "account_id": account_id,
+                                        "user_cognito_id": playerDetail[0] ? playerDetail[0].user_cognito_id : '',
+                                    }
+
+                                    if ("impact" in _temp_player) {
+                                        temp_simulation_data["impact"] = _temp_player.impact
+                                    }
+
+                                    simulation_data.push(temp_simulation_data);
+
+                                    counter++;
+
+                                    if (counter == player_data_array.length) {
+                                        console.log('SIMULATION DATA IS ', JSON.stringify(simulation_data));
+                                        // Uploading simulation data file
+                                        upload_simulation_data(simulation_data, user_bucket)
+                                            .then(job => {
+                                                // Submitting simulation job
+                                                return submitJobsToBatch(simulation_data, job.job_id, job.path, apiMode, user_bucket);
+                                            })
+                                            .then(value => {
+                                                console.log('simulation_result_urls ', simulation_result_urls);
+                                                resolve(simulation_result_urls);
+                                            })
+                                            .catch(err => {
+                                                console.log(err);
+                                                reject(err);
+                                            })
+
+                                    }
+
+                                })
+                                .catch(err => {
+                                    console.log(err);
+                                    // counter = result.length;
+                                    j = player_data_array.length;
+                                    reject(err)
+                                })
+                        })
+                })
+                .catch(err => {
+                    console.log(err);
+                    // counter = result.length;
                     j = player_data_array.length;
                     reject(err)
                 })
@@ -2482,5 +2705,6 @@ module.exports = {
     generateSimulationForPlayersFromJson,
     computeImageData,
     generateINP,
-    deleteSimulationFromBucket
+    deleteSimulationFromBucket,
+    generateSimulationForPlayers_v2
 };

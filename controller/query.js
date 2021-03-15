@@ -334,6 +334,7 @@ function getOrganizationData(obj) {
 }
 
 function storeSensorData(sensor_data_array, org_id) {
+    console.log('storeSensorData ---------')
     return new Promise((resolve, reject) => {
         var counter = 0;
         if (sensor_data_array.length == 0) {
@@ -352,10 +353,35 @@ function storeSensorData(sensor_data_array, org_id) {
             docClient.put(param, function (err, data) {
                 counter++;
                 if (err) {
-                    console.log(err);
+                    console.log('err storeSensorData ---------\n',err);
                     reject(err);
                 }
                 if (counter == sensor_data_array.length) {
+                    resolve(true);
+                }
+            });
+        }
+    });
+}
+
+function storeSensorData_v2(sensor_data_array, org_id) {
+    console.log('storeSensorData_v2 ---------', org_id)
+    return new Promise((resolve, reject) => {
+        if(sensor_data_array) {
+            sensor_data_array.org_id = org_id;
+            if (sensor_data_array.level === 300) {
+                delete sensor_data_array.sensor
+            }
+            let param = {
+                TableName: "sensor_details",
+                Item: sensor_data_array,
+            };
+
+            docClient.put(param, function (err, data) {
+                if (err) {
+                    console.log('err storeSensorData_v2 ---------\n',err);
+                    reject(err);
+                }else{
                     resolve(true);
                 }
             });
@@ -1233,5 +1259,6 @@ module.exports = {
     updateJobImageGenerateStatus,
     getPendingJobsLog,
     updateJobStatus,
-    getFialedBrainImgagesJob
+    getFialedBrainImgagesJob,
+    storeSensorData_v2
 };

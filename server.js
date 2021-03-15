@@ -56,38 +56,38 @@ const apiPrefix = "/api/"
 // ======================================
 //       CONFIGURING AWS SDK & EXPESS
 // ======================================
-// var config = {
-//     "awsAccessKeyId": process.env.AWS_ACCESS_KEY_ID,
-//     "awsSecretAccessKey": process.env.AWS_ACCESS_SECRET_KEY,
-//     "avatar3dClientId": process.env.AVATAR_3D_CLIENT_ID,
-//     "avatar3dclientSecret": process.env.AVATAR_3D_CLIENT_SECRET,
-//     "region" : process.env.REGION,
-//     "usersbucket": process.env.USERS_BUCKET,
-//     "usersbucketbeta": process.env.USERS_BUCKET_BETA,
-//     "apiVersion" : process.env.API_VERSION,
-//     "jwt_secret" : process.env.JWT_SECRET,
-//     "email_id" : process.env.EMAIL_ID,
-//     "mail_list" : process.env.MAIL_LIST,
-//     "ComputeInstanceEndpoint" : process.env.COMPUTE_INSTANCE_ENDPOINT,
-//     "userPoolId": process.env.USER_POOL_ID,
-//     "ClientId" : process.env.CLIENT_ID,
-//     "react_website_url" : process.env.REACT_WEBSITE_URL,
-//     "simulation_result_host_url" : process.env.SIMULATION_RESULT_HOST_URL,
-//     "jobQueueBeta" : process.env.JOB_QUEUE_BETA,
-//     "jobDefinitionBeta" : process.env.JOB_DEFINITION_BETA,
-//     "jobQueueProduction" : process.env.JOB_QUEUE_PRODUCTION,
-//     "jobDefinitionProduction" : process.env.JOB_DEFINITION_PRODUCTION,
-//     "simulation_bucket" : process.env.SIMULATION_BUCKET,
-//     "queue_x" : process.env.QUEUE_X,
-//     "queue_y" : process.env.QUEUE_Y,
-//     "queue_beta" : process.env.QUEUE_BETA,
-//     "mlUrl" : process.env.ML_URL,
-//     "nodeThreejsUrl" : process.env.NODE_THREE_JS_URL
-// };
+var config = {
+    "awsAccessKeyId": process.env.AWS_ACCESS_KEY_ID,
+    "awsSecretAccessKey": process.env.AWS_ACCESS_SECRET_KEY,
+    "avatar3dClientId": process.env.AVATAR_3D_CLIENT_ID,
+    "avatar3dclientSecret": process.env.AVATAR_3D_CLIENT_SECRET,
+    "region" : process.env.REGION,
+    "usersbucket": process.env.USERS_BUCKET,
+    "usersbucketbeta": process.env.USERS_BUCKET_BETA,
+    "apiVersion" : process.env.API_VERSION,
+    "jwt_secret" : process.env.JWT_SECRET,
+    "email_id" : process.env.EMAIL_ID,
+    "mail_list" : process.env.MAIL_LIST,
+    "ComputeInstanceEndpoint" : process.env.COMPUTE_INSTANCE_ENDPOINT,
+    "userPoolId": process.env.USER_POOL_ID,
+    "ClientId" : process.env.CLIENT_ID,
+    "react_website_url" : process.env.REACT_WEBSITE_URL,
+    "simulation_result_host_url" : process.env.SIMULATION_RESULT_HOST_URL,
+    "jobQueueBeta" : process.env.JOB_QUEUE_BETA,
+    "jobDefinitionBeta" : process.env.JOB_DEFINITION_BETA,
+    "jobQueueProduction" : process.env.JOB_QUEUE_PRODUCTION,
+    "jobDefinitionProduction" : process.env.JOB_DEFINITION_PRODUCTION,
+    "simulation_bucket" : process.env.SIMULATION_BUCKET,
+    "queue_x" : process.env.QUEUE_X,
+    "queue_y" : process.env.QUEUE_Y,
+    "queue_beta" : process.env.QUEUE_BETA,
+    "mlUrl" : process.env.ML_URL,
+    "nodeThreejsUrl" : process.env.NODE_THREE_JS_URL
+};
 
 const subject_signature = fs.readFileSync("data/base64")
 
-var config = require('./config/configuration_keys.json');
+// var config = require('./config/configuration_keys.json');
 var config_env = config;
 const FrontendUrl = "https://nsfcareer.io/";
 
@@ -152,7 +152,8 @@ const {
     generateSimulationForPlayersFromJson,
     computeImageData,
     generateINP,
-    deleteSimulationFromBucket
+    deleteSimulationFromBucket,
+    generateSimulationForPlayers_v2
 } = require('./controller/simulation');
 
 const {
@@ -177,7 +178,8 @@ const {
     updateJobImageGenerateStatus,
     getPendingJobsLog,
     updateJobStatus,
-    getFialedBrainImgagesJob
+    getFialedBrainImgagesJob,
+    storeSensorData_v2
 } = require('./controller/query');
 
 // Include the cluster module
@@ -773,6 +775,8 @@ if (cluster.isMaster) {
         let reader = 0;
         let filename = req.body.data_filename !== undefined ? req.body.data_filename : null;
         let buffer = '';
+        let organization = req.body.organization;
+        let team = req.body.team;
         let overwrite = req.body.overwrite !== undefined ? req.body.overwrite : false;
         let bypass_simulation_formatting = req.body.bypass_simulation_formatting !== undefined ? req.body.bypass_simulation_formatting : false;
         console.log('filename ----------------------\n', req.body.data_filename)
@@ -1297,339 +1301,661 @@ if (cluster.isMaster) {
             } else {
                 //Converting file data into JSON
                 convertFileDataToJson(buffer, reader, filename)
-                    .then(items => {
+                .then(async items => {
+                    if(reader === 6){
+                        // console.log('items -------------------',items.length, items)
+                        if(items.length > 0){
+                            var totalItem = items.length;
+                            var indexItme = 0;
+                            var simulation_result_urls = []
+                            items.forEach(async (jobData)=>{
+                                var result = await controllerSimulationData({level,sensor, jobData, organization, team, sensor_brand: req.body.sensor_brand, user_cognito_id: req.body.user_cognito_id, overwrite});
+                                console.log('result -------------',result.account_id)
+                                if(result.message === 'success'){
+                                    uploadPlayerSelfieIfNotPresent(req.body.selfie, result.player_id, req.body.filename, result.account_id)
+                                    .then((selfieDetails) => {
+                                        
+                                        return generateSimulationForPlayers_v2([result.new_items_array], reader, apiMode, sensor, mesh, result.account_id, req.body.user_cognito_id, result.impact_video_path);
+                                    })
+                                    .then(urls => {
+                                        simulation_result_urls.push(urls);
+                                        indexItme++;
+                                        console.log('totalItem == indexItme', totalItem, indexItme)
+                                        if(totalItem == indexItme){
+                                            res.send({
+                                                message: "success",
+                                                image_url: _.spread(_.union)(simulation_result_urls),
+                                            })
+                                        }
+                                        
+                                    })
+                                    .catch(err => {
+                                        indexItme++;
+                                        console.log('err ----- 1', err);
+                                        if(totalItem == indexItme){
+                                            res.send({
+                                                message: "failure",
+                                                error: err
+                                            })
+                                        }
+                                    })
+                                }else{
+                                    indexItme++;
+                                    if(totalItem == indexItme){
+                                        res.send(result);
+                                    }
+                                }
+                            })
+                        }else{
+                            res.send({
+                                message: "failure",
+                                error: 'No jobs found in file.'
+                            })
+                        }
+
+                    }else{
                         // Adding default organization Unknown to the impact data
                         const new_items_array = _.map(items, o => _.extend({ organization: "Unknown" }, o));
-
+                  
                         if (new_items_array.length == 0) {
                             res.send({
                                 message: "failure",
                                 error: 'CSV data is required.'
                             })
                         } else {
-
                             checkSensorDataExists({ 'impact-id': new_items_array[0]["impact-id"] ? new_items_array[0]["impact-id"] : '', 'sensor-id': new_items_array[0]["sensor-id"] ? new_items_array[0]["sensor-id"] : '' })
-                                .then(sensor_detail => {
-                                    console.log('sensor_detail ', sensor_detail);
-                                    if (sensor_detail.length > 0 && !overwrite) {
-                                        res.send({
-                                            message: "failure",
-                                            error: 'Duplicate event simulation skipped, use -F "overwrite=true" to recompute'
-                                        })
-                                    } else {
-                                        (async () => {
-                                            // Adding image id in array data
-                                            for (var i = 0; i < new_items_array.length; i++) {
-                                                var _temp = new_items_array[i];
+                            .then(sensor_detail => {
+                                console.log('sensor_detail ', sensor_detail);
+                                if (sensor_detail.length > 0 && !overwrite) {
+                                    res.send({
+                                        message: "failure",
+                                        error: 'Duplicate event simulation skipped, use -F "overwrite=true" to recompute'
+                                    })
+                                } else {
+                                    (async () => {
+                                        // Adding image id in array data
+                                        for (var i = 0; i < new_items_array.length; i++) {
+                                            var _temp = new_items_array[i];
 
-                                                if (level === 300) {
-                                                    if (sensor.toLowerCase() === 'sensor_company_x' || sensor.toLowerCase() === 'swa') {
-                                                        req.body.sensor_brand = 'SWA';
-                                                    } else if (sensor.toLowerCase() === 'sisu') {
-                                                        req.body.sensor_brand = 'SISU';
-                                                    } else if (sensor.toLowerCase() === 'stanford') {
-                                                        req.body.sensor_brand = 'Stanford';
-                                                    } else if (sensor.toLowerCase() === 'panther') {
-                                                        req.body.sensor_brand = 'Panther';
-                                                    } else if (sensor.toLowerCase() === 'hitiq') {
-                                                        req.body.sensor_brand = 'HitIQ';
-                                                    } else if (sensor.toLowerCase() === 'gforcetracker') {
-                                                        req.body.sensor_brand = 'GForceTracker';
-                                                    } else if (sensor.toLowerCase() === 'fitguard') {
-                                                        req.body.sensor_brand = 'FitGuard';
-                                                    } else if (sensor.toLowerCase() === 'blackbox') {
-                                                        req.body.sensor_brand = 'Blackbox Biometrics';
-                                                    } else if (sensor.toLowerCase() === 'biocore') {
-                                                        req.body.sensor_brand = 'BioCore';
-                                                    } else if (sensor.toLowerCase() === 'athlete') {
-                                                        req.body.sensor_brand = 'Athlete Intelligence';
-                                                    } else if (sensor.toLowerCase() === 'medeng') {
-                                                        req.body.sensor_brand = 'Med-Eng';
-                                                    } else if (sensor.toLowerCase() === 'hybrid3') {
-                                                        req.body.sensor_brand = 'Hybrid3';
-                                                    } else {
-                                                        req.body.sensor_brand = 'Prevent Biometrics';
-                                                    }
-                                                }
-                                                var impact_video_path = '';
-                                                if (sensor_detail.length > 0) {
-                                                    _temp["image_id"] = sensor_detail[0].image_id;
-                                                   
-
-                                                    getPlayerSimulationFile({ image_id: sensor_detail[0].image_id })
-                                                        .then(simulation => {
-                                                            if (simulation) {
-                                                                 console.log('simulation[0].impact_video_path', simulation.impact_video_path)
-                                                                 impact_video_path = simulation.impact_video_path && simulation.impact_video_path != undefined ? simulation.impact_video_path : '';
-
-                                                                deleteSimulationFromBucket(simulation, function (err, data) {
-                                                                    console.log('Deleted from bucket');
-                                                                })
-                                                            }
-                                                        })
-                                                    let params = {
-                                                        TableName: "sensor_details",
-                                                        Key: {
-                                                            org_id: sensor_detail[0].org_id,
-                                                            player_id: sensor_detail[0].player_id,
-                                                        },
-                                                    };
-                                                    docClient.delete(params, function (err, data) {
-                                                        if (err) {
-                                                            console.log(err);
-                                                        } else {
-                                                            console.log('Player deleted from sensor_details');
-                                                            let params1 = {
-                                                                TableName: "simulation_images",
-                                                                Key: {
-                                                                    image_id: sensor_detail[0].image_id,
-                                                                },
-                                                            };
-                                                            docClient.delete(params1, function (err, data) {
-                                                                if (err) {
-                                                                    console.log(err);
-                                                                } else {
-                                                                    console.log('Player deleted from simulation_images');
-                                                                }
-                                                            });
-                                                        }
-                                                    });
+                                            if (level === 300) {
+                                                if (sensor.toLowerCase() === 'sensor_company_x' || sensor.toLowerCase() === 'swa') {
+                                                    req.body.sensor_brand = 'SWA';
+                                                } else if (sensor.toLowerCase() === 'sisu') {
+                                                    req.body.sensor_brand = 'SISU';
+                                                } else if (sensor.toLowerCase() === 'stanford') {
+                                                    req.body.sensor_brand = 'Stanford';
+                                                } else if (sensor.toLowerCase() === 'panther') {
+                                                    req.body.sensor_brand = 'Panther';
+                                                } else if (sensor.toLowerCase() === 'hitiq') {
+                                                    req.body.sensor_brand = 'HitIQ';
+                                                } else if (sensor.toLowerCase() === 'gforcetracker') {
+                                                    req.body.sensor_brand = 'GForceTracker';
+                                                } else if (sensor.toLowerCase() === 'fitguard') {
+                                                    req.body.sensor_brand = 'FitGuard';
+                                                } else if (sensor.toLowerCase() === 'blackbox') {
+                                                    req.body.sensor_brand = 'Blackbox Biometrics';
+                                                } else if (sensor.toLowerCase() === 'biocore') {
+                                                    req.body.sensor_brand = 'BioCore';
+                                                } else if (sensor.toLowerCase() === 'athlete') {
+                                                    req.body.sensor_brand = 'Athlete Intelligence';
+                                                } else if (sensor.toLowerCase() === 'medeng') {
+                                                    req.body.sensor_brand = 'Med-Eng';
+                                                } else if (sensor.toLowerCase() === 'hybrid3') {
+                                                    req.body.sensor_brand = 'Hybrid3';
                                                 } else {
-                                                    _temp["image_id"] = shortid.generate();
+                                                    req.body.sensor_brand = 'Prevent Biometrics';
                                                 }
+                                            }
+                                            var impact_video_path = '';
+                                            if (sensor_detail.length > 0) {
+                                                _temp["image_id"] = sensor_detail[0].image_id;
+                                               
 
-                                                _temp["level"] = level;
-                                                _temp["user_cognito_id"] = req.body.user_cognito_id;
-                                                _temp["sensor"] = req.body.sensor_brand;
-                                                // _temp["image_id"] = shortid.generate();
-                                                _temp['player'] = {};
-                                                _temp['player']['first-name'] = "Unknown";
-                                                _temp['player']['last-name'] = "Unknown";
-                                                _temp['player']['sport'] = "Unknown";
-                                                _temp['player']['position'] = "Unknown";
-                                                _temp['player']['team'] = "Unknown";
-                                                _temp['player']['impact-id'] = _temp['impact-id'] ? _temp['impact-id'] : 'Unknown';
-                                                _temp['player']['sensor-id'] = _temp['sensor-id'] ? _temp['sensor-id'] : 'Unknown';
-                                                _temp["team"] = "Unknown";
-                                                _temp["used_sensor"] = req.body.sensor_brand;
+                                                getPlayerSimulationFile({ image_id: sensor_detail[0].image_id })
+                                                    .then(simulation => {
+                                                        if (simulation) {
+                                                             console.log('simulation[0].impact_video_path', simulation.impact_video_path)
+                                                             impact_video_path = simulation.impact_video_path && simulation.impact_video_path != undefined ? simulation.impact_video_path : '';
 
-                                                if (_temp['impact-id'] && _temp['sensor-id']) {
-                                                    delete _temp['impact-id'];
-                                                    delete _temp['sensor-id'];
-                                                }
+                                                            deleteSimulationFromBucket(simulation, function (err, data) {
+                                                                console.log('Deleted from bucket');
+                                                            })
+                                                        }
+                                                    })
+                                                let params = {
+                                                    TableName: "sensor_details",
+                                                    Key: {
+                                                        org_id: sensor_detail[0].org_id,
+                                                        player_id: sensor_detail[0].player_id,
+                                                    },
+                                                };
+                                                docClient.delete(params, function (err, data) {
+                                                    if (err) {
+                                                        console.log(err);
+                                                    } else {
+                                                        console.log('Player deleted from sensor_details');
+                                                        let params1 = {
+                                                            TableName: "simulation_images",
+                                                            Key: {
+                                                                image_id: sensor_detail[0].image_id,
+                                                            },
+                                                        };
+                                                        docClient.delete(params1, function (err, data) {
+                                                            if (err) {
+                                                                console.log(err);
+                                                            } else {
+                                                                console.log('Player deleted from simulation_images');
+                                                            }
+                                                        });
+                                                    }
+                                                });
+                                            } else {
+                                                _temp["image_id"] = shortid.generate();
+                                            }
 
-                                                if (req.body.organization) {
-                                                    _temp['organization'] = req.body.organization
-                                                }
+                                            _temp["level"] = level;
+                                            _temp["user_cognito_id"] = req.body.user_cognito_id;
+                                            _temp["sensor"] = req.body.sensor_brand;
+                                            // _temp["image_id"] = shortid.generate();
+                                            _temp['player'] = {};
+                                            _temp['player']['first-name'] = "Unknown";
+                                            _temp['player']['last-name'] = "Unknown";
+                                            _temp['player']['sport'] = "Unknown";
+                                            _temp['player']['position'] = "Unknown";
+                                            _temp['player']['team'] = "Unknown";
+                                            _temp['player']['impact-id'] = _temp['impact-id'] ? _temp['impact-id'] : 'Unknown';
+                                            _temp['player']['sensor-id'] = _temp['sensor-id'] ? _temp['sensor-id'] : 'Unknown';
+                                            _temp["team"] = "Unknown";
+                                            _temp["used_sensor"] = req.body.sensor_brand;
 
-                                                if (req.body.team) {
-                                                    _temp['player']['team'] = req.body.team
-                                                    _temp['team'] = req.body.team
-                                                }
+                                            if (_temp['impact-id'] && _temp['sensor-id']) {
+                                                delete _temp['impact-id'];
+                                                delete _temp['sensor-id'];
+                                            }
 
-                                                await getUserDetailBySensorId(_temp["sensor"], _temp.player_id.split("$")[0])
-                                                    .then(user_detail => {
-                                                        // console.log(user_detail);
-                                                        if (user_detail.length > 0) {
-                                                            _temp['player']['first-name'] = user_detail[0]['first_name'];
-                                                            _temp['player']['last-name'] = user_detail[0]['last_name'];
-                                                            new_items_array[i] = _temp;
-                                                            removeRequestedPlayerFromOrganizationTeam(req.body.organization ? req.body.organization : 'Unknown', req.body.team ? req.body.team : 'Unknown', user_detail[0]['user_cognito_id'])
-                                                                .then(data => {
-                                                                    // console.log(data);
+                                            if (req.body.organization) {
+                                                _temp['organization'] = req.body.organization
+                                            }
+
+                                            if (req.body.team) {
+                                                _temp['player']['team'] = req.body.team
+                                                _temp['team'] = req.body.team
+                                            }
+
+                                            await getUserDetailBySensorId(_temp["sensor"], _temp.player_id.split("$")[0])
+                                                .then(user_detail => {
+                                                    // console.log(user_detail);
+                                                    if (user_detail.length > 0) {
+                                                        _temp['player']['first-name'] = user_detail[0]['first_name'];
+                                                        _temp['player']['last-name'] = user_detail[0]['last_name'];
+                                                        new_items_array[i] = _temp;
+                                                        removeRequestedPlayerFromOrganizationTeam(req.body.organization ? req.body.organization : 'Unknown', req.body.team ? req.body.team : 'Unknown', user_detail[0]['user_cognito_id'])
+                                                            .then(data => {
+                                                                // console.log(data);
+                                                            })
+                                                            .catch(err => {
+                                                                console.log('Error ', err);
+                                                            })
+                                                    } else {
+                                                        new_items_array[i] = _temp;
+                                                    }
+                                                })
+                                                .catch(err => {
+                                                    new_items_array[i] = _temp;
+                                                })
+                                        }
+
+                                        console.log('New items array is ', new_items_array);
+
+                                        // Stores sensor data in db 
+                                        // TableName: "sensor_details"
+                                        // team, player_id
+
+                                        // storeSensorData(new_items_array)
+                                        //     .then(flag => {
+
+                                        if (level === 300) {
+                                            for (var i = 0; i < new_items_array.length; i++) {
+                                                let _temp1 = new_items_array[i];
+                                                _temp1.sensor = req.body.sensor_brand
+                                                new_items_array[i] = _temp1;
+                                            }
+                                        }
+
+                                        var players = new_items_array.map(function (player) {
+                                            return {
+                                                player_id: player.player_id.split("$")[0],
+                                                team: player.player.team,
+                                                sensor: player.sensor,
+                                                player: player.player,
+                                                organization: player.organization,
+                                            }
+                                        });
+
+                                        // Fetching unique players
+                                        const result = _.uniqBy(players, 'player_id')
+
+                                        var simulation_result_urls = [];
+
+                                        if (result.length == 0) {
+                                            res.send({
+                                                message: "success"
+                                            })
+                                        } else {
+                                            // Run simulation here and send data
+                                            // {
+                                            //     "player_id" : "STRING",
+                                            //     "team" : "STRING",
+                                            //     "organization" : "STRING"
+                                            // }
+                                            var counter = 0;
+
+                                            for (var i = 0; i < result.length; i++) {
+                                                var temp = result[i];
+
+                                                // Adds team details in db if doesn't already exist
+                                                addPlayerToTeamOfOrganization(level === 300 ? null : req.body.sensor_brand, req.body.user_cognito_id, temp.organization, temp.team, temp.player_id)
+                                                    .then(org_id => {
+                                                        console.log('org ', org_id);
+                                                        if (counter === 0) {
+                                                            storeSensorData(new_items_array, org_id)
+                                                                .then(flag => {
+                                                                    // 
+                                                                })
+                                                        }
+                                                        counter++;
+                                                        if (counter == result.length) {
+                                                            // Upload player selfie if not present and generate meshes
+                                                            // Generate simulation for player
+
+                                                            // Generate 10 digits unique number
+                                                            let account_id = Math.floor(Math.random() * 9000000000) + 1000000000;
+                                                            account_id = account_id.toString();
+                                                            let player_id = temp.player_id + '-' + temp.sensor;
+                                                            // getUserByPlayerId(player_id)
+                                                            getUserDetailBySensorId(temp.sensor, temp.player['sensor-id'])
+                                                                .then(user_detail => {
+                                                                    // console.log(user_detail);
+                                                                    if (user_detail.length > 0) {
+                                                                        if (user_detail[0]['account_id']) {
+                                                                            account_id = user_detail[0]['account_id'];
+                                                                        }
+                                                                        if (user_detail[0]['player_id']) {
+                                                                            player_id = user_detail[0]['player_id'];
+                                                                        }
+                                                                        var userParams = {
+                                                                            TableName: "users",
+                                                                            Key: {
+                                                                                "user_cognito_id": user_detail[0]['user_cognito_id'],
+                                                                            },
+                                                                            UpdateExpression: "set account_id = :account_id, player_id = :player_id",
+                                                                            ExpressionAttributeValues: {
+                                                                                ":account_id": account_id,
+                                                                                ":player_id": player_id
+                                                                            },
+                                                                            ReturnValues: "UPDATED_NEW"
+                                                                        };
+                                                                        docClient.update(userParams, (err, data) => {
+                                                                            if (err) {
+                                                                                console.log(err);
+                                                                            }
+                                                                        })
+                                                                    } else {
+                                                                        let obj = {};
+                                                                        obj['user_cognito_id'] = player_id;
+                                                                        obj['account_id'] = account_id;
+                                                                        obj['sensor_id_number'] = temp.player['sensor-id'] ? temp.player['sensor-id'] : '';
+                                                                        obj['sensor'] = temp.sensor;
+                                                                        obj['player_id'] = player_id;
+                                                                        obj['first_name'] = temp.player['first-name'];
+                                                                        obj['last_name'] = temp.player['last-name'];
+                                                                        obj['sport'] = temp.player['sport'] ? temp.player['sport'] : '';
+                                                                        obj['team'] = temp.player['team'] ? temp.player['team'] : '';
+                                                                        obj['position'] = temp.player['position'] ? temp.player['position'] : '';
+
+                                                                        addPlayer(obj)
+                                                                            .then(playerData => {
+                                                                                console.log('Player added in user table');
+                                                                            })
+                                                                    }
+
+                                                                    console.log('new_items_array 1------------------',new_items_array[0].image_id)
+                                                                    var data = {account_id: account_id, event_id: new_items_array[0].image_id };
+
+                                                                    uploadPlayerSelfieIfNotPresent(req.body.selfie, player_id, req.body.filename, account_id)
+                                                                        .then((selfieDetails) => {
+                                                                            
+                                                                            return generateSimulationForPlayers(new_items_array, reader, apiMode, sensor, mesh, account_id, req.body.user_cognito_id, impact_video_path);
+                                                                        })
+                                                                        .then(urls => {
+                                                                            simulation_result_urls.push(urls)
+                                                                            res.send({
+                                                                                message: "success",
+                                                                                image_url: _.spread(_.union)(simulation_result_urls),
+                                                                                playerDetails: data
+                                                                            })
+                                                                        })
+                                                                        .catch(err => {
+                                                                            console.log(err);
+                                                                            counter = result.length;
+                                                                            i = result.length;
+                                                                            res.send({
+                                                                                message: "failure",
+                                                                                error: err
+                                                                            })
+                                                                        })
                                                                 })
                                                                 .catch(err => {
-                                                                    console.log('Error ', err);
+                                                                    console.log(err);
+                                                                    counter = result.length;
+                                                                    i = result.length;
+                                                                    res.send({
+                                                                        message: "failure",
+                                                                        error: err
+                                                                    })
                                                                 })
-                                                        } else {
-                                                            new_items_array[i] = _temp;
+
                                                         }
                                                     })
                                                     .catch(err => {
-                                                        new_items_array[i] = _temp;
+                                                        console.log(err);
+                                                        counter = result.length;
+                                                        i = result.length;
+                                                        res.send({
+                                                            message: "failure",
+                                                            error: err
+                                                        })
                                                     })
                                             }
-
-                                            console.log('New items array is ', new_items_array);
-
-                                            // Stores sensor data in db 
-                                            // TableName: "sensor_details"
-                                            // team, player_id
-
-                                            // storeSensorData(new_items_array)
-                                            //     .then(flag => {
-
-                                            if (level === 300) {
-                                                for (var i = 0; i < new_items_array.length; i++) {
-                                                    let _temp1 = new_items_array[i];
-                                                    _temp1.sensor = req.body.sensor_brand
-                                                    new_items_array[i] = _temp1;
-                                                }
-                                            }
-
-                                            var players = new_items_array.map(function (player) {
-                                                return {
-                                                    player_id: player.player_id.split("$")[0],
-                                                    team: player.player.team,
-                                                    sensor: player.sensor,
-                                                    player: player.player,
-                                                    organization: player.organization,
-                                                }
-                                            });
-
-                                            // Fetching unique players
-                                            const result = _.uniqBy(players, 'player_id')
-
-                                            var simulation_result_urls = [];
-
-                                            if (result.length == 0) {
-                                                res.send({
-                                                    message: "success"
-                                                })
-                                            } else {
-                                                // Run simulation here and send data
-                                                // {
-                                                //     "player_id" : "STRING",
-                                                //     "team" : "STRING",
-                                                //     "organization" : "STRING"
-                                                // }
-                                                var counter = 0;
-
-                                                for (var i = 0; i < result.length; i++) {
-                                                    var temp = result[i];
-
-                                                    // Adds team details in db if doesn't already exist
-                                                    addPlayerToTeamOfOrganization(level === 300 ? null : req.body.sensor_brand, req.body.user_cognito_id, temp.organization, temp.team, temp.player_id)
-                                                        .then(org_id => {
-                                                            console.log('org ', org_id);
-                                                            if (counter === 0) {
-                                                                storeSensorData(new_items_array, org_id)
-                                                                    .then(flag => {
-                                                                        // 
-                                                                    })
-                                                            }
-                                                            counter++;
-                                                            if (counter == result.length) {
-                                                                // Upload player selfie if not present and generate meshes
-                                                                // Generate simulation for player
-
-                                                                // Generate 10 digits unique number
-                                                                let account_id = Math.floor(Math.random() * 9000000000) + 1000000000;
-                                                                account_id = account_id.toString();
-                                                                let player_id = temp.player_id + '-' + temp.sensor;
-                                                                // getUserByPlayerId(player_id)
-                                                                getUserDetailBySensorId(temp.sensor, temp.player['sensor-id'])
-                                                                    .then(user_detail => {
-                                                                        // console.log(user_detail);
-                                                                        if (user_detail.length > 0) {
-                                                                            if (user_detail[0]['account_id']) {
-                                                                                account_id = user_detail[0]['account_id'];
-                                                                            }
-                                                                            if (user_detail[0]['player_id']) {
-                                                                                player_id = user_detail[0]['player_id'];
-                                                                            }
-                                                                            var userParams = {
-                                                                                TableName: "users",
-                                                                                Key: {
-                                                                                    "user_cognito_id": user_detail[0]['user_cognito_id'],
-                                                                                },
-                                                                                UpdateExpression: "set account_id = :account_id, player_id = :player_id",
-                                                                                ExpressionAttributeValues: {
-                                                                                    ":account_id": account_id,
-                                                                                    ":player_id": player_id
-                                                                                },
-                                                                                ReturnValues: "UPDATED_NEW"
-                                                                            };
-                                                                            docClient.update(userParams, (err, data) => {
-                                                                                if (err) {
-                                                                                    console.log(err);
-                                                                                }
-                                                                            })
-                                                                        } else {
-                                                                            let obj = {};
-                                                                            obj['user_cognito_id'] = player_id;
-                                                                            obj['account_id'] = account_id;
-                                                                            obj['sensor_id_number'] = temp.player['sensor-id'] ? temp.player['sensor-id'] : '';
-                                                                            obj['sensor'] = temp.sensor;
-                                                                            obj['player_id'] = player_id;
-                                                                            obj['first_name'] = temp.player['first-name'];
-                                                                            obj['last_name'] = temp.player['last-name'];
-                                                                            obj['sport'] = temp.player['sport'] ? temp.player['sport'] : '';
-                                                                            obj['team'] = temp.player['team'] ? temp.player['team'] : '';
-                                                                            obj['position'] = temp.player['position'] ? temp.player['position'] : '';
-
-                                                                            addPlayer(obj)
-                                                                                .then(playerData => {
-                                                                                    console.log('Player added in user table');
-                                                                                })
-                                                                        }
-
-                                                                        console.log('new_items_array 1------------------',new_items_array[0].image_id)
-                                                                        var data = {account_id: account_id, event_id: new_items_array[0].image_id };
-
-                                                                        uploadPlayerSelfieIfNotPresent(req.body.selfie, player_id, req.body.filename, account_id)
-                                                                            .then((selfieDetails) => {
-                                                                                
-                                                                                return generateSimulationForPlayers(new_items_array, reader, apiMode, sensor, mesh, account_id, req.body.user_cognito_id, impact_video_path);
-                                                                            })
-                                                                            .then(urls => {
-                                                                                simulation_result_urls.push(urls)
-                                                                                res.send({
-                                                                                    message: "success",
-                                                                                    image_url: _.spread(_.union)(simulation_result_urls),
-                                                                                    playerDetails: data
-                                                                                })
-                                                                            })
-                                                                            .catch(err => {
-                                                                                console.log(err);
-                                                                                counter = result.length;
-                                                                                i = result.length;
-                                                                                res.send({
-                                                                                    message: "failure",
-                                                                                    error: err
-                                                                                })
-                                                                            })
-                                                                    })
-                                                                    .catch(err => {
-                                                                        console.log(err);
-                                                                        counter = result.length;
-                                                                        i = result.length;
-                                                                        res.send({
-                                                                            message: "failure",
-                                                                            error: err
-                                                                        })
-                                                                    })
-
-                                                            }
-                                                        })
-                                                        .catch(err => {
-                                                            console.log(err);
-                                                            counter = result.length;
-                                                            i = result.length;
-                                                            res.send({
-                                                                message: "failure",
-                                                                error: err
-                                                            })
-                                                        })
-                                                }
-                                            }
-                                            // })
-                                        })();
-                                    }
-                                });
-                        
-    
+                                        }
+                                        // })
+                                    })();
+                                }
+                            });
                         }
+                    }
+                })
+                .catch(err => {
+                    res.send({
+                        message: "failure",
+                        error: "Incorrect file format"
                     })
-                    .catch(err => {
-                        res.send({
-                            message: "failure",
-                            error: "Incorrect file format"
-                        })
-                    })
+                })
             }
         }
     })
+
+    function controllerSimulationData(...args){
+        return new Promise((resolve, reject)=>{
+            // console.log('args', args[0]);
+            // console.log(args[0].jobData);
+            var new_items_array = args[0].jobData;
+            var sensor_brand = args[0].sensor_brand;
+            const { level, sensor, organization, team, user_cognito_id, overwrite } = args[0];
+
+            checkSensorDataExists({ 'impact-id': new_items_array["impact-id"] ? new_items_array["impact-id"] : '', 'sensor-id': new_items_array["sensor-id"] ? new_items_array["sensor-id"] : '' })
+            .then( async sensor_detail => {
+                console.log('sensor_detail ', sensor_detail);
+                if (sensor_detail.length > 0 && !overwrite) {
+                    res.send({
+                        message: "failure",
+                        error: 'Duplicate event simulation skipped, use -F "overwrite=true" to recompute'
+                    })
+                } else {
+
+                    var _temp = new_items_array;
+
+                    if (level === 300) {
+                        if (sensor.toLowerCase() === 'sensor_company_x' || sensor.toLowerCase() === 'swa') {
+                            sensor_brand = 'SWA';
+                        } else if (sensor.toLowerCase() === 'sisu') {
+                            sensor_brand = 'SISU';
+                        } else if (sensor.toLowerCase() === 'stanford') {
+                            sensor_brand = 'Stanford';
+                        } else if (sensor.toLowerCase() === 'panther') {
+                            sensor_brand = 'Panther';
+                        } else if (sensor.toLowerCase() === 'hitiq') {
+                            sensor_brand = 'HitIQ';
+                        } else if (sensor.toLowerCase() === 'gforcetracker') {
+                            sensor_brand = 'GForceTracker';
+                        } else if (sensor.toLowerCase() === 'fitguard') {
+                            sensor_brand = 'FitGuard';
+                        } else if (sensor.toLowerCase() === 'blackbox') {
+                            sensor_brand = 'Blackbox Biometrics';
+                        } else if (sensor.toLowerCase() === 'biocore') {
+                            sensor_brand = 'BioCore';
+                        } else if (sensor.toLowerCase() === 'athlete') {
+                            sensor_brand = 'Athlete Intelligence';
+                        } else if (sensor.toLowerCase() === 'medeng') {
+                            sensor_brand = 'Med-Eng';
+                        } else if (sensor.toLowerCase() === 'hybrid3') {
+                            sensor_brand = 'Hybrid3';
+                        } else if (sensor.toLowerCase() === 'linx_ias') {
+                            sensor_brand = 'Linx IAS';
+                        } else {
+                            sensor_brand = 'Prevent Biometrics';
+                        }
+                    }
+                    var impact_video_path = '';
+                    if (sensor_detail.length > 0) {
+                        _temp["image_id"] = sensor_detail[0].image_id;
+                    
+                        getPlayerSimulationFile({ image_id: sensor_detail[0].image_id })
+                        .then(simulation => {
+                            if (simulation) {
+                                console.log('simulation[0].impact_video_path', simulation.impact_video_path)
+                                impact_video_path = simulation.impact_video_path && simulation.impact_video_path != undefined ? simulation.impact_video_path : '';
+
+                                deleteSimulationFromBucket(simulation, function (err, data) {
+                                    console.log('Deleted from bucket');
+                                })
+                            }
+                        })
+
+                        let params = {
+                            TableName: "sensor_details",
+                            Key: {
+                                org_id: sensor_detail[0].org_id,
+                                player_id: sensor_detail[0].player_id,
+                            },
+                        };
+                        docClient.delete(params, function (err, data) {
+                            if (err) {
+                                console.log(err);
+                            } else {
+                                console.log('Player deleted from sensor_details');
+                                let params1 = {
+                                    TableName: "simulation_images",
+                                    Key: {
+                                        image_id: sensor_detail[0].image_id,
+                                    },
+                                };
+                                docClient.delete(params1, function (err, data) {
+                                    if (err) {
+                                        console.log(err);
+                                    } else {
+                                        console.log('Player deleted from simulation_images');
+                                    }
+                                });
+                            }
+                        });
+                    } else {
+                        _temp["image_id"] = shortid.generate();
+                    }
+
+                    _temp["level"] = level;
+                    _temp["user_cognito_id"] = user_cognito_id;
+                    _temp["sensor"] = sensor_brand;
+                    // _temp["image_id"] = shortid.generate();
+                    _temp['player'] = {};
+                    _temp['player']['first-name'] = "Unknown";
+                    _temp['player']['last-name'] = "Unknown";
+                    _temp['player']['sport'] = "Unknown";
+                    _temp['player']['position'] = "Unknown";
+                    _temp['player']['team'] = "Unknown";
+                    _temp['player']['impact-id'] = _temp['impact-id'] ? _temp['impact-id'] : 'Unknown';
+                    _temp['player']['sensor-id'] = _temp['sensor-id'] ? _temp['sensor-id'] : 'Unknown';
+                    _temp["team"] = "Unknown";
+                    _temp["used_sensor"] = sensor_brand;
+
+                    if (_temp['impact-id'] && _temp['sensor-id']) {
+                        delete _temp['impact-id'];
+                        delete _temp['sensor-id'];
+                    }
+
+                    if (organization) {
+                        _temp['organization'] = organization
+                    }
+
+                    if (team) {
+                        _temp['player']['team'] = team
+                        _temp['team'] = team
+                    }
+
+
+                    // Delete entery from users table if profile exits ...
+                    await getUserDetailBySensorId(_temp["sensor"], _temp.player_id.split("$")[0])
+                    .then(user_detail => {
+                        // console.log(user_detail);
+                        if (user_detail.length > 0) {
+                            _temp['player']['first-name'] = user_detail[0]['first_name'];
+                            _temp['player']['last-name'] = user_detail[0]['last_name'];
+                            new_items_array = _temp;
+                            removeRequestedPlayerFromOrganizationTeam(organization ? organization : 'Unknown', team ? team : 'Unknown', user_detail[0]['user_cognito_id'])
+                                .then(data => {
+                                    // console.log(data);
+                                })
+                                .catch(err => {
+                                    console.log('Error ', err);
+                                })
+                        } else {
+                            new_items_array = _temp;
+                        }
+                    })
+                    .catch(err => {
+                        new_items_array = _temp;
+                    })
+
+                    // ...
+                    if (level === 300) {
+                        for (var i = 0; i < new_items_array.length; i++) {
+                            let _temp1 = new_items_array;
+                            _temp1.sensor = req.body.sensor_brand
+                            new_items_array = _temp1;
+                        }
+                    }
+
+                    // ...
+                    var players =  {
+                            player_id: new_items_array.player_id.split("$")[0],
+                            team: new_items_array.player.team,
+                            sensor: new_items_array.sensor,
+                            player: new_items_array.player,
+                            organization: new_items_array.organization,
+                        }
+
+                    // Fetching unique players
+                    
+                    // console.log('players --------', players)
+                    var simulation_result_urls = [];
+
+                    var temp = players;
+
+                    // Adds team details in db if doesn't already exist
+                    addPlayerToTeamOfOrganization(level === 300 ? null : sensor_brand, user_cognito_id, temp.organization, temp.team, temp.player_id)
+                    .then(async org_id => {
+                        console.log('org_id --------------', org_id)
+                        await storeSensorData_v2(new_items_array, org_id);
+                        // Upload player selfie if not present and generate meshes
+                        // Generate simulation for player
+
+                        // Generate 10 digits unique number
+                        let account_id = Math.floor(Math.random() * 9000000000) + 1000000000;
+                        account_id = account_id.toString();
+                        let player_id = temp.player_id + '-' + temp.sensor;
+                        // getUserByPlayerId(player_id)
+                        getUserDetailBySensorId(temp.sensor, temp.player['sensor-id'])
+                        .then(async user_detail => {
+                            // console.log('user_detail --------------------',user_detail);
+                            if (user_detail.length > 0) {
+                                if (user_detail[0]['account_id']) {
+                                    account_id = user_detail[0]['account_id'];
+                                }
+                                if (user_detail[0]['player_id']) {
+                                    player_id = user_detail[0]['player_id'];
+                                }
+                                var userParams = {
+                                    TableName: "users",
+                                    Key: {
+                                        "user_cognito_id": user_detail[0]['user_cognito_id'],
+                                    },
+                                    UpdateExpression: "set account_id = :account_id, player_id = :player_id",
+                                    ExpressionAttributeValues: {
+                                        ":account_id": account_id,
+                                        ":player_id": player_id
+                                    },
+                                    ReturnValues: "UPDATED_NEW"
+                                };
+                                docClient.update(userParams, (err, data) => {
+                                    if (err) {
+                                        console.log(err);
+                                    }else{
+                                        console.log('user updated')
+                                    }
+                                })
+                            } else {
+                                let obj = {};
+                                obj['user_cognito_id'] = player_id;
+                                obj['account_id'] = account_id;
+                                obj['sensor_id_number'] = temp.player['sensor-id'] ? temp.player['sensor-id'] : '';
+                                obj['sensor'] = temp.sensor;
+                                obj['player_id'] = player_id;
+                                obj['first_name'] = temp.player['first-name'];
+                                obj['last_name'] = temp.player['last-name'];
+                                obj['sport'] = temp.player['sport'] ? temp.player['sport'] : '';
+                                obj['team'] = temp.player['team'] ? temp.player['team'] : '';
+                                obj['position'] = temp.player['position'] ? temp.player['position'] : '';
+
+                                addPlayer(obj)
+                                .then(playerData => {
+                                    console.log('Player added in user table');
+                                }).catch(err=>{
+                                    console.log('error with user add ---',err)
+                                })
+                            }
+
+                            console.log('new_items_array 1------------------',new_items_array.image_id)
+                            var data = { 
+                                message: "success",
+                                account_id: account_id, 
+                                event_id: new_items_array.image_id, 
+                                player_id: new_items_array.player_id,
+                                new_items_array: new_items_array,
+                                impact_video_path: impact_video_path
+                            };
+                            resolve(data);
+                        })
+                        .catch(err => {
+                            console.log('err -------user ',err)
+                            reject({
+                                message: "failure",
+                                error: err
+                            })
+                        })
+                    })
+                    .catch(err => {
+                        console.log(err);
+                        reject({
+                            message: "failure",
+                            error: err
+                        })
+                    })
+                    
+                }
+            })
+        })
+    }
+
 
     app.post(`${apiPrefix}getUserDetailsForIRB`, function (req, res) {
         console.log(req.body);
@@ -2046,7 +2372,7 @@ if (cluster.isMaster) {
     })
 
     // Configuring port for APP
-    const port = process.env.PORT || 5000;
+    const port = process.env.PORT || 3000;
     const server = app.listen(port, function () {
         console.log('Magic happens on ' + port);
     });
