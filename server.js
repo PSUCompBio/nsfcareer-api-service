@@ -178,8 +178,10 @@ const {
     updateJobImageGenerateStatus,
     getPendingJobsLog,
     updateJobStatus,
-    getFialedBrainImgagesJob,
-    storeSensorData_v2
+    getFialedBrainSummaryImgagesJob,
+    storeSensorData_v2,
+    getFialedBrainSingleEventImgagesJob,
+    getFialedBrainLabeledImgagesJob
 } = require('./controller/query');
 
 // Include the cluster module
@@ -299,39 +301,69 @@ if (cluster.isMaster) {
 
     cron.schedule('*/10 * * * *', () => {
         console.log('cron job of 10 minute ------------------')
-        getFialedBrainImgagesJob()
-            .then(simulation_data => {
-                console.log('simulation_data -------------\n',simulation_data.length)
-                if (simulation_data.length > 0) {
-                    console.log(simulation_data.length);
-                    let account_id_list = [];
-                    simulation_data.forEach((job) => {
-                        let obj = {};
-                        obj.image_id = job.image_id;
-                        obj.account_id = job.account_id;
-                        // Creating image of simulation brain plots...
-                        if (!account_id_list.includes(job.account_id)) {
-                            account_id_list.push(job.account_id);
-                            var bodygetSummaryImage = { account_id: job.account_id };
-                            generateBrainImages('getSummary', obj, bodygetSummaryImage);
-                        }
-                        /* ========================================= 
-                            Creating brain image of single event 
-                         ========================================= */
-                            var bodySingleEventImage = { account_id: job.account_id, event_id: job.image_id};
-                            generateBrainImages('GetSingleEvent', obj, bodySingleEventImage);
-                        //  end ...
 
-                        /* ========================================= 
-                            Creating label brain image of single event 
-                         ========================================= */
-                            var bodyLabelbrainImage = { account_id: job.account_id, event_id: job.image_id};
-                            generateBrainImages('GetLabeledImage', obj, bodyLabelbrainImage);
-                        //  end ...
-                    })
-                }
-            })
+        // For sumarry images ...
+        getFialedBrainSummaryImgagesJob()
+        .then(simulation_data => {
+            console.log('simulation_data 1-------------\n',simulation_data.length)
+            if (simulation_data.length > 0) {
+                let account_id_list = [];
+                simulation_data.forEach((job) => {
+                    let obj = {};
+                    obj.image_id = job.image_id;
+                    obj.account_id = job.account_id;
+                    // Creating image of simulation brain plots...
+                    if (!account_id_list.includes(job.account_id)) {
+                        account_id_list.push(job.account_id);
+                        var bodygetSummaryImage = { account_id: job.account_id };
+                        generateBrainImages('getSummary', obj, bodygetSummaryImage);
+                    }
+                   
+                })
+            }
+        })
+
+        /* ========================================= 
+            Creating brain image of single event 
+         ========================================= */
+        getFialedBrainSingleEventImgagesJob()
+        .then(simulation_data => {
+            console.log('simulation_data 2-------------\n',simulation_data.length)
+            if (simulation_data.length > 0) {
+                let account_id_list = [];
+                simulation_data.forEach((job) => {
+                    let obj = {};
+                    obj.image_id = job.image_id;
+                    obj.account_id = job.account_id;
+                    var bodySingleEventImage = { account_id: job.account_id, event_id: job.image_id};
+                    generateBrainImages('GetSingleEvent', obj, bodySingleEventImage);
+                   
+                })
+            }
+        })
+
+        /* ========================================= 
+            Creating label brain image of single event 
+         ========================================= */
+        getFialedBrainLabeledImgagesJob()
+        .then(simulation_data => {
+            console.log('simulation_data 3-------------\n',simulation_data.length)
+            if (simulation_data.length > 0) {
+                let account_id_list = [];
+                simulation_data.forEach((job) => {
+                    let obj = {};
+                    obj.image_id = job.image_id;
+                    obj.account_id = job.account_id;
+                    var bodyLabelbrainImage = { account_id: job.account_id, event_id: job.image_id};
+                    generateBrainImages('GetLabeledImage', obj, bodyLabelbrainImage);
+                   
+                })
+            }
+        })
+
     })
+
+
 
     function generateBrainImages(url, obj, body){
         console.log('url ---------------',url)
@@ -340,14 +372,18 @@ if (cluster.isMaster) {
             body: body,
             json: true
         }, function (err, httpResponse, body) {
+            obj['type'] = url+'_status';
             if (err) {
                 console.log(url+' created failure ', err);
                 obj.simulation_images_status = "Failure";
             }
             else {
                 console.log('Single Image created successfully......', httpResponse.body +'\n'+body);
-                obj.simulation_images_status = "Uploaded";
-               
+                if(httpResponse.body.status == '200'){
+                    obj.simulation_images_status = "Uploaded";
+                }else{
+                    obj.simulation_images_status = "Failure";
+                }
             }
             updateJobImageGenerateStatus(obj, function (err, dbdata) {
                 if (err) {

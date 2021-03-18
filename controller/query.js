@@ -549,7 +549,8 @@ function addPlayerToTeamOfOrganization(sensor, user_cognito_id, org, team, playe
                             user_cognito_id: user_cognito_id,
                             organization: org,
                             team_name: team,
-                            player_list: [player_id]
+                            player_list: [player_id],
+                            entityID: 'EID'+ Date.now()
                         },
                     };
                     docClient.put(dbInsert, function (err, data) {
@@ -870,17 +871,17 @@ function getCompletedJobs() {
     });
 }
 
-function getFialedBrainImgagesJob() {
+function getFialedBrainSummaryImgagesJob() {
     return new Promise((resolve, reject) => {
         let params = {
             TableName: "simulation_images",
             FilterExpression:
-                "#simulation_images_status = :simulation_images_status",
+                "#getSummary_status = :getSummary_status",
             ExpressionAttributeValues: {
-                ":simulation_images_status": "Failure",
+                ":getSummary_status": "Failure",
             },
             ExpressionAttributeNames: {
-                "#simulation_images_status": "simulation_images_status",
+                "#getSummary_status": "getSummary_status",
             },
         };
         var item = [];
@@ -898,6 +899,66 @@ function getFialedBrainImgagesJob() {
         });
     });
 }
+
+function getFialedBrainSingleEventImgagesJob() {
+    return new Promise((resolve, reject) => {
+        let params = {
+            TableName: "simulation_images",
+            FilterExpression:
+                "#GetSingleEvent_status = :GetSingleEvent_status",
+            ExpressionAttributeValues: {
+                ":GetSingleEvent_status": "Failure",
+            },
+            ExpressionAttributeNames: {
+                "#GetSingleEvent_status": "GetSingleEvent_status",
+            },
+        };
+        var item = [];
+        docClient.scan(params).eachPage((err, data, done) => {
+            if (err) {
+                reject(err);
+            }
+            if (data == null) {
+                resolve(concatArrays(item));
+            } else {
+                // console.log(data.Items);
+                item.push(data.Items);
+            }
+            done();
+        });
+    });
+}
+
+
+function getFialedBrainLabeledImgagesJob() {
+    return new Promise((resolve, reject) => {
+        let params = {
+            TableName: "simulation_images",
+            FilterExpression:
+                "#GetLabeledImage_status = :GetLabeledImage_status",
+            ExpressionAttributeValues: {
+                ":GetLabeledImage_status": "Failure",
+            },
+            ExpressionAttributeNames: {
+                "#GetLabeledImage_status": "GetLabeledImage_status",
+            },
+        };
+        var item = [];
+        docClient.scan(params).eachPage((err, data, done) => {
+            if (err) {
+                reject(err);
+            }
+            if (data == null) {
+                resolve(concatArrays(item));
+            } else {
+                // console.log(data.Items);
+                item.push(data.Items);
+            }
+            done();
+        });
+    });
+}
+
 
 function updateJobComputedTime(obj, cb) {
     var userParams = {
@@ -930,9 +991,12 @@ function updateJobImageGenerateStatus(obj, cb) {
             image_id: obj.image_id,
         },
         UpdateExpression:
-            "set simulation_images_status = :simulation_images_status",
+            "set #simulation_images_type = :simulation_images_status",
         ExpressionAttributeValues: {
             ":simulation_images_status": obj.simulation_images_status,
+        },
+        ExpressionAttributeNames: {
+            "#simulation_images_type": obj.type,
         },
         ReturnValues: "UPDATED_NEW",
     };
@@ -1259,6 +1323,8 @@ module.exports = {
     updateJobImageGenerateStatus,
     getPendingJobsLog,
     updateJobStatus,
-    getFialedBrainImgagesJob,
-    storeSensorData_v2
+    getFialedBrainSummaryImgagesJob,
+    storeSensorData_v2,
+    getFialedBrainSingleEventImgagesJob,
+    getFialedBrainLabeledImgagesJob
 };
