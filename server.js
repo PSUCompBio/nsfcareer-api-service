@@ -31,6 +31,7 @@ shortid.characters('0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWX
 var _ = require('lodash');
 var simulation_timer = 120000; // 4 minutes in milliseconds
 
+var db_connection  = require('./middlewares/dbConnection');
 // ================================================
 //            SERVER CONFIGURATION
 // ================================================
@@ -56,7 +57,7 @@ const apiPrefix = "/api/"
 // ======================================
 //       CONFIGURING AWS SDK & EXPESS
 // ======================================
-var config = {
+ var config = {
     "awsAccessKeyId": process.env.AWS_ACCESS_KEY_ID,
     "awsSecretAccessKey": process.env.AWS_ACCESS_SECRET_KEY,
     "avatar3dClientId": process.env.AVATAR_3D_CLIENT_ID,
@@ -87,7 +88,7 @@ var config = {
 
 const subject_signature = fs.readFileSync("data/base64")
 
-// var config = require('./config/configuration_keys.json');
+ // var config = require('./config/configuration_keys.json');
 var config_env = config;
 const FrontendUrl = "https://nsfcareer.io/";
 
@@ -207,7 +208,7 @@ if (cluster.isMaster) {
     });
 
     // Cron to get job computation time after job completion
-    cron.schedule('*/1 * * * *', () => {
+    cron.schedule('*/30 * * * *', () => {
         console.log('cron job')
         updateJobLogs();
         getCompletedJobs()
@@ -653,14 +654,17 @@ if (cluster.isMaster) {
             .then(data => {
                 console.log(data.length);
                 data.forEach((player) => {
-                    let params = {
+                 /*   let params = {
                         TableName: "sensor_details",
                         Key: {
                             team: player.team,
                             player_id: player.player_id,
                         },
-                    };
-                    docClient.delete(params, function (err, data) {
+                    };*/
+					const sensorDetails = require("./models/sensors/sensorDetailsData");
+					var params = { team: player.team,player_id: player.player_id };
+					sensorDetails.deleteOne(params, function(err, data) {							
+//docClient.delete(params, function (err, data) {
                         if (err) {
                             console.log(err);
                         } else {
@@ -734,7 +738,8 @@ if (cluster.isMaster) {
                 data.forEach((player, index) => {
                     // if(index === 0){
                     console.log('player ------------', player)
-                    var userParams = {
+					const sensorDetails = require("./models/sensors/sensorDetailsData");
+                  /*  var userParams = {
                         TableName: "sensor_details",
                         Key: {
                             org_id: player.org_id,
@@ -746,14 +751,24 @@ if (cluster.isMaster) {
                             ":sensor": null,
                         },
                         ReturnValues: "UPDATED_NEW",
-                    };
-                    docClient.update(userParams, (err, data) => {
+                    };*/
+					 var myquery = { org_id: player.org_id,player_id: player.player_id };
+					var newvalues = { $set: {sensor: null } };
+					sensorDetails.updateOne(myquery, newvalues, function(err, res) {
+						if (err) {					
+							console.log("Error ",err)
+						}
+						else {
+							console.log("Player detail updated")
+						}
+					});	
+                    /*docClient.update(userParams, (err, data) => {
                         if (err) {
                             console.log('Error ', err);
                         } else {
                             console.log('Player detail updated.');
                         }
-                    });
+                    });*/
                     // }
                 })
             });
@@ -778,6 +793,7 @@ if (cluster.isMaster) {
                             .then(org => {
                                 if (org.length > 0) {
                                     player.org_id = org[0].organization_id;
+
                                     const dbInsert = {
                                         TableName: "sensor_details",
                                         Item: player,
@@ -1072,14 +1088,17 @@ if (cluster.isMaster) {
                                                     })
                                                 }
                                             })
-                                        let params = {
+                                      /*  let params = {
                                             TableName: "sensor_details",
                                             Key: {
                                                 org_id: sensor_detail[0].org_id,
                                                 player_id: sensor_detail[0].player_id,
                                             },
                                         };
-                                        docClient.delete(params, function (err, data) {
+                                        docClient.delete(params, function (err, data) {*/
+											const sensorDetails = require("./models/sensors/sensorDetailsData");
+											var params = { org_id: sensor_detail[0].org_id,player_id: sensor_detail[0].player_id };
+											sensorDetails.deleteOne(params, function(err, data) {	
                                             if (err) {
                                                 console.log(err);
                                             } else {
@@ -1211,7 +1230,7 @@ if (cluster.isMaster) {
                                                 if (counter === 0) {
                                                     storeSensorData(sensor_data_array, org_id)
                                                         .then(flag => {
-                                                            // 
+                                                            console.log("flag",flag); // 
                                                         })
                                                 }
                                                 counter++;
@@ -1458,14 +1477,17 @@ if (cluster.isMaster) {
                                                             })
                                                         }
                                                     })
-                                                let params = {
+                                               /* let params = {
                                                     TableName: "sensor_details",
                                                     Key: {
                                                         org_id: sensor_detail[0].org_id,
                                                         player_id: sensor_detail[0].player_id,
                                                     },
                                                 };
-                                                docClient.delete(params, function (err, data) {
+                                                docClient.delete(params, function (err, data) { */
+												const sensorDetails = require("./models/sensors/sensorDetailsData");
+												var params = { org_id: sensor_detail[0].org_id,player_id: sensor_detail[0].player_id };
+												sensorDetails.deleteOne(params, function(err, data) {	
                                                     if (err) {
                                                         console.log(err);
                                                     } else {
@@ -1596,6 +1618,7 @@ if (cluster.isMaster) {
                                                         if (counter === 0) {
                                                             storeSensorData(new_items_array, org_id)
                                                                 .then(flag => {
+																	console.log("flag",flag);
                                                                     // 
                                                                 })
                                                         }
@@ -1788,14 +1811,17 @@ if (cluster.isMaster) {
                             }
                         })
 
-                        let params = {
+                       /*  let params = {
                             TableName: "sensor_details",
                             Key: {
                                 org_id: sensor_detail[0].org_id,
                                 player_id: sensor_detail[0].player_id,
                             },
                         };
-                        docClient.delete(params, function (err, data) {
+                        docClient.delete(params, function (err, data) { */
+						const sensorDetails = require("./models/sensors/sensorDetailsData");
+						var params = { org_id: sensor_detail[0].org_id, player_id: sensor_detail[0].player_id };
+						sensorDetails.deleteOne(params, function(err, data) {	
                             if (err) {
                                 console.log(err);
                             } else {
@@ -1807,6 +1833,7 @@ if (cluster.isMaster) {
                                     },
                                 };
                                 docClient.delete(params1, function (err, data) {
+									
                                     if (err) {
                                         console.log(err);
                                     } else {
@@ -1902,6 +1929,7 @@ if (cluster.isMaster) {
                     .then(async org_id => {
                         console.log('org_id --------------', org_id)
                         await storeSensorData_v2(new_items_array, org_id);
+						console.log("flag","");
                         // Upload player selfie if not present and generate meshes
                         // Generate simulation for player
 
@@ -2408,7 +2436,7 @@ if (cluster.isMaster) {
     })
 
     // Configuring port for APP
-    const port = process.env.PORT || 3000;
+    const port = process.env.PORT || 5000;
     const server = app.listen(port, function () {
         console.log('Magic happens on ' + port);
     });
@@ -2572,15 +2600,56 @@ if (cluster.isMaster) {
 
     function getHeadAccelerationEvents(obj) {
         return new Promise((resolve, reject) => {
-            let params = {
+          /*  let params = {
                 TableName: 'sensor_details',
                 KeyConditionExpression: "team = :team and begins_with(player_id, :player_id)",
                 ExpressionAttributeValues: {
                     ":team": obj.team,
                     ":player_id": obj.player_id
                 }
-            };
-            var item = [];
+            }; */
+			let params = {team : obj.team ,player_id : obj.player_id}
+			const sensorDetails = require("../models/sensors/sensorDetailsData");		
+						var item = [];
+						sensorDetails.find(params, function (err, details) {
+							if (err) {
+								console.log(err);
+								reject(err);
+							}
+							if (details == null) {
+								let records = concatArrays(item);
+								let date = records.map(function (record) {
+									return record.date;
+								});
+								// Now we will store no of impacts corresponding to date
+								var date_map = new Map();
+								for (var i = 0; i < date.length; i++) {
+									// check if key in map exists (Player id)
+									// if it doesn't exists then add the array element
+									// else update value of alert and impacts in existsing key in map
+									if (date_map.has(date[i])) {
+
+										let tempObject = date_map.get(date[i]);
+										tempObject += 1;
+										date_map.set(date[i], tempObject);
+									}
+									else {
+
+										date_map.set(date[i], 0);
+									}
+								}
+								console.log("DATE MAP", date_map.keys());
+								console.log(Array.from(date_map.values()));
+								resolve({
+									no_of_impacts: Array.from(date_map.values()),
+									dates: Array.from(date_map.keys()),
+									timestamp: Number(Date.now()).toString()
+								});
+							} else {
+								resolve(details);
+							}
+							});
+			/* var item = [];
             docClient.query(params).eachPage((err, data, done) => {
                 if (err) {
                     console.log(err);
@@ -2619,7 +2688,7 @@ if (cluster.isMaster) {
                     item.push(data.Items);
                 }
                 done();
-            });
+            }); */
         })
         // var myObject = {
         //     message : "success",

@@ -1932,7 +1932,7 @@ function generateSimulationForPlayers(player_data_array, reader, apiMode, sensor
         player_data_array.forEach((player, j) => {
 
             var _temp_player = player;
-            console.log('_temp_player', _temp_player)
+            //console.log('_temp_player', _temp_player)
             var index = j;
             var token_secret = shortid.generate();
             generateJWTokenWithNoExpiry({ image_id: _temp_player.image_id }, token_secret)
@@ -2086,7 +2086,7 @@ function generateSimulationForPlayers(player_data_array, reader, apiMode, sensor
                                     counter++;
 
                                     if (counter == player_data_array.length) {
-                                        console.log('SIMULATION DATA IS ', JSON.stringify(simulation_data));
+                                      //  console.log('SIMULATION DATA IS ', JSON.stringify(simulation_data));
                                         // Uploading simulation data file
                                         upload_simulation_data(simulation_data, user_bucket)
                                             .then(job => {
@@ -2288,7 +2288,7 @@ function generateSimulationForPlayers_v2(player_data_array, reader, apiMode, sen
                                     counter++;
 
                                     if (counter == player_data_array.length) {
-                                        console.log('SIMULATION DATA IS ', JSON.stringify(simulation_data));
+                                       // console.log('SIMULATION DATA IS ', JSON.stringify(simulation_data));
                                         // Uploading simulation data file
                                         upload_simulation_data(simulation_data, user_bucket)
                                             .then(job => {
@@ -2358,7 +2358,7 @@ function generateSimulationForPlayersFromJson(player_data_array, apiMode, mesh, 
                                 })
                                 .then(playerDetail => {
                                     let cg_coordinates =  playerDetail.length > 0 && playerDetail[0]['cg_coordinates'] ? playerDetail[0]['cg_coordinates'] : null;
-                                    console.log('CG coordinates are ', cg_coordinates);
+                                   // console.log('CG coordinates are ', cg_coordinates);
 
                                     // console.log("LOOPING THROUGH COMPONENTS ++++++++++ !!!!! ",index ,_temp_player);
 
@@ -2502,7 +2502,7 @@ function generateSimulationForPlayersFromJson(player_data_array, apiMode, mesh, 
                                     counter++;
 
                                     if (counter == player_data_array.length) {
-                                        console.log('SIMULATION DATA JSON IS ', JSON.stringify(simulation_data));
+                                      //  console.log('SIMULATION DATA JSON IS ', JSON.stringify(simulation_data));
                                         // Uploading simulation data file
                                         upload_simulation_data(simulation_data, user_bucket)
                                             .then(job => {

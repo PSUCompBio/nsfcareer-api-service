@@ -146,8 +146,9 @@ function getTeamDataWithPlayerRecords(obj) {
             .then (org => {
                 if (org.length > 0) {
                     let params;
-                    if (obj.sensor && obj.sensor != 'null') {
-                        params = {
+                    if (obj.sensor && obj.sensor != 'null') {						
+						params = {org_id : org[0].organization_id,sensor:obj.sensor,organization : obj.organization , team :obj.team,player_id :   {$regex: obj.player_id, $options: 'i'}}
+                       /* params = {
                             TableName: "sensor_details",
                             KeyConditionExpression:  "org_id = :org_id and begins_with(player_id,:player_id)",
                             FilterExpression: "sensor = :sensor and organization = :organization and team = :team",
@@ -166,9 +167,11 @@ function getTeamDataWithPlayerRecords(obj) {
                             },
                             ProjectionExpression: " #time, #date,#Impact_date,#Impact_time, image_id,organization,player,player_id,sensor,simulation_status,team,user_cognito_id",
                             ScanIndexForward: false
-                        };
+                        };*/
                     } else {
-                        params = {
+							
+						params = {org_id : org[0].organization_id,organization : obj.organization , team :obj.team,player_id :   {$regex: obj.player_id, $options: 'i'}}
+                       /* params = {
                             TableName: "sensor_details",
                             KeyConditionExpression:  "org_id = :org_id and begins_with(player_id,:player_id)",
                             FilterExpression: "organization = :organization and team = :team",
@@ -186,8 +189,22 @@ function getTeamDataWithPlayerRecords(obj) {
                             },
                             ProjectionExpression: " #time, #date,#Impact_date,#Impact_time, image_id,organization,player,player_id,sensor,simulation_status,team,user_cognito_id",
                             ScanIndexForward: false
-                        };
+                        };*/
                     }
+					
+				  const sensorDetails = require("../models/sensors/sensorDetailsData");		
+						var item = [];
+						sensorDetails.find(params, function (err, details) {
+							if (err) {
+								reject(err);
+							}
+							if (details == null) {
+								resolve([]);
+							} else {
+								resolve(details);
+							}
+						}); 
+						/*
                     var item = [];
                     docClient.query(params).eachPage((err, data, done) => {
                         if (err) {
@@ -199,7 +216,7 @@ function getTeamDataWithPlayerRecords(obj) {
                             item.push(data.Items);
                         }
                         done();
-                    });
+                    });*/
                 } else {
                     resolve([]);
                 }
@@ -220,7 +237,9 @@ function getTeamData(obj) {
                 if (org.length > 0) {
                     let params;
                     if (obj.brand && obj.brand != 'null') {
-                        params = {
+						
+						params = {org_id : org[0].organization_id,sensor : obj.brand ,organization : obj.organization , team :obj.team};
+                       /* params = {
                             TableName: "sensor_details",
                             KeyConditionExpression:  "org_id = :org_id",
                             FilterExpression: "sensor = :sensor and organization = :organization and team = :team",
@@ -231,9 +250,10 @@ function getTeamData(obj) {
                                 ":team": obj.team
                             },
                             ProjectionExpression: "team, player_id, image_id, sensor"
-                        };
+                        }; */
                     } else {
-                        params = {
+						params = {org_id : org[0].organization_id ,organization : obj.organization , team :obj.team}
+                      /*  params = {
                             TableName: "sensor_details",
                             KeyConditionExpression:  "org_id = :org_id",
                             FilterExpression: "organization = :organization and team = :team",
@@ -243,10 +263,22 @@ function getTeamData(obj) {
                                 ":team": obj.team
                             },
                             ProjectionExpression: "team, player_id, image_id, sensor"
-                        };
+                        };*/
                     }
                     
-                    var item = [];
+				  const sensorDetails = require("../models/sensors/sensorDetailsData");		
+						var item = [];
+						sensorDetails.find(params, function (err, details) {
+							if (err) {
+								reject(err);
+							}
+							if (details == null) {
+								resolve([]);
+							} else {
+								resolve(details);
+							}
+						}); 
+                     /* var item = [];
                     docClient.query(params).eachPage((err, data, done) => {
                         if (err) {
                             reject(err);
@@ -257,7 +289,7 @@ function getTeamData(obj) {
                             item.push(data.Items);
                         }
                         done();
-                    });
+                    }); */
                 } else {
                     resolve([]);
                     done();
@@ -340,17 +372,66 @@ function storeSensorData(sensor_data_array, org_id) {
         if (sensor_data_array.length == 0) {
             resolve(true);
         }
+		const sensorDetails = require("../models/sensors/sensorDetailsData");
         for (var i = 0; i < sensor_data_array.length; i++) {
             sensor_data_array[i].org_id = org_id;
             if (sensor_data_array[i].level === 300) {
                 delete sensor_data_array[i].sensor
             }
-            let param = {
+            /* let param = {
                 TableName: "sensor_details",
                 Item: sensor_data_array[i],
-            };
-
-            docClient.put(param, function (err, data) {
+            }; */ 
+			
+			var simulation = {
+				"angular-velocity":"",
+				"angular-acceleration":"",
+				"linear-acceleration":"",
+				"mesh-transformation":"",
+				"angular-velocity":"",
+			}
+			if(sensor_data_array[i]['angular-velocity']){
+				simulation["angular-velocity"] = sensor_data_array[i]['angular-velocity'];
+			}
+			if(sensor_data_array[i]['angular-acceleration']){
+				simulation["angular-acceleration"]= sensor_data_array[i]['angular-acceleration'];
+			}
+			if(sensor_data_array[i]['linear-acceleration']){
+				simulation["linear-acceleration"]=sensor_data_array[i]['linear-acceleration'];
+			}
+			if(sensor_data_array[i]['mesh-transformation']){
+				simulation["mesh-transformation"] = sensor_data_array[i]['mesh-transformation'];
+			}
+			if(sensor_data_array[i]['la-units']){
+				simulation["la-units"] = sensor_data_array[i]['la-units'];
+			}
+			var sensor = new sensorDetails(
+				{
+					org_id: sensor_data_array[i].org_id,
+					player_id: sensor_data_array[i].player_id,
+					image_id: sensor_data_array[i].image_id,
+					'impact-date': sensor_data_array[i]['impact-date'],
+					'impact-time': sensor_data_array[i]['impact-time'],
+					level: sensor_data_array[i].level,
+					organization: sensor_data_array[i].organization,
+					player: sensor_data_array[i].player,
+					simulation: simulation,
+					simulation_status: sensor_data_array[i].simulation_status,
+					team: sensor_data_array[i].team,
+					sensor: sensor_data_array[i].sensor,
+					user_cognito_id: sensor_data_array[i].user_cognito_id
+				}
+			);
+			console.log("sensor",sensor)
+			sensor.save(function (err) {
+				if (err) {					
+					reject(err);
+				}
+				else {
+					resolve(true);
+				}
+			});	 
+           /* docClient.put(param, function (err, data) {
                 counter++;
                 if (err) {
                     console.log('err storeSensorData ---------\n',err);
@@ -359,20 +440,21 @@ function storeSensorData(sensor_data_array, org_id) {
                 if (counter == sensor_data_array.length) {
                     resolve(true);
                 }
-            });
+            });*/
         }
     });
 }
 
 function storeSensorData_v2(sensor_data_array, org_id) {
     console.log('storeSensorData_v2 ---------', org_id)
+	const sensorDetails = require("../models/sensors/sensorDetailsData");
     return new Promise((resolve, reject) => {
         if(sensor_data_array) {
             sensor_data_array.org_id = org_id;
             if (sensor_data_array.level === 300) {
                 delete sensor_data_array.sensor
             }
-            let param = {
+            /* let param = {
                 TableName: "sensor_details",
                 Item: sensor_data_array,
             };
@@ -384,7 +466,55 @@ function storeSensorData_v2(sensor_data_array, org_id) {
                 }else{
                     resolve(true);
                 }
-            });
+            });*/
+			var simulation = {
+				"angular-velocity":"",
+				"angular-acceleration":"",
+				"linear-acceleration":"",
+				"mesh-transformation":"",
+				"angular-velocity":"",
+			}
+			if(sensor_data_array[i]['angular-velocity']){
+				simulation["angular-velocity"] = sensor_data_array[i]['angular-velocity'];
+			}
+			if(sensor_data_array[i]['angular-acceleration']){
+				simulation["angular-acceleration"]= sensor_data_array[i]['angular-acceleration'];
+			}
+			if(sensor_data_array[i]['linear-acceleration']){
+				simulation["linear-acceleration"]=sensor_data_array[i]['linear-acceleration'];
+			}
+			if(sensor_data_array[i]['mesh-transformation']){
+				simulation["mesh-transformation"] = sensor_data_array[i]['mesh-transformation'];
+			}
+			if(sensor_data_array[i]['la-units']){
+				simulation["la-units"] = sensor_data_array[i]['la-units'];
+			}
+			var sensor = new sensorDetails(
+				{
+					org_id: sensor_data_array.org_id,
+					player_id: sensor_data_array.player_id,
+					image_id: sensor_data_array.image_id,
+					'impact-date': sensor_data_array['impact-date'],
+					'impact-time': sensor_data_array['impact-time'],
+					level: sensor_data_array.level,
+					organization: sensor_data_array.organization,
+					player: sensor_data_array.player,
+					simulation: simulation,
+					simulation_status: sensor_data_array.simulation_status,
+					team: sensor_data_array.team,
+					sensor: sensor_data_array.sensor,
+					user_cognito_id: sensor_data_array.user_cognito_id
+				}
+			);
+			console.log("sensor",sensor)
+			sensor.save(function (err) {
+				if (err) {					
+					reject(err);
+				}
+				else {
+					resolve(true);
+				}
+			});	
         }
     });
 }
@@ -1148,7 +1278,8 @@ function uploadCGValuesAndSetINPStatus(user_cognito_id, file_name) {
 function checkSensorDataExists(obj) {
     console.log(obj);
     return new Promise((resolve, reject) => {
-        let params = {
+		 let params = {"player.impact-id" : obj['impact-id'],"player.sensor-id" : obj['sensor-id']}
+       /* let params = {
             TableName: "sensor_details",
             FilterExpression: "player.#impact_id = :impact_id and player.#sensor_id = :sensor_id",
             ExpressionAttributeValues: {
@@ -1160,8 +1291,21 @@ function checkSensorDataExists(obj) {
                 "#sensor_id": "sensor-id",
             },
             ProjectionExpression: "org_id, image_id, team, player_id, organization"
-        };
-        var item = [];
+        };*/
+		
+		const sensorDetails = require("../models/sensors/sensorDetailsData");		
+		var item = [];
+		sensorDetails.find(params, function (err, details) {
+			if (err) {
+				reject(err);
+			}
+			if (details == null) {
+				resolve([]);
+			} else {
+				resolve(details);
+			}
+		}); 
+       /* var item = [];
         docClient.scan(params).eachPage((err, data, done) => {
             if (err) {
                 reject(err);
@@ -1172,7 +1316,7 @@ function checkSensorDataExists(obj) {
                 item.push(data.Items);
             }
             done();
-        });
+        });*/
     })
 }
 
