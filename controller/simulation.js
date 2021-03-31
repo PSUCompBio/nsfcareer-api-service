@@ -29,7 +29,7 @@ const xlsxFile = require('read-excel-file/node');
 // ======================================
 //       CONFIGURING AWS SDK & EXPESS
 // ======================================
-var config = {
+ var config = {
     "awsAccessKeyId": process.env.AWS_ACCESS_KEY_ID,
     "awsSecretAccessKey": process.env.AWS_ACCESS_SECRET_KEY,
     "avatar3dClientId": process.env.AVATAR_3D_CLIENT_ID,
@@ -56,7 +56,7 @@ var config = {
     "queue_beta" : process.env.QUEUE_BETA
 };
 
-// var config = require('../config/configuration_keys.json'); 
+ //var config = require('../config/configuration_keys.json'); 
 var config_env = config;
 const BUCKET_NAME = config_env.usersbucket;
 

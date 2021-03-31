@@ -410,8 +410,8 @@ function storeSensorData(sensor_data_array, org_id) {
 					org_id: sensor_data_array[i].org_id,
 					player_id: sensor_data_array[i].player_id,
 					image_id: sensor_data_array[i].image_id,
-					'impact-date': sensor_data_array[i]['impact-date'],
-					'impact-time': sensor_data_array[i]['impact-time'],
+					'impact-date': sensor_data_array[i]['impact-date']?sensor_data_array[i]['impact-date']:sensor_data_array[i]['date'],
+					'impact-time': sensor_data_array[i]['impact-time']?sensor_data_array[i]['impact-time']:sensor_data_array[i]['time'],
 					level: sensor_data_array[i].level,
 					organization: sensor_data_array[i].organization,
 					player: sensor_data_array[i].player,
@@ -422,7 +422,6 @@ function storeSensorData(sensor_data_array, org_id) {
 					user_cognito_id: sensor_data_array[i].user_cognito_id
 				}
 			);
-			console.log("sensor",sensor)
 			sensor.save(function (err) {
 				if (err) {					
 					reject(err);
@@ -494,8 +493,8 @@ function storeSensorData_v2(sensor_data_array, org_id) {
 					org_id: sensor_data_array.org_id,
 					player_id: sensor_data_array.player_id,
 					image_id: sensor_data_array.image_id,
-					'impact-date': sensor_data_array['impact-date'],
-					'impact-time': sensor_data_array['impact-time'],
+					'impact-date': sensor_data_array['impact-date']?sensor_data_array['impact-date']:sensor_data_array['date'],
+					'impact-time': sensor_data_array['impact-time']?sensor_data_array['impact-time']:sensor_data_array['time'],
 					level: sensor_data_array.level,
 					organization: sensor_data_array.organization,
 					player: sensor_data_array.player,

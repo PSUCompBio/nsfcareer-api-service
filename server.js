@@ -57,7 +57,7 @@ const apiPrefix = "/api/"
 // ======================================
 //       CONFIGURING AWS SDK & EXPESS
 // ======================================
- var config = {
+  var config = {
     "awsAccessKeyId": process.env.AWS_ACCESS_KEY_ID,
     "awsSecretAccessKey": process.env.AWS_ACCESS_SECRET_KEY,
     "avatar3dClientId": process.env.AVATAR_3D_CLIENT_ID,
@@ -84,11 +84,11 @@ const apiPrefix = "/api/"
     "queue_beta" : process.env.QUEUE_BETA,
     "mlUrl" : process.env.ML_URL,
     "nodeThreejsUrl" : process.env.NODE_THREE_JS_URL
-};
+}; 
 
 const subject_signature = fs.readFileSync("data/base64")
 
- // var config = require('./config/configuration_keys.json');
+//var config = require('./config/configuration_keys.json');
 var config_env = config;
 const FrontendUrl = "https://nsfcareer.io/";
 
@@ -208,7 +208,7 @@ if (cluster.isMaster) {
     });
 
     // Cron to get job computation time after job completion
-    cron.schedule('*/30 * * * *', () => {
+    cron.schedule('*/1 * * * *', () => {
         console.log('cron job')
         updateJobLogs();
         getCompletedJobs()
@@ -2436,7 +2436,7 @@ if (cluster.isMaster) {
     })
 
     // Configuring port for APP
-    const port = process.env.PORT || 5000;
+    const port = process.env.PORT || 3000;
     const server = app.listen(port, function () {
         console.log('Magic happens on ' + port);
     });
