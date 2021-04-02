@@ -57,7 +57,7 @@ const apiPrefix = "/api/"
 // ======================================
 //       CONFIGURING AWS SDK & EXPESS
 // ======================================
-  var config = {
+var config = {
     "awsAccessKeyId": process.env.AWS_ACCESS_KEY_ID,
     "awsSecretAccessKey": process.env.AWS_ACCESS_SECRET_KEY,
     "avatar3dClientId": process.env.AVATAR_3D_CLIENT_ID,
@@ -88,7 +88,7 @@ const apiPrefix = "/api/"
 
 const subject_signature = fs.readFileSync("data/base64")
 
-//var config = require('./config/configuration_keys.json');
+// var config = require('./config/configuration_keys.json');
 var config_env = config;
 const FrontendUrl = "https://nsfcareer.io/";
 
@@ -182,7 +182,8 @@ const {
     getFialedBrainSummaryImgagesJob,
     storeSensorData_v2,
     getFialedBrainSingleEventImgagesJob,
-    getFialedBrainLabeledImgagesJob
+    getFialedBrainLabeledImgagesJob,
+    storeSensorData_of_jsonFile
 } = require('./controller/query');
 
 // Include the cluster module
@@ -380,7 +381,7 @@ if (cluster.isMaster) {
             }
             else {
                 console.log('Single Image created successfully......', httpResponse.body +'\n'+body);
-                if(httpResponse.body.status == '200'){
+                if(httpResponse.body && httpResponse.body.status == '200'){
                     obj.simulation_images_status = "Uploaded";
                 }else{
                     obj.simulation_images_status = "Failure";
@@ -878,6 +879,7 @@ if (cluster.isMaster) {
             let new_items_array = [];
             try {
                 new_items_array = file_extension === 'json' ? JSON.parse(buffer) : JSON.parse(req.body.json);
+                console.log('new_items_array ------------',new_items_array)
             } catch (e) {
                 res.send({
                     message: "failure",
@@ -1228,7 +1230,7 @@ if (cluster.isMaster) {
                                             .then(org_id => {
                                                 console.log('org ', org_id);
                                                 if (counter === 0) {
-                                                    storeSensorData(sensor_data_array, org_id)
+                                                    storeSensorData_of_jsonFile(sensor_data_array, org_id)
                                                         .then(flag => {
                                                             console.log("flag",flag); // 
                                                         })

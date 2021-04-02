@@ -366,7 +366,9 @@ function getOrganizationData(obj) {
 }
 
 function storeSensorData(sensor_data_array, org_id) {
-    console.log('storeSensorData ---------')
+    console.log('storeSensorData ---------', sensor_data_array)
+    console.log('storeSensorData 2---------', sensor_data_array[0]['simulation'])
+
     return new Promise((resolve, reject) => {
         var counter = 0;
         if (sensor_data_array.length == 0) {
@@ -405,6 +407,9 @@ function storeSensorData(sensor_data_array, org_id) {
 			if(sensor_data_array[i]['la-units']){
 				simulation["la-units"] = sensor_data_array[i]['la-units'];
 			}
+
+            console.log('storeSensorData 3---------', simulation)
+
 			var sensor = new sensorDetails(
 				{
 					org_id: sensor_data_array[i].org_id,
@@ -430,6 +435,96 @@ function storeSensorData(sensor_data_array, org_id) {
 					resolve(true);
 				}
 			});	 
+           /* docClient.put(param, function (err, data) {
+                counter++;
+                if (err) {
+                    console.log('err storeSensorData ---------\n',err);
+                    reject(err);
+                }
+                if (counter == sensor_data_array.length) {
+                    resolve(true);
+                }
+            });*/
+        }
+    });
+}
+
+function storeSensorData_of_jsonFile(sensor_data_array, org_id) {
+    console.log('storeSensorData_of_jsonFile ---------', sensor_data_array)
+    console.log('storeSensorData_of_jsonFile 2---------', sensor_data_array[0]['simulation'])
+
+    return new Promise((resolve, reject) => {
+        var counter = 0;
+        if (sensor_data_array.length == 0) {
+            resolve(true);
+        }
+        const sensorDetails = require("../models/sensors/sensorDetailsData");
+        for (var i = 0; i < sensor_data_array.length; i++) {
+            sensor_data_array[i].org_id = org_id;
+            if (sensor_data_array[i].level === 300) {
+                delete sensor_data_array[i].sensor
+            }
+            /* let param = {
+                TableName: "sensor_details",
+                Item: sensor_data_array[i],
+            }; */ 
+            
+            var simulation = {
+                "la-units":"",
+                "angular-to-linear-frame":"",
+                "angular-velocity":"",
+                "angular-acceleration":"",
+                "linear-acceleration":"",
+                "mesh-transformation":"",
+                "angular-velocity":"",
+            }
+            if(sensor_data_array[i]['simulation']['angular-velocity']){
+                simulation["angular-velocity"] = sensor_data_array[i]['simulation']['angular-velocity'];
+            }
+            if(sensor_data_array[i]['simulation']['angular-acceleration']){
+                simulation["angular-acceleration"]= sensor_data_array[i]['simulation']['angular-acceleration'];
+            }
+            if(sensor_data_array[i]['simulation']['linear-acceleration']){
+                simulation["linear-acceleration"]=sensor_data_array[i]['simulation']['linear-acceleration'];
+            }
+            if(sensor_data_array[i]['simulation']['mesh-transformation']){
+                simulation["mesh-transformation"] = sensor_data_array[i]['simulation']['mesh-transformation'];
+            }
+            if(sensor_data_array[i]['simulation']['la-units']){
+                simulation["la-units"] = sensor_data_array[i]['simulation']['la-units'];
+            }
+            if(sensor_data_array[i]['simulation']['angular-to-linear-frame']){
+                simulation["angular-to-linear-frame"] = sensor_data_array[i]['simulation']['angular-to-linear-frame'];
+            }
+
+
+            console.log('storeSensorData_of_jsonFile 3---------', simulation)
+
+            var sensor = new sensorDetails(
+                {
+                    org_id: sensor_data_array[i].org_id,
+                    player_id: sensor_data_array[i].player_id,
+                    image_id: sensor_data_array[i].image_id,
+                    'impact-date': sensor_data_array[i]['impact-date']?sensor_data_array[i]['impact-date']:sensor_data_array[i]['date'],
+                    'impact-time': sensor_data_array[i]['impact-time']?sensor_data_array[i]['impact-time']:sensor_data_array[i]['time'],
+                    level: sensor_data_array[i].level,
+                    organization: sensor_data_array[i].organization,
+                    player: sensor_data_array[i].player,
+                    simulation: simulation,
+                    simulation_status: sensor_data_array[i].simulation_status,
+                    team: sensor_data_array[i].team,
+                    sensor: sensor_data_array[i].sensor,
+                    user_cognito_id: sensor_data_array[i].user_cognito_id
+                }
+            );
+            sensor.save(function (err) {
+                if (err) {                  
+                    reject(err);
+                }
+                else {
+                    resolve(true);
+                }
+            });  
            /* docClient.put(param, function (err, data) {
                 counter++;
                 if (err) {
@@ -1469,5 +1564,6 @@ module.exports = {
     getFialedBrainSummaryImgagesJob,
     storeSensorData_v2,
     getFialedBrainSingleEventImgagesJob,
-    getFialedBrainLabeledImgagesJob
+    getFialedBrainLabeledImgagesJob,
+    storeSensorData_of_jsonFile
 };
