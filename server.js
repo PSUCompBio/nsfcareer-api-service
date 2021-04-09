@@ -383,8 +383,9 @@ if (cluster.isMaster) {
             body: body,
             json: true
         }*/
+		
         console.log('url ---------------',lambdaurl)
-        request.post(lambdaurl, function (err, httpResponse, body) {
+        request.get(lambdaurl, function (err, httpResponse, body) {      
             obj['type'] = url+'_status';
             if (err) {
                 console.log(url+' created failure ', err);
