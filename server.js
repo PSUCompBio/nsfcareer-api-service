@@ -368,12 +368,23 @@ if (cluster.isMaster) {
 
 
     function generateBrainImages(url, obj, body){
-        console.log('url ---------------',url)
-        request.post({
+		var  lambdaurl = "https://cvsr9v6fz8.execute-api.us-east-1.amazonaws.com/Testlambda";
+		if(url == "getSummary"){
+			lambdaurl = lambdaurl+"?account_id="+obj.account_id+"&ftype=getSummary"
+		}
+		if(url == "GetSingleEvent"){
+			lambdaurl = lambdaurl+"?account_id="+obj.account_id+"&event_id="+obj.image_id+"&ftype=GetSingleEvent"
+		}
+		if(url == "GetLabeledImage"){
+			lambdaurl = lambdaurl+"?account_id="+obj.account_id+"&event_id="+obj.image_id+"&ftype=GetLabeledImage"
+		}
+		/*{
             url: config.nodeThreejsUrl + url,
             body: body,
             json: true
-        }, function (err, httpResponse, body) {
+        }*/
+        console.log('url ---------------',lambdaurl)
+        request.post(lambdaurl, function (err, httpResponse, body) {
             obj['type'] = url+'_status';
             if (err) {
                 console.log(url+' created failure ', err);
