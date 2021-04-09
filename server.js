@@ -368,15 +368,17 @@ if (cluster.isMaster) {
 
 
     function generateBrainImages(url, obj, body){
+		console.log("body account_id",body.account_id);
+		console.log("body event_id",body.event_id);
 		var  lambdaurl = "https://cvsr9v6fz8.execute-api.us-east-1.amazonaws.com/Testlambda";
 		if(url == "getSummary"){
-			lambdaurl = lambdaurl+"?account_id="+obj.account_id+"&ftype=getSummary"
+			lambdaurl = lambdaurl+"?account_id="+body.account_id+"&ftype=getSummary";
 		}
 		if(url == "GetSingleEvent"){
-			lambdaurl = lambdaurl+"?account_id="+obj.account_id+"&event_id="+obj.image_id+"&ftype=GetSingleEvent"
+			lambdaurl = lambdaurl+"?account_id="+body.account_id+"&event_id="+body.event_id+"&ftype=GetSingleEvent";
 		}
 		if(url == "GetLabeledImage"){
-			lambdaurl = lambdaurl+"?account_id="+obj.account_id+"&event_id="+obj.image_id+"&ftype=GetLabeledImage"
+			lambdaurl = lambdaurl+"?account_id="+body.account_id+"&event_id="+body.event_id+"&ftype=GetLabeledImage";
 		}
 		/*{
             url: config.nodeThreejsUrl + url,
