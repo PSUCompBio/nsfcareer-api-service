@@ -3,6 +3,7 @@ process.title = "NSFCAREER";
 // ======================================
 //         INITIALIZING DEPENDENCIES
 // ======================================
+const serverless = require('serverless-http');
 const express = require('express');
 app = express(),
     bodyParser = require("body-parser"),
@@ -25,12 +26,9 @@ app = express(),
     moment = require('moment'),
     async = require("async"),
     request = require('request');
-
 shortid.characters('0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ_$');
-
 var _ = require('lodash');
 var simulation_timer = 120000; // 4 minutes in milliseconds
-
 var db_connection  = require('./middlewares/dbConnection');
 // ================================================
 //            SERVER CONFIGURATION
@@ -45,19 +43,16 @@ function setConnectionTimeout(time) {
         next();
     }
 }
-
 // ======================================
 //         	GLOBAL VARIABLES
 // ======================================
-
 const successMessage = "success";
 const failureMessage = "failure";
 const apiPrefix = "/api/"
-
 // ======================================
 //       CONFIGURING AWS SDK & EXPESS
 // ======================================
-var config = {
+/* var config = {
     "awsAccessKeyId": process.env.AWS_ACCESS_KEY_ID,
     "awsSecretAccessKey": process.env.AWS_ACCESS_SECRET_KEY,
     "avatar3dClientId": process.env.AVATAR_3D_CLIENT_ID,
@@ -84,17 +79,13 @@ var config = {
     "queue_beta" : process.env.QUEUE_BETA,
     "mlUrl" : process.env.ML_URL,
     "nodeThreejsUrl" : process.env.NODE_THREE_JS_URL
-}; 
-
+}; */
 const subject_signature = fs.readFileSync("data/base64")
-
-// var config = require('./config/configuration_keys.json');
+var config = require('./config/configuration_keys.json');
 var config_env = config;
 const FrontendUrl = "https://nsfcareer.io/";
-
 //AWS.config.loadFromPath('./config/configuration_keys.json');
 const BUCKET_NAME = config_env.usersbucket;
-
 // AWS Credentials loaded
 var myconfig = AWS.config.update({
     accessKeyId: config_env.awsAccessKeyId, secretAccessKey: config_env.awsSecretAccessKey, region: config_env.region
@@ -103,22 +94,18 @@ var storage = multer.memoryStorage()
 var upload = multer({
     storage: storage
 });
-
 var s3 = new AWS.S3();
 var batch = new AWS.Batch();
 var cron = require('node-cron');
-
 const docClient = new AWS.DynamoDB.DocumentClient({
     convertEmptyValues: true
 });
-
 // NODEMAILER CONFIGURATION
 var email = config_env.email_id;
 let transport = nodemailer.createTransport({
     SES: new AWS.SES({ apiVersion: "2010-12-01" })
 })
 console.log(email, config_env.email_id_password);
-
 app.use(bodyParser.urlencoded({
     limit: '50mb',
     extended: true
@@ -127,22 +114,17 @@ app.use(bodyParser.json({
     limit: '50mb',
     extended: true
 }));
-
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'ejs');
-
 // ===========================================
 //     UTILITY FUNCTIONS
 // ===========================================
-
 function concatArrays(arrays) {
     return [].concat.apply([], arrays);
 }
-
 // Promise to delay a function or any promise
 const delay = t => new Promise(resolve => setTimeout(resolve, t));
-
 // Simuation related functions
 const {
     convertFileDataToJson,
@@ -156,7 +138,6 @@ const {
     deleteSimulationFromBucket,
     generateSimulationForPlayers_v2
 } = require('./controller/simulation');
-
 const {
     getUserDetails,
     getUserDetailBySensorId,
@@ -185,21 +166,17 @@ const {
     getFialedBrainLabeledImgagesJob,
     storeSensorData_of_jsonFile
 } = require('./controller/query');
-
 // Include the cluster module
 const cluster = require('cluster');
 
 // Code to run if we're in the master process
 if (cluster.isMaster) {
-
     // Count the machine's CPUs
     var cpuCount = require('os').cpus().length;
-
     // Create a worker for each CPU
     for (var i = 0; i < cpuCount; i += 1) {
         cluster.fork();
     }
-
     // Listen for terminating workers
     cluster.on('exit', function (worker) {
 
@@ -207,7 +184,6 @@ if (cluster.isMaster) {
         console.log('Worker ' + worker.id + ' died :(');
         cluster.fork();
     });
-
     // Cron to get job computation time after job completion
     cron.schedule('*/1 * * * *', () => {
         console.log('cron job')
@@ -299,8 +275,6 @@ if (cluster.isMaster) {
                 console.log(err);
             })
     });
-
-
     cron.schedule('*/10 * * * *', () => {
         console.log('cron job of 10 minute ------------------')
 
@@ -364,30 +338,13 @@ if (cluster.isMaster) {
         })
 
     })
-
-
-
     function generateBrainImages(url, obj, body){
-		console.log("body account_id",body.account_id);
-		console.log("body event_id",body.event_id);
-		var  lambdaurl = "https://cvsr9v6fz8.execute-api.us-east-1.amazonaws.com/Testlambda";
-		if(url == "getSummary"){
-			lambdaurl = lambdaurl+"?account_id="+body.account_id+"&ftype=getSummary";
-		}
-		if(url == "GetSingleEvent"){
-			lambdaurl = lambdaurl+"?account_id="+body.account_id+"&event_id="+body.event_id+"&ftype=GetSingleEvent";
-		}
-		if(url == "GetLabeledImage"){
-			lambdaurl = lambdaurl+"?account_id="+body.account_id+"&event_id="+body.event_id+"&ftype=GetLabeledImage";
-		}
-		/*{
+        console.log('url ---------------',url)
+        request.post({
             url: config.nodeThreejsUrl + url,
             body: body,
             json: true
-        }*/
-		
-        console.log('url ---------------',lambdaurl)
-        request.get(lambdaurl, function (err, httpResponse, body) {      
+        }, function (err, httpResponse, body) {
             obj['type'] = url+'_status';
             if (err) {
                 console.log(url+' created failure ', err);
@@ -412,7 +369,6 @@ if (cluster.isMaster) {
         })
 
     }
-
     function getJobsStatus(item){
         // console.log('item',item);
         return new Promise((resolve, reject)=>{
@@ -459,7 +415,6 @@ if (cluster.isMaster) {
             }
         })
     }
-
     /**
     * Update job log function and send mail to user about simulation status.
     */
@@ -492,7 +447,6 @@ if (cluster.isMaster) {
         })
     }
     // end..
-
     function sendMailToUser(address, body, subject){
         return new Promise((resolve, reject)=>{
             var params = {
@@ -542,7 +496,6 @@ if (cluster.isMaster) {
             });
         })
     }
-
      // Cron to get job log stream name after job completion
      cron.schedule('*/2 * * * *', () => {
         getJobs()
@@ -588,11 +541,9 @@ if (cluster.isMaster) {
     });
 
 } else {
-
     app.get(`/`, (req, res) => {
         res.send("TesT SERVICE HERE");
     })
-
     // Update users whic have no account id
     app.get('/updateUsers', (req, res) => {
         getUsersWthNoAccountId()
@@ -623,7 +574,6 @@ if (cluster.isMaster) {
                 // })
             });
     })
-
     // Creating copy of s3 folder 
     app.get(`/copyS3Folder`, (req, res) => {
         // res.send("TesT SERVICE HERE");
@@ -658,7 +608,6 @@ if (cluster.isMaster) {
             }
         });
     })
-
     app.get(`/deleteTestData`, (req, res) => {
         const obj = {};
         obj.brand = 'SWA';
@@ -702,7 +651,6 @@ if (cluster.isMaster) {
                 })
             });
     })
-
     app.get(`/updateData`, (req, res) => {
         const obj = {};
         obj.brand = 'Prevent Biometrics';
@@ -740,7 +688,6 @@ if (cluster.isMaster) {
                 })
             });
     })
-
     app.get(`/updateSensor`, (req, res) => {
         const obj = {};
         obj.brand = 'Prevent Biometrics';
@@ -788,7 +735,6 @@ if (cluster.isMaster) {
                 })
             });
     })
-
     app.get('/migrateData', (req, res) => {
         const obj = {};
         // obj.brand = 'Prevent Biometrics';
@@ -832,7 +778,6 @@ if (cluster.isMaster) {
                 })
             })
     })
-
     app.post(`${apiPrefix}generateSimulationForSensorData`, setConnectionTimeout('10m'), function (req, res) {
         // console.log('user_cognito_id', req.body.user_cognito_id);
         let apiMode = req.body.mode;
@@ -1759,7 +1704,6 @@ if (cluster.isMaster) {
             }
         }
     })
-
     function controllerSimulationData(...args){
         return new Promise((resolve, reject)=>{
             // console.log('args', args[0]);
@@ -2035,8 +1979,6 @@ if (cluster.isMaster) {
             })
         })
     }
-
-
     app.post(`${apiPrefix}getUserDetailsForIRB`, function (req, res) {
         console.log(req.body);
         verifyToken(req.body.consent_token)
@@ -2064,7 +2006,6 @@ if (cluster.isMaster) {
                 })
             })
     })
-
     app.post(`${apiPrefix}IRBFormGenerate`, function (req, res) {
         // console.log(req.body);
         var { user_cognito_id, age } = req.body;
@@ -2176,7 +2117,6 @@ if (cluster.isMaster) {
             }
         });
     })
-
     app.post(`${apiPrefix}computeImageData`, setConnectionTimeout('10m'), function (req, res) {
         computeImageData(req)
             .then((data) => {
@@ -2191,7 +2131,6 @@ if (cluster.isMaster) {
                 })
             })
     })
-
     app.post(`${apiPrefix}generateINF`, function (req, res) {
         console.log(req.body);
         generateINP(req.body.user_id).then((d) => {
@@ -2207,7 +2146,6 @@ if (cluster.isMaster) {
             })
         })
     })
-
     app.post(`${apiPrefix}generateSimulation`, function (req, res) {
         console.log(req.body);
         generateSimulationFile(req.body.user_id).then((d) => {
@@ -2223,8 +2161,6 @@ if (cluster.isMaster) {
             })
         })
     })
-
-
     app.post(`${apiPrefix}getPlayersDetails`, function (req, res) {
 
         getPlayersListFromTeamsDB(req.body)
@@ -2366,7 +2302,6 @@ if (cluster.isMaster) {
                 })
             });
     })
-
     //pending
     app.post(`${apiPrefix}getBrainSimulationLogFile`, function (req, res) {
         const { image_id } = req.body
@@ -2402,7 +2337,6 @@ if (cluster.isMaster) {
                 })
             })
     })
-
     app.post(`${apiPrefix}getUpdatesAndNotifications`, (req, res) => {
         var subject = `${req.body.first_name} ${req.body.last_name} subscribed for updates`;
         ejs.renderFile(__dirname + '/views/UpdateTemplate.ejs', { data: req.body }, {}, function (err, str) {
@@ -2451,11 +2385,12 @@ if (cluster.isMaster) {
         })
     })
 
-    // Configuring port for APP
+   /* // Configuring port for APP
     const port = process.env.PORT || 3000;
     const server = app.listen(port, function () {
         console.log('Magic happens on ' + port);
-    });
+    });*/
+	module.exports.handler = serverless(app);
 
     // ======================================
     //              FUNCTIONS
@@ -2503,7 +2438,6 @@ if (cluster.isMaster) {
             })
         })
     }
-
     function generateJWToken(obj, expiry) {
         return new Promise((resolve, reject) => {
             console.log('Generating jwt secret');
@@ -2517,7 +2451,6 @@ if (cluster.isMaster) {
             })
         })
     }
-
     function verifyToken(token) {
         return new Promise((resolve, reject) => {
             jwt.verify(token, config_env.jwt_secret, (err, decoded) => {
@@ -2531,7 +2464,6 @@ if (cluster.isMaster) {
             })
         })
     }
-
     function uploadSimulationFile(user_id, timestamp, cb) {
         var uploadParams = {
             Bucket: config.usersbucket,
@@ -2561,7 +2493,6 @@ if (cluster.isMaster) {
             }
         })
     }
-
     function generateSimulationFile(user_id) {
         return new Promise((resolve, reject) => {
             // 1. Do Simulation
@@ -2600,7 +2531,6 @@ if (cluster.isMaster) {
             })
         })
     }
-
     function getCumulativeEventPressureData() {
         var myObject = {
             message: "success",
@@ -2612,8 +2542,6 @@ if (cluster.isMaster) {
         }
         return myObject;
     }
-
-
     function getHeadAccelerationEvents(obj) {
         return new Promise((resolve, reject) => {
           /*  let params = {
@@ -2716,7 +2644,6 @@ if (cluster.isMaster) {
         // }
         // return myObject;
     }
-
     function getTeamAdminData() {
         var myObject = {
             message: "success",
@@ -2733,7 +2660,6 @@ if (cluster.isMaster) {
         }
         return myObject;
     }
-
     function getImpactSummary() {
         var myObject =
         {
@@ -2745,7 +2671,6 @@ if (cluster.isMaster) {
         }
         return myObject;
     }
-
     function getImpactHistory() {
         var myObject =
         {
@@ -2757,7 +2682,6 @@ if (cluster.isMaster) {
         }
         return myObject;
     }
-
     function getPlayersData() {
         var myObject = {
             message: "success",
@@ -2790,7 +2714,6 @@ if (cluster.isMaster) {
         }
         return myObject;
     }
-
     function getOrganizationAdminData() {
         var myObject = {
             message: "success",
@@ -2807,7 +2730,6 @@ if (cluster.isMaster) {
         }
         return myObject;
     }
-
     function getAllRosters() {
 
         var myObject = {
@@ -2818,7 +2740,6 @@ if (cluster.isMaster) {
         }
         return myObject;
     }
-
     function customInsertionSortForGraphData(arr, arr1) {
         // arr needs to be the Y-AXIS of the graph
         // arr1 is X-AXIS of the graph
@@ -2849,7 +2770,6 @@ if (cluster.isMaster) {
             array_X: arr1
         }
     }
-
     function getPlayersInList(list) {
         var playerMap = new Map();
         for (var i = 0; i < list.length; i++) {
@@ -2871,7 +2791,6 @@ if (cluster.isMaster) {
         return Array.from(playerMap.values());
 
     }
-
     function indexOfMax(arr) {
         if (arr.length === 0) {
             return -1;
@@ -2944,7 +2863,6 @@ if (cluster.isMaster) {
             })
         })
     }
-
     function uploadIRBForm(user_id, file_path, file_name) {
 
         return new Promise((resolve, reject) => {
@@ -2977,7 +2895,6 @@ if (cluster.isMaster) {
             })
         })
     }
-
     function base64_encode(file) {
         // read binary data
         let bitmap = fs.readFileSync(file);
@@ -2985,7 +2902,6 @@ if (cluster.isMaster) {
         // convert binary data to base64 encoded string
         return new Buffer(bitmap).toString('base64');
     }
-
     function getFileFromS3(url, bucket_name) {
         // console.log('url', url)
         return new Promise((resolve, reject) => {
@@ -3004,7 +2920,6 @@ if (cluster.isMaster) {
             });
         })
     }
-
     function getImageFromS3Buffer(image_data) {
         return new Promise((resolve, reject) => {
             try {
