@@ -1059,66 +1059,6 @@ function computeImageData(req) {
 
 }
 
-/*
-* computeImageData For brainsimreasearch app ... 
-*/
-function computeImageData_2(req) {
-    // Input { image_url : '', user_cognito_id : ''}
-    return new Promise((resolve, reject) => {
-        // Get URL Image in input
-        // Get User cognito ID in input
-        // 1. Generate 3d Avatar
-        // 1.1 Set update in DB that selfie model is uploaded
-        // 2. Genearte 3d Profile Image from PLY file of 3D Avatar
-        // 2.1 Set Update in DB that 3d Profile Png image generated is uploaded
-        // - Generate STL file from PLY File -> output -> timestamp.stl | Call pvpython extract.py
-        // - Generate Parameters file from PLY File -> output -> timestamp.stl | Call pvpython controlpoints.py
-        // 3. Generate INP File
-        // - Generate the VTK
-        // - Generate Morphed VTK file | call python3  RBF_coarse.py
-        // 3.1 Set update in DB that inp file is uploaded
-        // 4. Do simulation & generate PNG file of it
-        // 4.1 Set Update in DB that simulation file is generated
-        // Adding timestamp as filename to request
-        req.body["file_name"] = Number(Date.now()).toString();
-        generate3DModel(req.body)
-            .then(data => {
-                return upload3DModelZip(req.body);
-            })
-            .then(data => {
-                // Create Selfie PNG Image using ProjectedTexture VTK
-                return executeShellCommands(`xvfb-run ${rootPath}/MergePolyData/build/ImageCapture ./avatars/${req.body.user_cognito_id}/head/model.ply ./avatars/${req.body.user_cognito_id}/head/model.jpg ./avatars/${req.body.user_cognito_id}/head/${req.body.file_name}.png`);
-            })
-            .then((data) => {
-                console.log('Selfie PNG Image ', data);
-                // Upload the selfie image generated on S3
-                return uploadGeneratedSelfieImage(req.body);
-            })
-            .then(data => {
-                return generateStlFromPly(req.body);
-            })
-            .then(d => {
-                return generateParametersFileFromStl(req.body)
-            })
-            .then(d => {
-                // Generate INP File
-                return generateINP(req.body.user_cognito_id, req.body);
-            })
-            .then(data => {
-                // Function to clean up
-                // the files generated
-                return cleanUp(req.body);
-            })
-            .then(d => {
-                resolve({ message: "success" });
-            })
-            .catch((err) => {
-                console.log(err);
-                reject(err);
-            })
-    })
-
-}
 
 function uploadMorphedVTKZip(user_id, timestamp) {
     return new Promise((resolve, reject) => {
@@ -1309,9 +1249,12 @@ function generateINP(user_id, obj = null) {
                                     .then(d => {
                                         return uploadFineVTKFile(user_id, obj.file_name);
                                     })
-                                    .then(d => {
-                                        return uploadCGValuesAndSetINPStatus(user_id, obj.file_name);
-                                    })
+
+                                    // *For updeate cg cordinates into database ....
+                                    // need to upate in brainsimreasearch database...
+                                    // .then(d => {
+                                    //     return uploadCGValuesAndSetINPStatus(user_id, obj.file_name);
+                                    // })
                                     .then(d => {
                                         return createMorphedVTKZip(user_id, obj.file_name);
                                     })
@@ -1874,6 +1817,7 @@ function generate3DModel(obj) {
 }
 
 function upload3DModelZip(obj) {
+    console.log('inside upload3DModelZip function =============================\n')
     return new Promise((resolve, reject) => {
         console.log("IN UPLOAD MODEL");
         var uploadParams = {
@@ -2757,6 +2701,186 @@ function deleteSimulationFromBucket(obj, callback) {
     });
 }
 
+/* ====================================================
+        BRAINSIM REASEARCH APPLICATION FUNCTIONS 
+======================================================= */
+
+/*
+* computeImageData For brainsimreasearch app ... 
+*/
+function computeImageData_v2(req) {
+    // Input { image_url : '', user_cognito_id : ''}
+    return new Promise((resolve, reject) => {
+        // Get URL Image in input
+        // Get User cognito ID in input
+        // 1. Generate 3d Avatar
+        // 1.1 Set update in DB that selfie model is uploaded
+        // 2. Genearte 3d Profile Image from PLY file of 3D Avatar
+        // 2.1 Set Update in DB that 3d Profile Png image generated is uploaded
+        // - Generate STL file from PLY File -> output -> timestamp.stl | Call pvpython extract.py
+        // - Generate Parameters file from PLY File -> output -> timestamp.stl | Call pvpython controlpoints.py
+        // 3. Generate INP File
+        // - Generate the VTK
+        // - Generate Morphed VTK file | call python3  RBF_coarse.py
+        // 3.1 Set update in DB that inp file is uploaded
+        // 4. Do simulation & generate PNG file of it
+        // 4.1 Set Update in DB that simulation file is generated
+        // Adding timestamp as filename to request
+        req.body["file_name"] = Number(Date.now()).toString();
+        generate3DModel(req.body)
+            .then(data => {
+                return upload3DModelZip(req.body);
+            })
+            .then(data => {
+                // Create Selfie PNG Image using ProjectedTexture VTK
+                return executeShellCommands(`xvfb-run ${rootPath}/MergePolyData/build/ImageCapture ./avatars/${req.body.user_cognito_id}/head/model.ply ./avatars/${req.body.user_cognito_id}/head/model.jpg ./avatars/${req.body.user_cognito_id}/head/${req.body.file_name}.png`);
+            })
+            .then((data) => {
+                console.log('Selfie PNG Image ', data);
+                // Upload the selfie image generated on S3
+                return uploadGeneratedSelfieImage(req.body);
+            })
+            .then(data => {
+                return generateStlFromPly(req.body);
+            })
+            .then(d => {
+                return generateParametersFileFromStl(req.body)
+            })
+            .then(d => {
+                // Generate INP File
+                return generateINP_v2(req.body.user_cognito_id, req.body);
+            })
+            .then(data => {
+                // Function to clean up
+                // the files generated
+                return cleanUp(req.body);
+            })
+            .then(d => {
+                resolve({ message: "success" });
+            })
+            .catch((err) => {
+                console.log('err -------------------\n',err);
+                reject(err);
+            })
+    })
+
+}
+
+//v2 function for brainsimreasearch app...
+function generateINP_v2(user_id, obj = null) {
+    return new Promise((resolve, reject) => {
+        // 1. Get Uploaded model list from user
+        // 2. Generate SignedURL of the image
+        // 3. Pass the signedURL to download the zip file
+        // 4. Generate the INF File
+        // 5. Store the INF File in /radio_basis_function/inf file
+        getUploadedModelFileList(user_id, (err, list) => {
+            if (err) {
+                reject(err);
+            }
+            else {
+                // Fetches the latest Model
+                var latestModel = list.reduce(function (oldest, latest_model) {
+                    return oldest.LastModified > latest_model.LastModified ? oldest : latest_model;
+                }, {});
+
+                // Getting the model key
+                var model_key;
+                if (list.length != 0) {
+                    model_key = latestModel.Key;
+                }
+                else {
+                    model_key = user_id + "/profile/model/" + user_id;
+                }
+                // Generate SignedURL of the image
+                getFileSignedUrl(model_key, (err, url) => {
+                    if (err) {
+                        reject(err);
+                    }
+                    else {
+                        // Download file
+                        var timestamp = Date.now();
+                        var zipFileName = timestamp + ".zip";
+                        var options = {
+                            directory: `${rootPath}/users_data/${user_id}/model/`,
+                            filename: zipFileName
+                        }
+                        download(url, options, function (err) {
+                            if (err) {
+                                reject(err);
+                            }
+                            else {
+                                generateMorphedVTK(obj)
+                                    .then((d) => {
+                                        var cmd = `mkdir -p ${rootPath}/users_data/${user_id}/rbf/ ;  ${rootPath}/MergePolyData/build/InpFromVTK  -in ${rootPath}/users_data/${user_id}/morphed_vtk/${obj.file_name}.vtu -out ${rootPath}/users_data/${user_id}/rbf/${obj.file_name}_coarse.inp`;
+                                        return executeShellCommands(cmd);
+                                    })
+                                    .then(d => {
+                                        console.log('aaaaaaaa ', d)
+                                        var fine_cmd = `${rootPath}/MergePolyData/build/InpFromVTK  -in ${rootPath}/users_data/${user_id}/morphed_vtk/${obj.file_name}_fine.vtu -out ${rootPath}/users_data/${user_id}/rbf/${obj.file_name}_fine.inp`;
+                                        return executeShellCommands(fine_cmd);
+                                    })
+                                    .then(d => {
+                                        return uploadINPFile(user_id, obj.file_name);
+                                    })
+                                    .then(d => {
+                                        return uploadVTKFile(user_id, obj.file_name);
+                                    })
+                                    .then(d => {
+                                        return uploadFineINPFile(user_id, obj.file_name);
+                                    })
+                                    .then(d => {
+                                        return uploadFineVTKFile(user_id, obj.file_name);
+                                    })
+                                    .then(d => {
+                                        return uploadCGValuesAndSetINPStatus(user_id, obj.file_name);
+                                    })
+                                    .then(d => {
+                                        return createMorphedVTKZip(user_id, obj.file_name);
+                                    })
+                                    .then(d => {
+                                        return uploadMorphedVTKZip(user_id, obj.file_name);
+                                    })
+                                    .then(d => {
+                                        return createStlZip(user_id, obj.file_name);
+                                    })
+                                    .then(d => {
+                                        return uploadStlZip(user_id, obj.file_name);
+                                    })
+                                    .then(d => {
+                                        return uploadSkullFile(user_id, obj.file_name);
+                                    })
+                                    .then(d => {
+                                        return uploadBrainFile(user_id, obj.file_name);
+                                    })
+                                    .then(d => {
+                                        return uploadAvatarModelFile(user_id);
+                                    })
+                                    .then(d => {
+                                        return uploadAvatarModelPlyFile(user_id, obj.file_name);
+                                    })
+                                    .then(d => {
+                                        resolve(true);
+                                    })
+                                    .catch((err) => {
+                                        reject(err);
+                                    })
+                            }
+                        })
+                    }
+                })
+            }
+        })
+
+    })
+}
+
+
+/* ==========================================================
+        BRAINSIM REASEARCH APPLICATION FUNCTIONS END
+============================================================= */
+
+
 module.exports = {
     convertFileDataToJson,
     storeSensorData,
@@ -2765,7 +2889,7 @@ module.exports = {
     generateSimulationForPlayers,
     generateSimulationForPlayersFromJson,
     computeImageData,
-    computeImageData_2,
+    computeImageData_v2,
     generateINP,
     deleteSimulationFromBucket,
     generateSimulationForPlayers_v2

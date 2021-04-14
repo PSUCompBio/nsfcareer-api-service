@@ -3,7 +3,7 @@ var mongoose = require("mongoose");
 var config = {
     "MONGODB_URL" : process.env.MONGODB_URL
 	}; 
-	console.log("config",config);
+	// console.log("config",config);
 var MONGODB_URL = config.MONGODB_URL;
 mongoose.connect(MONGODB_URL, { useNewUrlParser: true, useUnifiedTopology: true }).then(() => {
     //don't show the log when it is test

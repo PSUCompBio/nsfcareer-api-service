@@ -152,7 +152,7 @@ const {
     generateSimulationForPlayers,
     generateSimulationForPlayersFromJson,
     computeImageData,
-    computeImageData_2,
+    computeImageData_v2,
     generateINP,
     deleteSimulationFromBucket,
     generateSimulationForPlayers_v2
@@ -205,13 +205,13 @@ if (cluster.isMaster) {
     cluster.on('exit', function (worker) {
 
         // Replace the terminated workers
-        console.log('Worker ' + worker.id + ' died :(');
+        // console.log('Worker ' + worker.id + ' died :(');
         cluster.fork();
     });
 
     // Cron to get job computation time after job completion
     cron.schedule('*/1 * * * *', () => {
-        console.log('cron job')
+        // console.log('cron job')
         updateJobLogs();
         getCompletedJobs()
             .then(simulation_data => {
@@ -405,7 +405,7 @@ if (cluster.isMaster) {
                     // console.log(err);
                 }
                 else {
-                    console.log(url+' Image created successfully');
+                    // console.log(url+' Image created successfully');
                 }
             })
         })
@@ -596,7 +596,7 @@ if (cluster.isMaster) {
     app.get('/updateUsers', (req, res) => {
         getUsersWthNoAccountId()
             .then(data => {
-                console.log(data.length);
+                // console.log(data.length);
                 // data.forEach((user) => {
                 //     let account_id = Math.floor(Math.random() * 9000000000) + 1000000000;
                 //     account_id = account_id.toString();
@@ -2192,7 +2192,7 @@ if (cluster.isMaster) {
     })
 
     app.post(`${apiPrefix}v2/computeImageData`, setConnectionTimeout('10m'), function (req, res) {
-        computeImageData_2(req)
+        computeImageData_v2(req)
             .then((data) => {
                 res.send({
                     message: "success"

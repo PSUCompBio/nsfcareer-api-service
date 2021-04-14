@@ -1208,7 +1208,7 @@ function updateJobComputedTime(obj, cb) {
 }
 
 function updateJobImageGenerateStatus(obj, cb) {
-    console.log('updateJobImageGenerateStatus', obj.image_id)
+    // console.log('updateJobImageGenerateStatus', obj.image_id)
     var userParams = {
         TableName: "simulation_images",
         Key: {
