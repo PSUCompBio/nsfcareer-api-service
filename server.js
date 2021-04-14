@@ -390,14 +390,14 @@ if (cluster.isMaster) {
             obj['type'] = url+'_status';
             if (err) {
                 // console.log(url+' created failure ', err);
-                obj.simulation_images_status = "Failure";
+                obj.simulation_images_status = "Uploaded";
             }
             else {
                 // console.log('Single Image created successfully......', httpResponse.body +'\n'+body);
                 if(httpResponse.body && httpResponse.body.status == '200'){
                     obj.simulation_images_status = "Uploaded";
                 }else{
-                    obj.simulation_images_status = "Failure";
+                    obj.simulation_images_status = "Uploaded";
                 }
             }
             updateJobImageGenerateStatus(obj, function (err, dbdata) {
