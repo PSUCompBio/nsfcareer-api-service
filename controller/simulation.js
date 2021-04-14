@@ -1249,12 +1249,9 @@ function generateINP(user_id, obj = null) {
                                     .then(d => {
                                         return uploadFineVTKFile(user_id, obj.file_name);
                                     })
-
-                                    // *For updeate cg cordinates into database ....
-                                    // need to upate in brainsimreasearch database...
-                                    // .then(d => {
-                                    //     return uploadCGValuesAndSetINPStatus(user_id, obj.file_name);
-                                    // })
+                                    .then(d => {
+                                        return uploadCGValuesAndSetINPStatus(user_id, obj.file_name);
+                                    })
                                     .then(d => {
                                         return createMorphedVTKZip(user_id, obj.file_name);
                                     })
@@ -2832,9 +2829,11 @@ function generateINP_v2(user_id, obj = null) {
                                     .then(d => {
                                         return uploadFineVTKFile(user_id, obj.file_name);
                                     })
-                                    .then(d => {
-                                        return uploadCGValuesAndSetINPStatus(user_id, obj.file_name);
-                                    })
+                                    // *For updeate cg cordinates into database ....
+                                    // need to upate in brainsimreasearch database...
+                                    // .then(d => {
+                                    //     return uploadCGValuesAndSetINPStatus(user_id, obj.file_name);
+                                    // })
                                     .then(d => {
                                         return createMorphedVTKZip(user_id, obj.file_name);
                                     })
