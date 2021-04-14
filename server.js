@@ -117,7 +117,7 @@ var email = config_env.email_id;
 let transport = nodemailer.createTransport({
     SES: new AWS.SES({ apiVersion: "2010-12-01" })
 })
-console.log(email, config_env.email_id_password);
+
 
 app.use(bodyParser.urlencoded({
     limit: '50mb',
@@ -152,6 +152,7 @@ const {
     generateSimulationForPlayers,
     generateSimulationForPlayersFromJson,
     computeImageData,
+    computeImageData_2,
     generateINP,
     deleteSimulationFromBucket,
     generateSimulationForPlayers_v2
@@ -214,9 +215,7 @@ if (cluster.isMaster) {
         updateJobLogs();
         getCompletedJobs()
             .then(simulation_data => {
-                console.log('simulation_data -------------\n',simulation_data.length)
                 if (simulation_data.length > 0) {
-                    console.log(simulation_data.length);
                     let account_id_list = [];
                     simulation_data.forEach((job) => {
                         if (job.job_id !== undefined) {
@@ -240,10 +239,10 @@ if (cluster.isMaster) {
 
                                             updateJobComputedTime(obj, function (err, dbdata) {
                                                 if (err) {
-                                                    console.log(err);
+                                                    // console.log(err);
                                                 }
                                                 else {
-                                                    console.log('Computed time and Log stream added in database for job id: ' + data.jobId);
+                                                    // console.log('Computed time and Log stream added in database for job id: ' + data.jobId);
                                                 }
                                             })
 
@@ -253,10 +252,10 @@ if (cluster.isMaster) {
                                                 json: true
                                             }, function (err, httpResponse, body) {
                                                 if (err) {
-                                                    console.log('ML api failure ', err);
+                                                    // console.log('ML api failure ', err);
                                                 }
                                                 else {
-                                                    console.log('ML api executed successfully.');
+                                                    // console.log('ML api executed successfully.');
                                                 }
                                             })
 
@@ -302,12 +301,12 @@ if (cluster.isMaster) {
 
 
     cron.schedule('*/10 * * * *', () => {
-        console.log('cron job of 10 minute ------------------')
+        // console.log('cron job of 10 minute ------------------')
 
         // For sumarry images ...
         getFialedBrainSummaryImgagesJob()
         .then(simulation_data => {
-            console.log('simulation_data 1-------------\n',simulation_data.length)
+            // console.log('simulation_data 1-------------\n',simulation_data.length)
             if (simulation_data.length > 0) {
                 let account_id_list = [];
                 simulation_data.forEach((job) => {
@@ -330,7 +329,7 @@ if (cluster.isMaster) {
          ========================================= */
         getFialedBrainSingleEventImgagesJob()
         .then(simulation_data => {
-            console.log('simulation_data 2-------------\n',simulation_data.length)
+            // console.log('simulation_data 2-------------\n',simulation_data.length)
             if (simulation_data.length > 0) {
                 let account_id_list = [];
                 simulation_data.forEach((job) => {
@@ -349,7 +348,7 @@ if (cluster.isMaster) {
          ========================================= */
         getFialedBrainLabeledImgagesJob()
         .then(simulation_data => {
-            console.log('simulation_data 3-------------\n',simulation_data.length)
+            // console.log('simulation_data 3-------------\n',simulation_data.length)
             if (simulation_data.length > 0) {
                 let account_id_list = [];
                 simulation_data.forEach((job) => {
@@ -368,8 +367,8 @@ if (cluster.isMaster) {
 
 
     function generateBrainImages(url, obj, body){
-		console.log("body account_id",body.account_id);
-		console.log("body event_id",body.event_id);
+		// console.log("body account_id",body.account_id);
+		// console.log("body event_id",body.event_id);
 		var  lambdaurl = "https://cvsr9v6fz8.execute-api.us-east-1.amazonaws.com/Testlambda";
 		if(url == "getSummary"){
 			lambdaurl = lambdaurl+"?account_id="+body.account_id+"&ftype=getSummary";
@@ -386,15 +385,15 @@ if (cluster.isMaster) {
             json: true
         }*/
 		
-        console.log('url ---------------',lambdaurl)
+        // console.log('url ---------------',lambdaurl)
         request.get(lambdaurl, function (err, httpResponse, body) {      
             obj['type'] = url+'_status';
             if (err) {
-                console.log(url+' created failure ', err);
+                // console.log(url+' created failure ', err);
                 obj.simulation_images_status = "Failure";
             }
             else {
-                console.log('Single Image created successfully......', httpResponse.body +'\n'+body);
+                // console.log('Single Image created successfully......', httpResponse.body +'\n'+body);
                 if(httpResponse.body && httpResponse.body.status == '200'){
                     obj.simulation_images_status = "Uploaded";
                 }else{
@@ -403,7 +402,7 @@ if (cluster.isMaster) {
             }
             updateJobImageGenerateStatus(obj, function (err, dbdata) {
                 if (err) {
-                    console.log(err);
+                    // console.log(err);
                 }
                 else {
                     console.log(url+' Image created successfully');
@@ -450,7 +449,7 @@ if (cluster.isMaster) {
                                 }
                             }
                         }).catch(err=>{
-                            console.log('log plyar detail err--------\n',err)
+                            // console.log('log plyar detail err--------\n',err)
                         })
                     }else{
                         resolve(false);
@@ -471,7 +470,7 @@ if (cluster.isMaster) {
                 res.forEach(async (item)=>{
                     // console.log('item',item);
                     let objJobStatus =  await getJobsStatus(item);
-                    console.log('objJobStatus ---',objJobStatus);
+                    // console.log('objJobStatus ---',objJobStatus);
                     if(objJobStatus.status == 'Completed'){
                         var PageLink = `${FrontendUrl}TeamAdmin/team/players/${objJobStatus.organization}/${objJobStatus.team}?brand=`;
                         PageLink = encodeURI(PageLink);
@@ -479,7 +478,7 @@ if (cluster.isMaster) {
                         var body = `Hi There,\n\nYour simulations have been completed. Please check them out here:\n${PageLink}\n\nKeep Computing!\nThe nsfcareer.ioTeam`;
                         var subject = "Your BrainSims are complete!";
                         var mailStatus = await sendMailToUser(address, body, subject);
-                        console.log('mailStatus',mailStatus);
+                        // console.log('mailStatus',mailStatus);
                         if(mailStatus.message == "Success"){
                             updateJobStatus(item.created);
                             // Finish...
@@ -527,7 +526,7 @@ if (cluster.isMaster) {
             // Handle promise's fulfilled/rejected states
             sendPromise.then(
             function (data) {
-                console.log(data.MessageId);
+                // console.log(data.MessageId);
                 resolve({
                     message: "Success",
                     data: data.MessageId
@@ -2179,6 +2178,21 @@ if (cluster.isMaster) {
 
     app.post(`${apiPrefix}computeImageData`, setConnectionTimeout('10m'), function (req, res) {
         computeImageData(req)
+            .then((data) => {
+                res.send({
+                    message: "success"
+                });
+            })
+            .catch((err) => {
+                res.send({
+                    message: "failure",
+                    error: err
+                })
+            })
+    })
+
+    app.post(`${apiPrefix}v2/computeImageData`, setConnectionTimeout('10m'), function (req, res) {
+        computeImageData_2(req)
             .then((data) => {
                 res.send({
                     message: "success"

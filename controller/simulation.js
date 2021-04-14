@@ -1059,6 +1059,67 @@ function computeImageData(req) {
 
 }
 
+/*
+* computeImageData For brainsimreasearch app ... 
+*/
+function computeImageData_2(req) {
+    // Input { image_url : '', user_cognito_id : ''}
+    return new Promise((resolve, reject) => {
+        // Get URL Image in input
+        // Get User cognito ID in input
+        // 1. Generate 3d Avatar
+        // 1.1 Set update in DB that selfie model is uploaded
+        // 2. Genearte 3d Profile Image from PLY file of 3D Avatar
+        // 2.1 Set Update in DB that 3d Profile Png image generated is uploaded
+        // - Generate STL file from PLY File -> output -> timestamp.stl | Call pvpython extract.py
+        // - Generate Parameters file from PLY File -> output -> timestamp.stl | Call pvpython controlpoints.py
+        // 3. Generate INP File
+        // - Generate the VTK
+        // - Generate Morphed VTK file | call python3  RBF_coarse.py
+        // 3.1 Set update in DB that inp file is uploaded
+        // 4. Do simulation & generate PNG file of it
+        // 4.1 Set Update in DB that simulation file is generated
+        // Adding timestamp as filename to request
+        req.body["file_name"] = Number(Date.now()).toString();
+        generate3DModel(req.body)
+            .then(data => {
+                return upload3DModelZip(req.body);
+            })
+            .then(data => {
+                // Create Selfie PNG Image using ProjectedTexture VTK
+                return executeShellCommands(`xvfb-run ${rootPath}/MergePolyData/build/ImageCapture ./avatars/${req.body.user_cognito_id}/head/model.ply ./avatars/${req.body.user_cognito_id}/head/model.jpg ./avatars/${req.body.user_cognito_id}/head/${req.body.file_name}.png`);
+            })
+            .then((data) => {
+                console.log('Selfie PNG Image ', data);
+                // Upload the selfie image generated on S3
+                return uploadGeneratedSelfieImage(req.body);
+            })
+            .then(data => {
+                return generateStlFromPly(req.body);
+            })
+            .then(d => {
+                return generateParametersFileFromStl(req.body)
+            })
+            .then(d => {
+                // Generate INP File
+                return generateINP(req.body.user_cognito_id, req.body);
+            })
+            .then(data => {
+                // Function to clean up
+                // the files generated
+                return cleanUp(req.body);
+            })
+            .then(d => {
+                resolve({ message: "success" });
+            })
+            .catch((err) => {
+                console.log(err);
+                reject(err);
+            })
+    })
+
+}
+
 function uploadMorphedVTKZip(user_id, timestamp) {
     return new Promise((resolve, reject) => {
         var uploadParams = {
@@ -2704,6 +2765,7 @@ module.exports = {
     generateSimulationForPlayers,
     generateSimulationForPlayersFromJson,
     computeImageData,
+    computeImageData_2,
     generateINP,
     deleteSimulationFromBucket,
     generateSimulationForPlayers_v2
