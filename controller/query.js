@@ -1,9 +1,9 @@
 const AWS = require("aws-sdk");
 const rootPath = '/home/ec2-user';
-
 const docClient = new AWS.DynamoDB.DocumentClient({
     convertEmptyValues: true,
 });
+const UserModel = require("../models/users/usersData.model");
 
 function concatArrays(arrays) {
     return [].concat.apply([], arrays);
@@ -1529,6 +1529,23 @@ function getPendingJobsLog() {
     });
 }
 
+function updateUserRBFstatus(query, neValues){
+    console.log('inside updateUserRBFstatus function -----------',query, neValues)
+    return new Promise((resolve, reject)=>{
+        UserModel.updateOne(query, neValues, (err, result) => {
+            if (err) {
+                console.log('update err', err)
+
+                reject(err);
+            } else {
+                console.log('update res', result)
+                resolve(result);
+            }
+        });
+    })
+ 
+}
+
 module.exports = {
     getUserDetails,
     getUserDetailBySensorId,
@@ -1565,5 +1582,6 @@ module.exports = {
     storeSensorData_v2,
     getFialedBrainSingleEventImgagesJob,
     getFialedBrainLabeledImgagesJob,
-    storeSensorData_of_jsonFile
+    storeSensorData_of_jsonFile,
+    updateUserRBFstatus
 };

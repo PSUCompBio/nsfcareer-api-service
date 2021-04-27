@@ -184,7 +184,8 @@ const {
     storeSensorData_v2,
     getFialedBrainSingleEventImgagesJob,
     getFialedBrainLabeledImgagesJob,
-    storeSensorData_of_jsonFile
+    storeSensorData_of_jsonFile,
+    updateUserRBFstatus
 } = require('./controller/query');
 
 // Include the cluster module
@@ -2198,7 +2199,8 @@ if (cluster.isMaster) {
                     message: "success"
                 });
             })
-            .catch((err) => {
+            .catch(async (err) => {
+                await updateUserRBFstatus({account_id: req.body.user_cognito_id}, {rbf_status: 'Failed to process RBF processing. Somthing went wrong. Please try to upload profile image again.'}); //updating status of rbf processing                
                 res.send({
                     message: "failure",
                     error: err

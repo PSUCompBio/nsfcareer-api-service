@@ -22,6 +22,7 @@ const {
     fetchCGValues,
     uploadCGValuesAndSetINPStatus,
     getUserDetails,
+    updateUserRBFstatus
 } = require('./query');
 
 const xlsxFile = require('read-excel-file/node');
@@ -2707,7 +2708,7 @@ function deleteSimulationFromBucket(obj, callback) {
 */
 function computeImageData_v2(req) {
     // Input { image_url : '', user_cognito_id : ''}
-    return new Promise((resolve, reject) => {
+    return new Promise( async (resolve, reject) => {
         // Get URL Image in input
         // Get User cognito ID in input
         // 1. Generate 3d Avatar
@@ -2724,39 +2725,49 @@ function computeImageData_v2(req) {
         // 4.1 Set Update in DB that simulation file is generated
         // Adding timestamp as filename to request
         req.body["file_name"] = Number(Date.now()).toString();
+        var query = { account_id: req.body.user_cognito_id }
         generate3DModel(req.body)
-            .then(data => {
+            .then( async data => {
+                await updateUserRBFstatus(query, {rbf_status: 'Generating avatar 3D model zip...'}); //updating status of rbf processing
                 return upload3DModelZip(req.body);
             })
-            .then(data => {
+            .then(async data => {
                 // Create Selfie PNG Image using ProjectedTexture VTK
+                await updateUserRBFstatus(query, {rbf_status: 'Generating 3D selfie...'}); //updating status of rbf processing
                 return executeShellCommands(`xvfb-run ${rootPath}/MergePolyData/build/ImageCapture ./avatars/${req.body.user_cognito_id}/head/model.ply ./avatars/${req.body.user_cognito_id}/head/model.jpg ./avatars/${req.body.user_cognito_id}/head/${req.body.file_name}.png`);
             })
-            .then((data) => {
+            .then(async (data) => {
                 console.log('Selfie PNG Image ', data);
+                await updateUserRBFstatus(query, {rbf_status: '3D selfie generated.'}); //updating status of rbf processing
                 // Upload the selfie image generated on S3
                 return uploadGeneratedSelfieImage(req.body);
             })
-            .then(data => {
+            .then(async data => {
+                await updateUserRBFstatus(query, {rbf_status: 'Generating STL file.'}); //updating status of rbf processing
                 return generateStlFromPly(req.body);
             })
-            .then(d => {
+            .then(async d => {
+                await updateUserRBFstatus(query, {rbf_status: 'STL file generated.'}); //updating status of rbf processing
                 return generateParametersFileFromStl(req.body)
             })
-            .then(d => {
+            .then(async d => {
                 // Generate INP File
+                await updateUserRBFstatus(query, {rbf_status: 'Generating INP file.'}); //updating status of rbf processing                
                 return generateINP_v2(req.body.user_cognito_id, req.body);
             })
-            .then(data => {
+            .then(async data => {
                 // Function to clean up
                 // the files generated
+                await updateUserRBFstatus(query, {rbf_status: ''}); //updating status of rbf processing                
                 return cleanUp(req.body);
             })
-            .then(d => {
+            .then(async d => {
+                await updateUserRBFstatus(query, {rbf_status: ''}); //updating status of rbf processing                
                 resolve({ message: "success" });
             })
-            .catch((err) => {
+            .catch(async (err) => {
                 console.log('err -------------------\n',err);
+                await updateUserRBFstatus(query, {rbf_status: 'Failed to process RBF processing. Somthing went wrong. Please try to upload profile image again.'}); //updating status of rbf processing                
                 reject(err);
             })
     })
@@ -2765,7 +2776,8 @@ function computeImageData_v2(req) {
 
 //v2 function for brainsimreasearch app...
 function generateINP_v2(user_id, obj = null) {
-    return new Promise((resolve, reject) => {
+    return new Promise( async (resolve, reject) => {
+        var query = { account_id: user_id }
         // 1. Get Uploaded model list from user
         // 2. Generate SignedURL of the image
         // 3. Pass the signedURL to download the zip file
@@ -2808,25 +2820,28 @@ function generateINP_v2(user_id, obj = null) {
                             }
                             else {
                                 generateMorphedVTK(obj)
-                                    .then((d) => {
+                                    .then(async (d) => {
                                         var cmd = `mkdir -p ${rootPath}/users_data/${user_id}/rbf/ ;  ${rootPath}/MergePolyData/build/InpFromVTK  -in ${rootPath}/users_data/${user_id}/morphed_vtk/${obj.file_name}.vtu -out ${rootPath}/users_data/${user_id}/rbf/${obj.file_name}_coarse.inp`;
+                                        await updateUserRBFstatus(query, {rbf_status: 'Generating Morphed VTK file...'}); //updating status of rbf processing  
                                         return executeShellCommands(cmd);
                                     })
-                                    .then(d => {
+                                    .then(async d => {
                                         console.log('aaaaaaaa ', d)
                                         var fine_cmd = `${rootPath}/MergePolyData/build/InpFromVTK  -in ${rootPath}/users_data/${user_id}/morphed_vtk/${obj.file_name}_fine.vtu -out ${rootPath}/users_data/${user_id}/rbf/${obj.file_name}_fine.inp`;
                                         return executeShellCommands(fine_cmd);
                                     })
-                                    .then(d => {
+                                    .then(async d => {
                                         return uploadINPFile(user_id, obj.file_name);
                                     })
-                                    .then(d => {
+                                    .then(async d => {
+                                        await updateUserRBFstatus(query, {rbf_status: 'INP file generated.'}); //updating status of rbf processing  
                                         return uploadVTKFile(user_id, obj.file_name);
                                     })
-                                    .then(d => {
+                                    .then(async d => {
+                                        await updateUserRBFstatus(query, {rbf_status: 'VTK file generated.'}); //updating status of rbf processing  
                                         return uploadFineINPFile(user_id, obj.file_name);
                                     })
-                                    .then(d => {
+                                    .then(async d => {
                                         return uploadFineVTKFile(user_id, obj.file_name);
                                     })
                                     // *For updeate cg cordinates into database ....
@@ -2834,19 +2849,21 @@ function generateINP_v2(user_id, obj = null) {
                                     // .then(d => {
                                     //     return uploadCGValuesAndSetINPStatus(user_id, obj.file_name);
                                     // })
-                                    .then(d => {
+                                    .then(async d => {
                                         return createMorphedVTKZip(user_id, obj.file_name);
                                     })
-                                    .then(d => {
+                                    .then(async d => {
+                                        await updateUserRBFstatus(query, {rbf_status: 'Generating Morphed VTK Zip...'}); //updating status of rbf processing  
                                         return uploadMorphedVTKZip(user_id, obj.file_name);
                                     })
-                                    .then(d => {
+                                    .then(async d => {
+                                        await updateUserRBFstatus(query, {rbf_status: 'Morphed VTK Zip file generated.'}); //updating status of rbf processing  
                                         return createStlZip(user_id, obj.file_name);
                                     })
-                                    .then(d => {
+                                    .then(async d => {
                                         return uploadStlZip(user_id, obj.file_name);
                                     })
-                                    .then(d => {
+                                    .then(async d => {
                                         return uploadSkullFile(user_id, obj.file_name);
                                     })
                                     .then(d => {
@@ -2861,7 +2878,8 @@ function generateINP_v2(user_id, obj = null) {
                                     .then(d => {
                                         resolve(true);
                                     })
-                                    .catch((err) => {
+                                    .catch(async (err) => {
+                                        await updateUserRBFstatus(query, {rbf_status: 'Failed to complete process of RBF. Somthing went wrong. Please try to upload profile image again.'}); //updating status of rbf processing                
                                         reject(err);
                                     })
                             }
