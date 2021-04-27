@@ -3,8 +3,7 @@ const rootPath = '/home/ec2-user';
 const docClient = new AWS.DynamoDB.DocumentClient({
     convertEmptyValues: true,
 });
-const UserModel = require("../models/users/usersData.model");
-
+const request = require('request');
 function concatArrays(arrays) {
     return [].concat.apply([], arrays);
 }
@@ -1532,16 +1531,14 @@ function getPendingJobsLog() {
 function updateUserRBFstatus(query, neValues){
     console.log('inside updateUserRBFstatus function -----------',query, neValues)
     return new Promise((resolve, reject)=>{
-        UserModel.updateOne(query, neValues, (err, result) => {
+        request.post({ url: "https://brainsimresearch.io/auth/updateUserRBFstatus", json: {query, neValues, token: 'brainsimresearch@notfication'} }, function (err, httpResponse, body) {
             if (err) {
-                console.log('update err', err)
-
                 reject(err);
-            } else {
-                console.log('update res', result)
-                resolve(result);
             }
-        });
+            else {
+                resolve(true);
+            }
+        })
     })
  
 }
